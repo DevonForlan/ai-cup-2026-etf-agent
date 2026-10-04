@@ -50,11 +50,40 @@ def save_raw(snapshot_date: str, source: str, filename: str, content: bytes, *, 
     return entry
 
 
+def _lock(path: Path, timeout: float = 60.0) -> int:
+    """Cross-process lock via O_EXCL lock file (several fetchers may write the same day folder)."""
+    import os
+    import time
+    lock = path.with_suffix(".lock")
+    t0 = time.time()
+    while True:
+        try:
+            return os.open(lock, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
+        except FileExistsError:
+            if time.time() - t0 > timeout:          # stale lock (crashed writer)
+                try:
+                    os.remove(lock)
+                except OSError:
+                    pass
+            time.sleep(0.05)
+
+
 def append_manifest(day_dir: Path, entry: ManifestEntry) -> None:
+    import os
     mf = day_dir / "manifest.json"
-    entries = json.loads(mf.read_text(encoding="utf-8")) if mf.exists() else []
-    entries.append(asdict(entry))
-    mf.write_text(json.dumps(entries, ensure_ascii=False, indent=1), encoding="utf-8")
+    fd = _lock(mf)
+    try:
+        entries = json.loads(mf.read_text(encoding="utf-8")) if mf.exists() else []
+        entries.append(asdict(entry))
+        tmp = mf.with_suffix(f".tmp{os.getpid()}")
+        tmp.write_text(json.dumps(entries, ensure_ascii=False, indent=1), encoding="utf-8")
+        os.replace(tmp, mf)
+    finally:
+        os.close(fd)
+        try:
+            os.remove(mf.with_suffix(".lock"))
+        except OSError:
+            pass
 
 
 def read_manifest(day_dir: Path) -> list[dict]:
