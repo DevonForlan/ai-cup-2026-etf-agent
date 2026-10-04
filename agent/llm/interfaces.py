@@ -158,7 +158,8 @@ class TemplateThesisWriter:
                 "same_lots": "目標權重推導張數與現持相同",
                 "decision_limit": "單日決策數上限（30），本日延後調整",
                 "no_rebalance_day": "非再平衡日，組合合規，維持不動",
-                "min_holding": "未滿最短持有天數，維持不動"}.get(reason, "維持不動")
+                "min_holding": "未滿最短持有天數，維持不動",
+                "odd_lot_locked": "持股含配股零股，無法以整股委託調整，維持不動"}.get(reason, "維持不動")
 
     def fallback_logic(self, reason: str) -> str:
         return f"本日組合建構未通過合規或資料檢查（{reason[:300]}），依預設安全機制維持前日組合不交易。"

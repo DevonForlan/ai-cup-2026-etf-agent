@@ -136,8 +136,16 @@ def construct(scores: pd.DataFrame, prev_holdings: dict[str, int], prev_cash: De
     cash_mid = (cash_lo + cash_hi) / 2
 
     exclude: set[str] = set()
+    locked = {t for t, sh in prev_h.items() if sh % lot != 0}
+    if locked:
+        notes.append(f"零股持股（配股）無法以整股委託調整，強制維持：{sorted(locked)}")
     for attempt in range(6):
         sel, info = B.select_names(scores, prev_h, cfg, exclude, holding_days)
+        # odd-share holdings (e.g. after stock dividends, NC-7) cannot be traded: derive-orders.v2 would
+        # produce a non-lot order. Keep them untouched (forced NO_TRADE) until the organiser clarifies.
+        for t in locked:
+            if t not in sel:
+                sel.append(t)
         if len(sel) < rb.rules.holdings_min:
             return FallbackToPreviousPortfolio(f"可選標的不足 {len(sel)} 檔")
         raw = B.equal_raw_weights(sel) if method in ("B1_score_equal", "B2_momentum", "B3_institutional") \
@@ -156,7 +164,7 @@ def construct(scores: pd.DataFrame, prev_holdings: dict[str, int], prev_cash: De
 
     # no-trade band for existing holdings
     band = D(str(tparams["rebalance_threshold"]))
-    no_trade: set[str] = set()
+    no_trade: set[str] = set(locked)
     cur_w = {t: Decimal(s) * D(closes_prev[t]) / nav_prev for t, s in prev_h.items()}
     for t in sel:
         if t in prev_h and abs(w[t] - cur_w[t]) < band and cur_w[t] <= caps[t]:

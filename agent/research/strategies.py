@@ -108,6 +108,17 @@ def registry() -> list[dict]:
     }
     for k, w in W.items():
         S.append(_s(k, "weights", k, w, CTRL))
+    # ---- low-frequency "pick & hold" family (cost-aware; added after round-03 first batch showed
+    #      transaction costs dominate): rebalance every 10 days or never (compliance-only trades) ----
+    HOLD10 = dict(CTRL, rebalance_every=10, min_holding_days=5, rebalance_threshold=0.02)
+    HOLDN = dict(CTRL, rebalance_every=100, min_holding_days=5, rebalance_threshold=0.02)
+    for name, w in (("full", FULL_V1), ("mom40", W["W_A_mom40"]), ("trend", W["W_E_trend"]),
+                    ("rev", mix(REV=1)), ("inst_rev", mix(INST=0.5, REV=0.5)), ("mom", mix(MOM=1))):
+        S.append(_s(f"H10_{name}", "hold", f"{name} factors, rebalance every 10 days", w, HOLD10))
+        S.append(_s(f"HN_{name}", "hold", f"{name} factors, buy day-1 then hold (compliance only)", w, HOLDN))
+    # ---- regime v0 on/off (soft cash range only) ----
+    S.append(_s("R_ctrl_regime", "regime", "CTRL + regime v0", FULL_V1, CTRL, **{"regime.use_v0": True}))
+    S.append(_s("R_h10_regime", "regime", "H10 full + regime v0", FULL_V1, HOLD10, **{"regime.use_v0": True}))
     return S
 
 

@@ -31,7 +31,8 @@ def plan_decisions(target_w: dict[str, Decimal], prev_holdings: dict[str, int], 
         cur = int(prev_holdings.get(t, 0))
         w = target_w.get(t, Decimal(0))
         if cur > 0 and t in no_trade:
-            out.append(PlannedDecision(t, "NO_TRADE", w, cur, cur, "no_trade_band"))
+            out.append(PlannedDecision(t, "NO_TRADE", w, cur, cur,
+                                       "odd_lot_locked" if cur % lot else "no_trade_band"))
             continue
         ts = target_shares(w, nav_prev, closes_prev[t], lot) if w > 0 else 0
         if cur == 0 and ts > 0:

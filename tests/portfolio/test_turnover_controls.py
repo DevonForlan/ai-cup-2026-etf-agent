@@ -130,3 +130,19 @@ def test_code_version_format():
     import re
     from agent.pipeline import code_version
     assert re.fullmatch(r"git:[0-9a-f]{7,12}(-dirty)?|git:unknown", code_version(refresh=True))
+
+
+def test_odd_lot_holding_is_locked_not_traded(fixture_store, rb, cfg):
+    """Stock dividends can leave odd shares; derive-orders.v2 would then emit a non-lot order.
+    The constructor must keep such a holding untouched (NO_TRADE) and never fall back."""
+    fs, sc, closes, etf, meta = _setup(fixture_store, rb, cfg)
+    tp = construct(sc, {}, rb.rules.initial_cash, rb.rules.initial_cash, closes, rb, cfg, fs.market, etf, meta)
+    held = dict(tp.est_holdings)
+    worst = max(sc.index, key=lambda t: sc.loc[t, "rank"] if sc.loc[t, "rank"] == sc.loc[t, "rank"] else -1)
+    held[worst] = 10_500                                   # odd shares in a deselected name
+    nav = sum(Decimal(s) * closes[t] for t, s in held.items()) + tp.est_cash
+    r = construct(sc, held, tp.est_cash, nav, closes, rb, cfg, fs.market, etf, meta)
+    assert isinstance(r, TargetPortfolio), getattr(r, "reason", "")
+    assert all(o.shares % 1000 == 0 for o in r.orders)
+    assert worst not in {o.ticker for o in r.orders}
+    assert any(p.ticker == worst and p.action == "NO_TRADE" and p.reason == "odd_lot_locked" for p in r.plan)
