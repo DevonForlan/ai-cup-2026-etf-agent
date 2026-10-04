@@ -69,7 +69,7 @@ def pick_windows(store: HistoryStore, fixed: dict[str, str], min_lookback: int =
         ds = days[i:i + WINDOW_DAYS]
         if used & set(ds):
             continue
-        r = float((1 + ew.loc[ds]).prod() - 1)
+        r = float(c.loc[ds[-1]].div(c.loc[days[i - 1]]).sub(1).mean())   # EW buy&hold, same as reported
         v = float(ew.loc[ds].std() * np.sqrt(252))
         cand.append((ds, r, v))
     best = max(cand, key=lambda x: x[1])
@@ -197,9 +197,27 @@ def run_job(job: dict) -> dict:
     return row
 
 
+def _precompute(args):
+    history, as_of, d = args
+    from agent.pipeline import cached_features
+    st = HistoryStore(history)
+    cached_features(st, as_of, d, sorted(load_universe()))
+    return d
+
+
+def precompute_features(history: str, wins: dict, workers: int) -> None:
+    store = HistoryStore(history)
+    cal = TradingCalendar(store.dates("daily_prices"))
+    todo = sorted({d for w in wins.values() for d in window_days(cal, w["start"])})
+    with ProcessPoolExecutor(max_workers=workers) as ex:
+        list(ex.map(_precompute, [(history, f"{d}T07:00:00+08:00", d) for d in todo]))
+    print(f"precomputed features for {len(todo)} dates", flush=True)
+
+
 def dataset_version(store: HistoryStore) -> str:
     from agent.pipeline import _store_fingerprint
-    return _store_fingerprint(store)
+    from agent.pipeline import FEATURE_TABLES
+    return _store_fingerprint(store, FEATURE_TABLES)
 
 
 def main(argv=None):
@@ -263,6 +281,7 @@ def main(argv=None):
                              "wid": wid, "run_id": f"{st['strategy_id']}__{wid}__{vname}", "out_root": str(out_root),
                              "config_hash": config_hash(cfg), "dataset_version": dv, "variant": vname,
                              "cost_mult": cm, "slippage": sl, "faults": fl})
+    precompute_features(a.history, wins, a.workers)
     print(f"{len(strategies)} strategies × {len(wins)} windows → {len(jobs)} jobs, {a.workers} workers", flush=True)
     rows, t0 = [], time.time()
     with ProcessPoolExecutor(max_workers=a.workers, initializer=_init_worker, initargs=(a.history,)) as ex:

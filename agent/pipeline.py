@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 import subprocess
 import time
 from dataclasses import dataclass, field
@@ -165,32 +166,51 @@ class DayResult:
 _FEATURE_CACHE: dict = {}
 
 
-def _store_fingerprint(store: HistoryStore) -> str:
+FEATURE_TABLES = ("daily_prices", "institutional", "monthly_revenue", "market_overnight")
+
+
+def _store_fingerprint(store: HistoryStore, tables=None) -> str:
     parts = []
     for p in sorted(store.root.glob("*.parquet")):
+        if tables and p.stem not in tables:
+            continue
         st = p.stat()
         parts.append(f"{p.name}:{st.st_size}:{int(st.st_mtime)}")
     return hashlib.sha256("|".join(parts).encode()).hexdigest()[:16]
 
 
 def cached_features(store: HistoryStore, as_of: str, trade_date: str, universe: list[str],
-                    use_cache: bool = True):
-    """Features + ETF holdings for (store state, as_of). Pure function of PIT data -> safe to cache."""
-    key = (str(store.root), _store_fingerprint(store), as_of, FEATURE_VERSION)
-    if use_cache and key in _FEATURE_CACHE:
-        return _FEATURE_CACHE[key]
-    view = PITView(store, as_of)
-    fs = build_features(view, universe, trade_date)
-    etf_h, etf_meta = etf_holdings_from_view(view)
-    rev = view.monthly_revenue()
-    rev_asof = str(rev["available_at"].max()) if len(rev) else None
-    ovn = view.table("market_overnight") if "market_overnight" in SCHEMAS else None
-    val = (fs, etf_h, etf_meta, rev_asof, bool(len(rev)), list(view.reads), ovn)
+                    use_cache: bool = True, disk_cache: bool = True):
+    """Features (+ revenue/overnight meta) for (feature-table state, as_of): pure function of PIT data,
+    cached in memory and on disk (data/cache/features/<fingerprint>/). ETF holdings are read fresh."""
+    import pickle
+    fp = _store_fingerprint(store, FEATURE_TABLES)
+    key = (str(store.root), fp, as_of, FEATURE_VERSION)
+    val = _FEATURE_CACHE.get(key) if use_cache else None
+    dpath = ROOT / "data" / "cache" / "features" / f"{FEATURE_VERSION}_{fp}" / (as_of.replace(":", "") + ".pkl")
+    if val is None and use_cache and disk_cache and dpath.exists():
+        try:
+            val = pickle.loads(dpath.read_bytes())
+        except Exception:  # noqa: BLE001
+            val = None
+    if val is None:
+        view = PITView(store, as_of)
+        fs = build_features(view, universe, trade_date)
+        rev = view.monthly_revenue()
+        rev_asof = str(rev["available_at"].max()) if len(rev) else None
+        val = (fs, rev_asof, bool(len(rev)), list(view.reads))
+        if use_cache and disk_cache:
+            dpath.parent.mkdir(parents=True, exist_ok=True)
+            tmp = dpath.with_suffix(f".tmp{os.getpid()}")
+            tmp.write_bytes(pickle.dumps(val))
+            os.replace(tmp, dpath)
     if use_cache:
         if len(_FEATURE_CACHE) > 400:
             _FEATURE_CACHE.clear()
         _FEATURE_CACHE[key] = val
-    return val
+    fs, rev_asof, has_rev, reads = val
+    etf_h, etf_meta = etf_holdings_from_view(PITView(store, as_of))
+    return fs, etf_h, etf_meta, rev_asof, has_rev, reads, None
 
 
 def update_state_after_settlement(state: dict, prev_holdings: dict, new_holdings: dict, trade_date: str) -> dict:
