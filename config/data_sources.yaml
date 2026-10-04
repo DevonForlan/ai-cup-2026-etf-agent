@@ -1,0 +1,23 @@
+# Data availability assumptions (PIT). available_at = trade date + offset (Asia/Taipei).
+# These are conservative assumptions (research/raw_notes/taiwan_data_sources.md), not official.
+availability:
+  daily_prices: "15:00"        # T close data available
+  institutional: "17:00"       # T86 / TPEx insti
+  margin: "22:00"
+  corporate_actions_lead_days: 1   # ex-dividend info known >= 1 day before ex-date
+  monthly_revenue_day: 10      # if no publish timestamp: assume day 10 of following month 23:59
+  monthly_revenue_time: "23:59"
+  etf_holdings: "22:00"        # issuer disclosure after NAV strike
+
+http:
+  min_interval_sec: 2.5
+  timeout_sec: 30
+  retries: 3
+  relax_x509_strict: true      # TWSE/TPEx certs fail Python 3.13 VERIFY_X509_STRICT; chain still verified
+
+endpoints:
+  twse_mi_index: "https://www.twse.com.tw/rwd/zh/afterTrading/MI_INDEX?date={yyyymmdd}&type=ALLBUT0999&response=json"
+  twse_t86: "https://www.twse.com.tw/rwd/zh/fund/T86?date={yyyymmdd}&selectType=ALLBUT0999&response=json"
+  tpex_daily_quotes: "https://www.tpex.org.tw/www/zh-tw/afterTrading/dailyQuotes?date={yyyy}/{mm}/{dd}&type=EW&response=json"
+  tpex_insti: "https://www.tpex.org.tw/www/zh-tw/insti/dailyTrade?type=Daily&sect=EW&date={yyyy}/{mm}/{dd}&response=json"
+  finmind: "https://api.finmindtrade.com/api/v4/data"

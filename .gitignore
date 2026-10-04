@@ -1,0 +1,15 @@
+.venv/
+__pycache__/
+.pytest_cache/
+*.pyc
+*.pyo
+.env
+data/raw/
+data/history/
+data/processed/
+data/cache/
+logs/runtime/
+logs/runs/
+sim_runs/
+out/
+.claude/

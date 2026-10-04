@@ -1,0 +1,10 @@
+{
+  "_comment": "Context reconstructed for the official examples (TEAM_042/043 2026-10-27). NAV 102,000,000 and closes 2330=1480, 2891=42.5, 2454=1250 come from the examples' derivation_detail; 2330 holding 17,000 from EX42 derivation_detail. prev_cash 6,475,000 reproduces EX43 _NOTE (net buy +2.65M -> est. cash 3.75%). 2317/2412 shares and closes are placeholders. Examples are excerpts -> partial_portfolio=true.",
+  "prev_holdings": {"2330": 17000, "2317": 40000, "2412": 30000},
+  "prev_cash": 6475000,
+  "prev_nav": 102000000,
+  "closes_prev": {"2330": 1480, "2891": 42.5, "2454": 1250, "2317": 200, "2412": 120},
+  "submission_time": "2026-10-27T08:50:00+08:00",
+  "expected_team_id": "TEAM_043",
+  "partial_portfolio": true
+}

@@ -1,0 +1,59 @@
+# Strategy parameters (NOT official rules). Changing anything here = new code_version.
+strategy_name: mvp0_quant_baseline
+team_id: TEAM_TEST
+
+strategy_buffers:
+  target_holdings: 25
+  target_holdings_min: 24
+  target_holdings_max: 27
+  tsmc_target_cap: 0.235
+  other_target_cap: 0.09
+  cash_target_min: 0.05
+  cash_target_max: 0.12
+  cash_declared_range: [0.02, 0.20]   # market_view.posture.target_cash_pct_range (wider than target)
+  active_share_target: 0.30
+  min_position_weight: 0.01           # below this a position is not worth holding
+  stress_price_shift: 0.05            # +/-5% VWAP vs T-1 close stress
+
+baseline:
+  method: B0_score_tiered            # B0_score_tiered | B1_score_equal | B2_momentum | B3_institutional
+  tiers:                             # tiered weights before normalisation
+    - {top: 5, weight: 1.6}
+    - {top: 15, weight: 1.2}
+    - {top: 30, weight: 1.0}
+  tsmc_policy: score                 # score | core (always hold 2330 at core weight)
+  tsmc_core_weight: 0.15
+
+turnover:
+  hold_buffer: 10                    # keep existing holding if rank <= target_holdings + hold_buffer
+  swap_score_margin: 0.10            # new name must beat weakest kept by this score margin (percentile units)
+  no_trade_band: 0.015               # skip rebalancing if |target - current| < band (weight)
+  max_new_names_per_day: 5
+
+score_weights:                       # percentile-rank based; missing feature -> neutral 0.5
+  ret_20d: 0.20
+  ret_60d: 0.15
+  relative_strength_20d: 0.10
+  relative_strength_60d: 0.10
+  distance_to_52w_high: 0.10         # closer to high = better
+  institutional_flow_5d: 0.10
+  institutional_flow_20d: 0.10
+  revenue_yoy: 0.10
+  revenue_mom: 0.05
+  volatility_20d: -0.10              # penalty
+  volume_ratio_5d: 0.0
+  ret_5d: 0.0
+
+regime:
+  # rule-based regime from universe breadth/trend (no LLM)
+  risk_off_breadth: 0.35             # share of universe above 20d MA
+  risk_on_breadth: 0.60
+  cash_by_regime:
+    risk_on: [0.03, 0.07]
+    neutral: [0.05, 0.10]
+    risk_off: [0.10, 0.18]
+
+runtime:
+  model_provider: other
+  model_version: none-quant-only-v0
+  run_cutoff_local: "08:55"

@@ -1,0 +1,40 @@
+# Official competition rules ONLY (source: 比賽辦法 PDF / D-Plan v4.2).
+# Do NOT put strategy safety margins here -> config/strategy.yaml.
+# Unclear items -> config/unconfirmed_rules.yaml.
+official_rules:
+  initial_cash: 1000000000          # 辦法 §一 p.1
+  tsmc_ticker: "2330"
+  tsmc_max_weight: 0.25             # 辦法 §六(八)
+  other_max_weight: 0.10            # 辦法 §六(八)
+  cash_max_weight: 0.25             # 辦法 §六(九) 「小於 25%」
+  cash_min: 0                       # 辦法 §六(十四)(2) 現金不得為負
+  holdings_min: 20                  # 辦法 §六(八)
+  holdings_max: 30
+  active_share_min: 0.20            # 辦法 §六(十三)
+  active_share_consecutive_days_dq: 2
+  buy_fee_rate: 0.001425            # 辦法 §六(十一)；指南 ⑥ 買賣各收
+  sell_fee_rate: 0.001425
+  transaction_tax_rate: 0.003       # 賣出另收
+  lot_size: 1000                    # 辦法 §六(十) 整股
+  max_daily_submissions: 25         # 辦法 §二(八)
+  warnings_to_dq: 3                 # 辦法 §六(十四)
+  price_drift_grace_trading_days: 5 # 辦法 §六 註3：第 6 個交易日仍超限記警告
+  min_submission_days_for_ranking: 22  # 辦法 §四(三)
+  competition_trading_days: 24
+  submission_window:
+    opens_prev_day: "19:30"
+    closes: "08:55"
+    timezone: "+08:00"
+  competition_period:
+    start: "2026-10-26"
+    end: "2026-11-27"
+
+dplan:
+  schema_path: "D-Plan.schema_v4.2.json"
+  schema_version: "4.2"
+  c12_hold_tolerance_nav: 0.02      # schema: server 參數，預設 2% NAV
+  filename_pattern: "D-Plan_{team_id}_{trade_date}.json"
+
+reference_files:
+  universe_csv: "config/universe_150.csv"
+  active_etf_csv: "config/active_etf_list.csv"

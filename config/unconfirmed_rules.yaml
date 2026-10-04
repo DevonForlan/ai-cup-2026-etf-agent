@@ -1,0 +1,29 @@
+# Rules NOT confirmed by the organiser (see research/01 §12 NC-1..NC-15).
+# `unknown`/`null` here must never be treated as confirmed.
+# `simulation_assumptions` is the value our simulator/validator uses *for now*;
+# every report states that it is an assumption.
+unconfirmed:
+  active_share_mode: unknown            # NC-2: NAV_WEIGHT | TOP10_NORMALIZED | FULL_PORTFOLIO
+  cash_equal_25_allowed: null           # NC-6
+  fee_rounding_mode: unknown            # NC-5
+  no_trade_execution_mode: unknown      # NC-4: skip | reject
+  mdd_include_initial_nav: null         # NC-8
+  daily_last_submission_wins: null      # NC-10 (11/27 is confirmed: last submission)
+  official_settlement_source: unknown   # NC-1
+  first_trade_date: unknown             # NC-15: 10/26 or 10/27
+  bugfix_during_competition_allowed: null  # NC-9
+  check_code_disposition: unknown       # NC-3: reject vs warning per C-code
+  c12_estimate_includes_fees: null
+  stock_dividend_odd_shares: unknown    # NC-7
+  holdings_count_inclusive: null        # NC-6 (20 and 30 inclusive?)
+
+simulation_assumptions:
+  active_share_mode: UNKNOWN            # UNKNOWN = evaluate all modes, gate on the minimum
+  cash_equal_25_allowed: false          # conservative
+  fee_rounding_mode: exact              # exact | round_half_up | floor | ceil  (to 1 TWD)
+  no_trade_execution_mode: skip         # skip | reject
+  mdd_include_initial_nav: both         # report both
+  daily_last_submission_wins: true
+  c12_estimate_includes_fees: false
+  stock_dividend_odd_shares: keep_exact
+  holdings_count_inclusive: true
