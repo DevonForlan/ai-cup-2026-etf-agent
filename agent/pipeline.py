@@ -15,7 +15,7 @@ import pandas as pd
 
 from agent.config import ROOT, D
 from agent.data.http import TPE
-from agent.data.loaders import HistoryStore
+from agent.data.loaders import SCHEMAS, HistoryStore
 from agent.data.manifest import read_manifest
 from agent.data.pit import PITView
 from agent.dplan.builder import SourceInfo, build_graph
@@ -23,43 +23,73 @@ from agent.dplan.exporter import export_dplan, write_dplan
 from agent.engine.models import Report, Status
 from agent.engine.rules import RuleBook
 from agent.engine.validate_dplan import ValidationContext, validate_dplan
-from agent.features.feature_engine import build_features, save_features
+from agent.features.feature_engine import FEATURE_VERSION, build_features, save_features
+from agent.features.regime import market_regime
 from agent.portfolio.constructor import FallbackToPreviousPortfolio, construct
-from agent.portfolio.ranking import save_scores, score
+from agent.portfolio import baseline as B
+from agent.portfolio.ranking import apply_turnover_scoring, save_scores, score
 from agent.sim.calendar import TradingCalendar
 from agent.sim.models import DayMarket, Settlement
 
 
-def code_version() -> str:
-    """git:<sha> if the project is a clean git repo, else sha256 of agent/ + config/ (12 hex)."""
-    try:
-        sha = subprocess.run(["git", "rev-parse", "--short=12", "HEAD"], cwd=ROOT, capture_output=True,
-                             text=True, timeout=5)
-        dirty = subprocess.run(["git", "status", "--porcelain", "agent", "config"], cwd=ROOT,
-                               capture_output=True, text=True, timeout=5)
-        if sha.returncode == 0 and not dirty.stdout.strip():
-            return f"git:{sha.stdout.strip()}"
-    except Exception:  # noqa: BLE001
-        pass
-    h = hashlib.sha256()
-    for p in sorted(list((ROOT / "agent").rglob("*.py")) + list((ROOT / "config").glob("*.*"))):
-        if "__pycache__" in p.parts:
-            continue
-        h.update(str(p.relative_to(ROOT)).replace("\\", "/").encode())
-        h.update(p.read_bytes())
-    return "pkg-sha256:" + h.hexdigest()[:12]
+class DirtyWorkingTreeError(RuntimeError):
+    pass
 
 
-def etf_holdings_from_view(view: PITView) -> tuple[dict, dict]:
+_CODE_VERSION: tuple[str, bool] | None = None
+
+
+def code_version(refresh: bool = False) -> str:
+    """git:<short_sha>; git:<short_sha>-dirty when agent/ or config/ have uncommitted changes.
+    Cached per process (the tree must not change during a run)."""
+    global _CODE_VERSION
+    if _CODE_VERSION is None or refresh:
+        try:
+            sha = subprocess.run(["git", "rev-parse", "--short", "HEAD"], cwd=ROOT, capture_output=True,
+                                 text=True, timeout=10)
+            dirty = subprocess.run(["git", "status", "--porcelain", "--", "agent", "config"], cwd=ROOT,
+                                   capture_output=True, text=True, timeout=10)
+            if sha.returncode != 0:
+                raise RuntimeError(sha.stderr)
+            is_dirty = bool(dirty.stdout.strip())
+            _CODE_VERSION = ("git:" + sha.stdout.strip() + ("-dirty" if is_dirty else ""), is_dirty)
+        except Exception:  # noqa: BLE001
+            _CODE_VERSION = ("git:unknown", True)
+    return _CODE_VERSION[0]
+
+
+def working_tree_dirty() -> bool:
+    code_version()
+    return bool(_CODE_VERSION and _CODE_VERSION[1])
+
+
+def require_clean_tree() -> None:
+    """Competition mode: refuse to run from uncommitted code (code_version must map to a commit)."""
+    code_version(refresh=True)
+    if working_tree_dirty():
+        raise DirtyWorkingTreeError("agent/ or config/ has uncommitted changes; commit before competition run")
+
+
+def etf_holdings_from_view(view: PITView, prefer_real: bool = True) -> tuple[dict, dict]:
+    """Latest visible top-10 per ETF. Real (synthetic=False) rows win over synthetic ones."""
     df = view.etf_holdings()
     if len(df) == 0:
         return {}, {}
-    last = df.groupby("etf")["date"].max()
-    out = {}
-    for etf, d in last.items():
-        g = df[(df["etf"] == etf) & (df["date"] == d)].sort_values("weight", ascending=False).head(10)
-        out[etf] = {r.ticker: D(round(float(r.weight), 6)) for r in g.itertuples()}
-    return out, {"date": str(last.max()), "synthetic": bool(df["synthetic"].any())}
+    if prefer_real and (~df["synthetic"]).any():
+        real_etfs = set(df.loc[~df["synthetic"], "etf"])
+        df = df[~(df["etf"].isin(real_etfs) & df["synthetic"])]
+    df = df[df["weight"].notna()]
+    last = df.groupby("etf")["date"].transform("max")
+    df = df[df["date"] == last].sort_values(["etf", "weight"], ascending=[True, False])
+    top = df.groupby("etf").head(10)
+    out: dict[str, dict] = {}
+    for etf, tk, w in zip(top["etf"], top["ticker"], top["weight"]):
+        out.setdefault(etf, {})[tk] = D(round(float(w), 6))
+    per_etf_date = top.groupby("etf")["date"].max().to_dict()
+    return out, {"date": str(top["date"].max()), "synthetic": bool(top["synthetic"].any()),
+                 "n_real": int(top.loc[~top["synthetic"], "etf"].nunique()),
+                 "n_synthetic": int(top.loc[top["synthetic"], "etf"].nunique()),
+                 "per_etf_date": per_etf_date}
 
 
 def build_sources(prev_date: str, mode: str, store_is_fixture: bool, revenue_asof: str | None,
@@ -107,16 +137,72 @@ class DayResult:
     closes_prev: dict = field(default_factory=dict)
     fallback: bool = False
     notes: list[str] = field(default_factory=list)
+    agent_state: dict = field(default_factory=dict)
+    timings: dict = field(default_factory=dict)
+    etf_meta: dict = field(default_factory=dict)
+    active_share: object = None
+
+
+_FEATURE_CACHE: dict = {}
+
+
+def _store_fingerprint(store: HistoryStore) -> str:
+    parts = []
+    for p in sorted(store.root.glob("*.parquet")):
+        st = p.stat()
+        parts.append(f"{p.name}:{st.st_size}:{int(st.st_mtime)}")
+    return hashlib.sha256("|".join(parts).encode()).hexdigest()[:16]
+
+
+def cached_features(store: HistoryStore, as_of: str, trade_date: str, universe: list[str],
+                    use_cache: bool = True):
+    """Features + ETF holdings for (store state, as_of). Pure function of PIT data -> safe to cache."""
+    key = (str(store.root), _store_fingerprint(store), as_of, FEATURE_VERSION)
+    if use_cache and key in _FEATURE_CACHE:
+        return _FEATURE_CACHE[key]
+    view = PITView(store, as_of)
+    fs = build_features(view, universe, trade_date)
+    etf_h, etf_meta = etf_holdings_from_view(view)
+    rev = view.monthly_revenue()
+    rev_asof = str(rev["available_at"].max()) if len(rev) else None
+    ovn = view.table("market_overnight") if "market_overnight" in SCHEMAS else None
+    val = (fs, etf_h, etf_meta, rev_asof, bool(len(rev)), list(view.reads), ovn)
+    if use_cache:
+        if len(_FEATURE_CACHE) > 400:
+            _FEATURE_CACHE.clear()
+        _FEATURE_CACHE[key] = val
+    return val
+
+
+def update_state_after_settlement(state: dict, prev_holdings: dict, new_holdings: dict, trade_date: str) -> dict:
+    """Entry dates / indices follow ACTUAL settled holdings (void trades do not create entries)."""
+    st = json.loads(json.dumps(state or {}))
+    di = st.get("day_index", 0)
+    ent_d, ent_i = st.setdefault("entry_date", {}), st.setdefault("entry_index", {})
+    for t in list(ent_d):
+        if new_holdings.get(t, 0) <= 0:
+            ent_d.pop(t, None)
+            ent_i.pop(t, None)
+    for t, s in new_holdings.items():
+        if s > 0 and prev_holdings.get(t, 0) <= 0:
+            ent_d[t] = trade_date
+            ent_i[t] = di
+    return st
 
 
 def run_day(trade_date: str, store: HistoryStore, prev: Settlement, rb: RuleBook, cfg: dict, *,
             team_id: str, mode: str = "replay", out_dir: Path | None = None, log_dir: Path | None = None,
             method: str | None = None, store_is_fixture: bool = False, calendar: TradingCalendar | None = None,
-            run_time: str = "07:00:00") -> DayResult:
-    t0 = time.time()
+            run_time: str = "07:00:00", light: bool = False, use_cache: bool = True,
+            data_faults: set[str] | None = None) -> DayResult:
+    """light=True: research mode (no per-day feature/score/graph logs; D-Plan + validation still produced).
+    data_faults: inputs to drop (fault injection) e.g. {'institutional','revenue','etf','overnight'}."""
+    t0 = time.perf_counter()
+    tm: dict[str, float] = {}
     out_dir = out_dir or ROOT / "out"
     log_dir = log_dir or ROOT / "logs" / "runs" / trade_date.replace("-", "")
-    log_dir.mkdir(parents=True, exist_ok=True)
+    if not light:
+        log_dir.mkdir(parents=True, exist_ok=True)
     cal = calendar or TradingCalendar(store.dates("daily_prices") + [trade_date])
     prev_date = cal.prev(trade_date)
     if mode == "live":
@@ -125,48 +211,77 @@ def run_day(trade_date: str, store: HistoryStore, prev: Settlement, rb: RuleBook
     else:
         as_of = f"{trade_date}T{run_time}+08:00"
         started = datetime.fromisoformat(as_of)
-    view = PITView(store, as_of)
     universe = sorted(rb.universe)
-    fs = build_features(view, universe, trade_date)
+    faults = data_faults or set()
+    fs, etf_h, etf_meta, rev_asof, has_rev, reads, ovn = cached_features(store, as_of, trade_date, universe,
+                                                                        use_cache)
+    tm["data_features"] = time.perf_counter() - t0
+    if faults:
+        fs = _inject_faults(fs, faults)
+        if "etf" in faults:
+            etf_h, etf_meta = {}, {}
+        if "revenue" in faults:
+            has_rev = False
+        if "overnight" in faults:
+            ovn = None
     notes = []
     if fs.last_data_date != prev_date:
         notes.append(f"最新價量日 {fs.last_data_date} ≠ 前一交易日 {prev_date}")
     closes_prev = {t: D(round(float(v), 4)) for t, v in fs.features["close_prev"].dropna().items()}
+
+    t1 = time.perf_counter()
+    tp = B.turnover_params(cfg)
+    state = json.loads(json.dumps(prev.agent_state or {}))
+    di = state.get("day_index", -1) + 1
+    held = {t for t, s in prev.holdings.items() if s > 0}
     sc = score(fs.features, cfg["score_weights"], method or cfg["baseline"]["method"])
-    save_features(fs, log_dir / "features")
-    save_scores(sc, trade_date, log_dir / "scores")
-    etf_h, etf_meta = etf_holdings_from_view(view)
+    sc, new_ema = apply_turnover_scoring(sc, state.get("score_ema", {}), held, tp)
+    holding_days = {t: di - int(state.get("entry_index", {}).get(t, di - 10**6)) for t in held}
+    last_rb = state.get("last_rebalance_index")
+    is_rb = (last_rb is None) or (di - int(last_rb) >= int(tp["rebalance_every"])) or not held
+    regime_tuple = market_regime(fs, ovn, cfg) if cfg.get("regime", {}).get("use_v0", False) else None
+    tm["ranking"] = time.perf_counter() - t1
+    if not light:
+        save_features(fs, log_dir / "features")
+        save_scores(sc, trade_date, log_dir / "scores")
     nav_prev = prev.nav
+
+    t2 = time.perf_counter()
     if fs.last_data_date != prev_date and prev_date is not None:
         result = FallbackToPreviousPortfolio(f"資料不完整：最新價量日 {fs.last_data_date}，前一交易日 {prev_date}")
     else:
         result = construct(sc, prev.holdings, prev.cash, nav_prev, closes_prev, rb, cfg, fs.market,
-                           etf_h or None, etf_meta, method)
-    rev = view.monthly_revenue()
-    rev_asof = str(rev["available_at"].max()) if len(rev) else None
-    sources = build_sources(prev_date or trade_date, mode, store_is_fixture, rev_asof, bool(len(rev)))
+                           etf_h or None, etf_meta, method, holding_days, is_rb,
+                           regime_tuple[:4] if regime_tuple else None)
+    tm["portfolio"] = time.perf_counter() - t2
+    sources = build_sources(prev_date or trade_date, mode, store_is_fixture, rev_asof, has_rev)
 
     def make(result_obj):
+        ta = time.perf_counter()
         g, info = build_graph(trade_date, fs, sc, result_obj, prev.holdings, prev.cash, nav_prev, closes_prev,
                               rb, cfg, sources)
-        elapsed = max(1, int(time.time() - t0))
+        elapsed = max(1, int(time.perf_counter() - t0))
         completed = (started + timedelta(seconds=elapsed)) if mode != "live" else datetime.now(TPE).replace(microsecond=0)
         md = {"model_provider": cfg["runtime"]["model_provider"], "model_version": cfg["runtime"]["model_version"],
               "run_started_at": started.isoformat(), "run_completed_at": completed.isoformat(),
               "input_tokens": 0, "output_tokens": 0, "tool_use_count": 0, "code_version": code_version()}
         doc, idmap = export_dplan(g, team_id, md)
         path = write_dplan(doc, out_dir)
+        tb = time.perf_counter()
         ctx = ValidationContext(prev_holdings=dict(prev.holdings), prev_cash=prev.cash, closes_prev=closes_prev,
                                 prev_nav=nav_prev, submission_time=completed.isoformat(), expected_team_id=team_id,
                                 filename=str(path), etf_holdings=etf_h or None, etf_data_date=etf_meta.get("date"),
                                 etf_synthetic=etf_meta.get("synthetic", False),
                                 active_share_target=D(cfg["strategy_buffers"]["active_share_target"]))
         rep = validate_dplan(doc, ctx, rb)
-        (log_dir / "evidence_graph.json").write_text(json.dumps(g.to_dict(), ensure_ascii=False, indent=1,
+        tm["dplan"] = tm.get("dplan", 0) + (tb - ta)
+        tm["validation"] = tm.get("validation", 0) + (time.perf_counter() - tb)
+        if not light:
+            (log_dir / "evidence_graph.json").write_text(json.dumps(g.to_dict(), ensure_ascii=False, indent=1,
+                                                                    default=str), encoding="utf-8")
+            (log_dir / "id_map.json").write_text(json.dumps(idmap, ensure_ascii=False, indent=1), encoding="utf-8")
+            (log_dir / "validation.json").write_text(json.dumps(rep.to_dict(), ensure_ascii=False, indent=1,
                                                                 default=str), encoding="utf-8")
-        (log_dir / "id_map.json").write_text(json.dumps(idmap, ensure_ascii=False, indent=1), encoding="utf-8")
-        (log_dir / "validation.json").write_text(json.dumps(rep.to_dict(), ensure_ascii=False, indent=1,
-                                                            default=str), encoding="utf-8")
         return path, doc, rep
 
     path, doc, rep = make(result)
@@ -175,13 +290,41 @@ def run_day(trade_date: str, store: HistoryStore, prev: Settlement, rb: RuleBook
                      + "; ".join(f"{c.rule_id}:{c.message}" for c in rep.failures[:5]))
         result = FallbackToPreviousPortfolio("D-Plan 驗證失敗：" + "; ".join(c.rule_id for c in rep.failures[:5]))
         path, doc, rep = make(result)
+    traded = bool(doc and doc.get("orders"))
+    state.update({"day_index": di, "score_ema": new_ema,
+                  "last_rebalance_index": di if (traded or last_rb is None) else last_rb,
+                  "regime": None if regime_tuple is None else {"regime": regime_tuple[0], "score": regime_tuple[4]}})
+    tm["total"] = time.perf_counter() - t0
     reports = getattr(result, "reports", []) or []
-    (log_dir / "portfolio_reports.json").write_text(json.dumps(
-        {"fallback": bool(getattr(result, "is_fallback", False)), "reason": getattr(result, "reason", None),
-         "notes": notes + list(getattr(result, "notes", [])), "reports": [r.to_dict() for r in reports],
-         "pit_reads": view.reads, "as_of": as_of}, ensure_ascii=False, indent=1, default=str), encoding="utf-8")
+    if not light:
+        (log_dir / "portfolio_reports.json").write_text(json.dumps(
+            {"fallback": bool(getattr(result, "is_fallback", False)), "reason": getattr(result, "reason", None),
+             "notes": notes + list(getattr(result, "notes", [])), "reports": [r.to_dict() for r in reports],
+             "pit_reads": reads, "as_of": as_of, "timings_sec": tm, "code_version": code_version()},
+            ensure_ascii=False, indent=1, default=str), encoding="utf-8")
     return DayResult(trade_date, prev_date, path, doc, rep, result, fs, sc, closes_prev,
-                     bool(getattr(result, "is_fallback", False)), notes + list(getattr(result, "notes", [])))
+                     bool(getattr(result, "is_fallback", False)), notes + list(getattr(result, "notes", [])),
+                     state, tm, etf_meta, getattr(result, "active_share", None))
+
+
+def _inject_faults(fs, faults: set[str]):
+    """Copy of the FeatureSet with selected inputs removed (fault-injection tests)."""
+    import copy
+    import numpy as np
+    f2 = copy.copy(fs)
+    df = fs.features.copy()
+    if "institutional" in faults:
+        for c in ("institutional_flow_5d", "institutional_flow_20d", "inst_net_5d_shares", "inst_net_20d_shares"):
+            df[c] = np.nan
+    if "revenue" in faults:
+        for c in ("revenue_yoy", "revenue_mom"):
+            df[c] = np.nan
+        df["revenue_ym"] = None
+    if "overnight" in faults:
+        for c in [c for c in df.columns if c.startswith("overnight_") or c in ("tsm_adr_ret", "taiex_futures_night_ret", "usd_twd_ret")]:
+            df[c] = np.nan
+    f2.features = df
+    return f2
 
 
 def day_market(store: HistoryStore, d: str) -> DayMarket:

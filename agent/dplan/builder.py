@@ -160,7 +160,9 @@ def build_graph(trade_date: str, fs, scores: pd.DataFrame, result, prev_holdings
           refs=["fact:market"])
 
     if not info["fallback"]:
-        band = cfg["turnover"]["no_trade_band"]
+        from agent.portfolio.baseline import turnover_params
+        tpar = turnover_params(cfg)
+        band = tpar["rebalance_threshold"]
         sc = scores["score"].to_dict() if "score" in scores else {}
         cur_w = {t: Decimal(s) * D(closes_prev[t]) / nav_prev for t, s in prev_h.items()}
         for d in decisions:
@@ -170,7 +172,7 @@ def build_graph(trade_date: str, fs, scores: pd.DataFrame, result, prev_holdings
             ctx = {"ticker": t, "name": rb.universe[t]["name"], "action": d["action"],
                    "target_weight": d["target_weight"], "current_weight": float(cur_w.get(t, 0)),
                    "rank": rank_of.get(t), "n_eligible": n_elig, "score": sc.get(t),
-                   "hold_limit": cfg["strategy_buffers"]["target_holdings"] + cfg["turnover"]["hold_buffer"],
+                   "hold_limit": tpar["hold_rank"],
                    "funding_for": bool(funding.get(d["decision_id"])), "values": vals}
             g.add("Signal", f"sig:{t}", {"rank": ctx["rank"], "score": ctx["score"], "n_eligible": n_elig})
             g.add("Inference", f"inf:{t}", {"logic": writer.decision_logic(ctx),

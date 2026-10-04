@@ -52,3 +52,26 @@ def save_scores(scores: pd.DataFrame, trade_date: str, out_dir: Path | None = No
     p = out_dir / f"{trade_date.replace('-', '')}.parquet"
     scores.reset_index().to_parquet(p, index=False)
     return p
+
+
+def apply_turnover_scoring(sc: pd.DataFrame, ema_prev: dict[str, float], held: set[str],
+                           tp: dict) -> tuple[pd.DataFrame, dict[str, float]]:
+    """Score smoothing (EMA) + turnover penalty, then re-rank.
+
+      smoothed = alpha × raw + (1 − alpha) × smoothed_{t−1}      (first observation: raw)
+      adjusted = smoothed − lambda × cost_units   for names NOT currently held
+    `score` becomes the adjusted score used for selection; `raw_score`, `smoothed_score` kept.
+    Only past values of the same cross-sectional score are used (no look-ahead)."""
+    out = sc.copy()
+    alpha = float(tp["score_ema_alpha"])
+    raw = out["score"]
+    prev = pd.Series(ema_prev, dtype="float64").reindex(out.index)
+    smoothed = (alpha * raw + (1 - alpha) * prev).where(prev.notna(), raw)
+    pen = float(tp["turnover_penalty_lambda"]) * float(tp["turnover_cost_score_units"])
+    adj = smoothed - pd.Series([0.0 if t in held else pen for t in out.index], index=out.index)
+    out["raw_score"] = raw
+    out["smoothed_score"] = smoothed
+    out["score"] = adj.where(out["eligible"])
+    out["rank"] = out["score"].rank(ascending=False, method="first")
+    new_ema = {t: float(v) for t, v in smoothed.items() if pd.notna(v)}
+    return out.sort_values("rank", na_position="last"), new_ema

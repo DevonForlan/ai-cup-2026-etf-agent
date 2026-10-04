@@ -18,7 +18,8 @@ from agent.config import ROOT, load_strategy  # noqa: E402
 from agent.data.loaders import HistoryStore  # noqa: E402
 from agent.data.providers import LiveProvider  # noqa: E402
 from agent.engine.rules import load_rulebook  # noqa: E402
-from agent.pipeline import run_day  # noqa: E402
+from agent.pipeline import (DirtyWorkingTreeError, code_version, require_clean_tree,  # noqa: E402
+                            run_day, working_tree_dirty)
 from agent.sim.calendar import TradingCalendar  # noqa: E402
 from agent.sim.models import Settlement  # noqa: E402
 
@@ -35,7 +36,17 @@ def main(argv=None) -> int:
     ap.add_argument("--out", default=str(ROOT / "out"))
     ap.add_argument("--method", default=None, help="B0_score_tiered|B1_score_equal|B2_momentum|B3_institutional")
     ap.add_argument("--fixture", action="store_true", help="history is a fixture/synthetic store")
+    ap.add_argument("--competition", action="store_true",
+                    help="official competition run: refuses to run from a dirty git working tree")
     a = ap.parse_args(argv)
+    if a.competition:
+        try:
+            require_clean_tree()
+        except DirtyWorkingTreeError as e:
+            print(f"[BLOCKED] {e}")
+            return 2
+    elif working_tree_dirty():
+        print(f"[warning] working tree dirty -> code_version={code_version()} (not allowed with --competition)")
 
     cfg = load_strategy(a.config)
     rb = load_rulebook()

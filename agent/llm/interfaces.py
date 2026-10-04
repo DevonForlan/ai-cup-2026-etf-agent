@@ -141,13 +141,18 @@ class TemplateThesisWriter:
         for t, cw, tw, rk, reason in items:
             r = f"排名 {rk}" if rk else "排名 -"
             parts.append(f"{t}（{r}，現權重 {cw:.2%}）")
+        if items and all(it[4] == "no_rebalance_day" for it in items):
+            return ("本日非策略再平衡日；以前日收盤價檢查現有組合之檔數、權重、現金與 Active Share 均合規，"
+                    "為避免來回成本（約 0.585%）維持不動：" + "、".join(parts))
         return ("下列持股仍在續抱範圍內，且目標與現權重差距小於無交易帶 "
                 f"{band:.1%} 或推導張數不變，為避免來回成本（約 0.585%）維持不動：" + "、".join(parts))
 
     def no_trade_reason(self, reason: str, band: float) -> str:
         return {"no_trade_band": f"權重偏離小於無交易帶 {band:.1%}",
                 "same_lots": "目標權重推導張數與現持相同",
-                "decision_limit": "單日決策數上限（30），本日延後調整"}.get(reason, "維持不動")
+                "decision_limit": "單日決策數上限（30），本日延後調整",
+                "no_rebalance_day": "非再平衡日，組合合規，維持不動",
+                "min_holding": "未滿最短持有天數，維持不動"}.get(reason, "維持不動")
 
     def fallback_logic(self, reason: str) -> str:
         return f"本日組合建構未通過合規或資料檢查（{reason[:300]}），依預設安全機制維持前日組合不交易。"

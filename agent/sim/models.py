@@ -54,6 +54,7 @@ class Settlement:
     closes: dict[str, Decimal] = field(default_factory=dict)       # closes used for NAV
     assumptions: dict = field(default_factory=dict)
     initial_nav: Decimal | None = None             # competition starting NAV (for MDD incl. initial)
+    agent_state: dict = field(default_factory=dict)  # OUR strategy state (score EMA, entry dates); not official
 
     @property
     def nav_with_accrued(self) -> Decimal:

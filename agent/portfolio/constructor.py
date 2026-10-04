@@ -82,11 +82,39 @@ def estimate(orders: list[DerivedOrder], prev_h: dict[str, int], prev_cash: Deci
     return h, cash, nav, w
 
 
+def _try_hold(prev_h, prev_cash, nav_prev, closes_prev, rb, cfg, scores, etf_holdings, etf_meta,
+              regime, stance, why, cash_rng):
+    """Non-rebalance day: keep every holding (all NO_TRADE) if the unchanged portfolio passes all
+    official checks at T-1 close and every name is still eligible. Otherwise return None."""
+    elig = scores["eligible"].to_dict() if "eligible" in scores else {}
+    if any(not elig.get(t, False) for t in prev_h):
+        return None
+    rep = C.check_portfolio(prev_h, closes_prev, prev_cash, rb, "維持(預估)", "post_trade_estimate")
+    _, _, est_nav, est_w = estimate([], prev_h, prev_cash, closes_prev, rb)
+    as_res = None
+    if etf_holdings:
+        as_res = compute_active_share(est_w, etf_holdings, rb.active_etfs, rb.assumptions.active_share_mode,
+                                      (etf_meta or {}).get("date"), (etf_meta or {}).get("synthetic", False))
+        C.check_active_share(as_res, rb, None, rep)
+    caps = _caps(prev_h, rb, cfg)
+    if rep.failures or any(est_w[t] > caps[t] + D("0.01") for t in est_w):
+        return None
+    w = {t: est_w[t].quantize(Q, rounding="ROUND_FLOOR") for t in prev_h}
+    plan = [PlannedDecision(t, "NO_TRADE", w[t], s, s, "no_rebalance_day") for t, s in sorted(prev_h.items())]
+    rank_of = {t: int(r) for t, r in scores["rank"].dropna().items()} if "rank" in scores else {}
+    return TargetPortfolio(w, prev_cash / est_nav, plan, [], regime, stance, why, cash_rng,
+                           {"kept": list(prev_h), "new": [], "dropped": [], "rank_of": rank_of, "hold_mode": True},
+                           dict(prev_h), prev_cash, est_nav, est_w, as_res, [rep], ["非再平衡日：維持組合"])
+
+
 def construct(scores: pd.DataFrame, prev_holdings: dict[str, int], prev_cash: Decimal, nav_prev: Decimal,
               closes_prev: dict, rb: RuleBook, cfg: dict, market: dict,
               etf_holdings: dict | None = None, etf_meta: dict | None = None,
-              method: str | None = None) -> TargetPortfolio | FallbackToPreviousPortfolio:
-    sb, tv = cfg["strategy_buffers"], cfg["turnover"]
+              method: str | None = None, holding_days: dict[str, int] | None = None,
+              is_rebalance_day: bool = True, regime_override: tuple | None = None
+              ) -> TargetPortfolio | FallbackToPreviousPortfolio:
+    sb = cfg["strategy_buffers"]
+    tparams = B.turnover_params(cfg)
     method = method or cfg["baseline"]["method"]
     lot = rb.rules.lot_size
     notes: list[str] = []
@@ -96,14 +124,20 @@ def construct(scores: pd.DataFrame, prev_holdings: dict[str, int], prev_cash: De
     if missing_px:
         return FallbackToPreviousPortfolio(f"前日持股缺收盤價 {missing_px}")
 
-    regime, stance, cash_rng, why = B.regime_from_market(market, cfg)
+    regime, stance, cash_rng, why = regime_override or B.regime_from_market(market, cfg)
+    if not is_rebalance_day and prev_h:
+        held = _try_hold(prev_h, D(prev_cash), nav_prev, closes_prev, rb, cfg, scores, etf_holdings, etf_meta,
+                         regime, stance, why, cash_rng)
+        if held is not None:
+            return held
+        notes.append("非再平衡日但維持現有組合未通過檢查 → 改為完整再平衡")
     cash_lo = max(D(cash_rng[0]), D(sb["cash_target_min"]) if regime != "risk_on" else D(cash_rng[0]))
     cash_hi = min(D(cash_rng[1]), D("0.20"))
     cash_mid = (cash_lo + cash_hi) / 2
 
     exclude: set[str] = set()
     for attempt in range(6):
-        sel, info = B.select_names(scores, prev_h, cfg, exclude)
+        sel, info = B.select_names(scores, prev_h, cfg, exclude, holding_days)
         if len(sel) < rb.rules.holdings_min:
             return FallbackToPreviousPortfolio(f"可選標的不足 {len(sel)} 檔")
         raw = B.equal_raw_weights(sel) if method in ("B1_score_equal", "B2_momentum", "B3_institutional") \
@@ -121,7 +155,7 @@ def construct(scores: pd.DataFrame, prev_holdings: dict[str, int], prev_cash: De
         return FallbackToPreviousPortfolio("整張可行性調整超過次數")
 
     # no-trade band for existing holdings
-    band = D(tv["no_trade_band"])
+    band = D(str(tparams["rebalance_threshold"]))
     no_trade: set[str] = set()
     cur_w = {t: Decimal(s) * D(closes_prev[t]) / nav_prev for t, s in prev_h.items()}
     for t in sel:
@@ -168,14 +202,27 @@ def construct(scores: pd.DataFrame, prev_holdings: dict[str, int], prev_cash: De
                 w[t] = (w[t] + cut * room[t] / tot).quantize(Q, rounding="ROUND_FLOOR")
             notes.append(f"Active Share 調整：{t0} −{cut}")
 
-    target_w = {t: w[t].quantize(Q, rounding="ROUND_FLOOR") for t in sel}
-    plan = plan_decisions(target_w, prev_h, no_trade, nav_prev, closes_prev, lot)
-    plan = enforce_decision_limit(plan, 30)
-    decisions = [{"ticker": p.ticker, "decision_id": f"tmp{i}", "target_weight": float(p.target_weight)}
-                 for i, p in enumerate(plan) if p.action != "NO_TRADE"]
-    orders = derive_orders(decisions, prev_h, nav_prev, closes_prev, lot)
-    if len(orders) > 30:
-        return FallbackToPreviousPortfolio(f"委託筆數 {len(orders)} > 30")
+    s_shift = D(sb["stress_price_shift"])
+    scale = Decimal(1)
+    for attempt in range(4):
+        target_w = {t: (w[t] if t in no_trade else w[t] * scale).quantize(Q, rounding="ROUND_FLOOR") for t in sel}
+        plan = plan_decisions(target_w, prev_h, no_trade, nav_prev, closes_prev, lot)
+        plan = enforce_decision_limit(plan, 30)
+        decisions = [{"ticker": p.ticker, "decision_id": f"tmp{i}", "target_weight": float(p.target_weight)}
+                     for i, p in enumerate(plan) if p.action != "NO_TRADE"]
+        orders = derive_orders(decisions, prev_h, nav_prev, closes_prev, lot)
+        if len(orders) > 30:
+            return FallbackToPreviousPortfolio(f"委託筆數 {len(orders)} > 30")
+        # stress: buys +5% / sells -5% must not push cash negative -> otherwise raise the cash buffer and retry
+        _, c_bad, n_bad, _ = estimate(orders, prev_h, D(prev_cash), closes_prev, rb, s_shift, s_shift)
+        if c_bad >= 0 or attempt == 3:
+            break
+        traded_w = sum((target_w[t] for t in sel if t not in no_trade), Decimal(0))
+        need = (-c_bad) / n_bad + Decimal("0.005")
+        if traded_w <= need:
+            break
+        scale = scale * (1 - need / traded_w)
+        notes.append(f"壓力測試現金不足，交易部位權重縮放 ×{float(scale):.4f}")
 
     reports = []
     pre = C.check_target_weights(target_w, rb, "目標")
@@ -193,14 +240,12 @@ def construct(scores: pd.DataFrame, prev_holdings: dict[str, int], prev_cash: De
                  C.SRC["R_ACTIVE_SHARE"])
     reports.append(post)
     stress = Report("stress")
-    s = D(sb["stress_price_shift"])
-    for name, bs, ss in (("buy+5%/sell-5%", s, s), ("buy-5%/sell+5%", -s, -s)):
-        _, c2, n2, w2 = estimate(orders, prev_h, D(prev_cash), closes_prev, rb, bs, ss)
+    for name, bs, ss in (("buy+5%/sell-5%", s_shift, s_shift), ("buy-5%/sell+5%", -s_shift, -s_shift)):
+        _, c2, n2, _ = estimate(orders, prev_h, D(prev_cash), closes_prev, rb, bs, ss)
         cw = c2 / n2 if n2 > 0 else Decimal(0)
         ok = c2 >= 0 and cw < rb.rules.cash_max_weight
         stress.add("STRESS_CASH", Status.PASS if ok else Status.FAIL, f"{name}: 現金 {c2:,.0f}（{float(cw):.3%}）",
                    cw, [0, rb.rules.cash_max_weight], "策略壓力測試（非官方）")
-        mx = max((x for t, x in w2.items()), default=Decimal(0))
     reports.append(stress)
     fails = [c for r in reports for c in r.failures]
     if fails:

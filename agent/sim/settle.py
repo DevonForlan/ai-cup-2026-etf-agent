@@ -72,7 +72,9 @@ def _violations(holdings, closes, cash, nav, rb: RuleBook, bought: set[str], dri
 
 
 def settle(prev: Settlement, orders: list[dict] | None, mkt: DayMarket, rb: RuleBook,
-           assumptions: Assumptions | None = None, active_share_min: Decimal | None = None) -> Settlement:
+           assumptions: Assumptions | None = None, active_share_min: Decimal | None = None,
+           buy_price_mult: Decimal | None = None, sell_price_mult: Decimal | None = None) -> Settlement:
+    """buy/sell_price_mult: RESEARCH-ONLY slippage stress (e.g. 1.002 / 0.998). Official = None (pure VWAP)."""
     a = assumptions or rb.assumptions
     r = rb.rules
     mode = a.fee_rounding_mode
@@ -112,6 +114,10 @@ def settle(prev: Settlement, orders: list[dict] | None, mkt: DayMarket, rb: Rule
                     if px is None:
                         executions.append({"ticker": t, "side": o["side"], "shares": n, "status": "SKIPPED_NO_TRADE"})
                         continue
+                    if o["side"] == "BUY" and buy_price_mult is not None:
+                        px = px * D(buy_price_mult)
+                    if o["side"] == "SELL" and sell_price_mult is not None:
+                        px = px * D(sell_price_mult)
                     val = Decimal(n) * px
                     traded += val
                     if o["side"] == "BUY":
@@ -172,4 +178,5 @@ def settle(prev: Settlement, orders: list[dict] | None, mkt: DayMarket, rb: Rule
                      "stock_dividend_odd_shares": a.stock_dividend_odd_shares,
                      "rejected_dplan_counts_as_missing": True},
         initial_nav=prev.initial_nav,
+        agent_state=dict(prev.agent_state or {}),
     )

@@ -52,7 +52,8 @@ def _coerce(df: pd.DataFrame, table: str) -> pd.DataFrame:
         if c not in df.columns:
             df[c] = pd.NA
         if t == "str":
-            df[c] = df[c].astype("string")
+            # plain Python objects: much faster than Arrow strings for row-wise access
+            df[c] = df[c].astype(object).where(df[c].notna(), None)
         elif t == "Int64":
             df[c] = pd.to_numeric(df[c], errors="coerce").round().astype("Int64")
         elif t == "bool":
