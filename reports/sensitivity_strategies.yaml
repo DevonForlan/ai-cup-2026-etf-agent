@@ -1,0 +1,1140 @@
+- strategy_id: S_HN_rev_w+-10
+  group: sensitivity
+  desc: HN_rev perturbation w+-10
+  overrides:
+    score_weights:
+      ret_5d: 0.0
+      ret_20d: 0.0
+      ret_60d: 0.0
+      relative_strength_20d: 0.0
+      relative_strength_60d: 0.0
+      distance_to_52w_high: 0.0
+      institutional_flow_5d: 0.0
+      institutional_flow_20d: 0.0
+      revenue_yoy: 0.77
+      revenue_mom: 0.27
+      volatility_20d: 0.0
+      volume_ratio_5d: 0.0
+    turnover:
+      score_ema_alpha: 0.4
+      entry_rank: 20
+      hold_rank: 35
+      min_holding_days: 5
+      rebalance_threshold: 0.02
+      swap_score_margin: 0.05
+      turnover_penalty_lambda: 1
+      rebalance_every: 100
+      max_new_names_per_day: 3
+    baseline.method: B0_score_tiered
+  parent: HN_rev
+- strategy_id: S_HN_rev_w-+10
+  group: sensitivity
+  desc: HN_rev perturbation w-+10
+  overrides:
+    score_weights:
+      ret_5d: 0.0
+      ret_20d: 0.0
+      ret_60d: 0.0
+      relative_strength_20d: 0.0
+      relative_strength_60d: 0.0
+      distance_to_52w_high: 0.0
+      institutional_flow_5d: 0.0
+      institutional_flow_20d: 0.0
+      revenue_yoy: 0.63
+      revenue_mom: 0.33
+      volatility_20d: 0.0
+      volume_ratio_5d: 0.0
+    turnover:
+      score_ema_alpha: 0.4
+      entry_rank: 20
+      hold_rank: 35
+      min_holding_days: 5
+      rebalance_threshold: 0.02
+      swap_score_margin: 0.05
+      turnover_penalty_lambda: 1
+      rebalance_every: 100
+      max_new_names_per_day: 3
+    baseline.method: B0_score_tiered
+  parent: HN_rev
+- strategy_id: S_HN_rev_w+-20
+  group: sensitivity
+  desc: HN_rev perturbation w+-20
+  overrides:
+    score_weights:
+      ret_5d: 0.0
+      ret_20d: 0.0
+      ret_60d: 0.0
+      relative_strength_20d: 0.0
+      relative_strength_60d: 0.0
+      distance_to_52w_high: 0.0
+      institutional_flow_5d: 0.0
+      institutional_flow_20d: 0.0
+      revenue_yoy: 0.84
+      revenue_mom: 0.24
+      volatility_20d: 0.0
+      volume_ratio_5d: 0.0
+    turnover:
+      score_ema_alpha: 0.4
+      entry_rank: 20
+      hold_rank: 35
+      min_holding_days: 5
+      rebalance_threshold: 0.02
+      swap_score_margin: 0.05
+      turnover_penalty_lambda: 1
+      rebalance_every: 100
+      max_new_names_per_day: 3
+    baseline.method: B0_score_tiered
+  parent: HN_rev
+- strategy_id: S_HN_rev_w-+20
+  group: sensitivity
+  desc: HN_rev perturbation w-+20
+  overrides:
+    score_weights:
+      ret_5d: 0.0
+      ret_20d: 0.0
+      ret_60d: 0.0
+      relative_strength_20d: 0.0
+      relative_strength_60d: 0.0
+      distance_to_52w_high: 0.0
+      institutional_flow_5d: 0.0
+      institutional_flow_20d: 0.0
+      revenue_yoy: 0.56
+      revenue_mom: 0.36
+      volatility_20d: 0.0
+      volume_ratio_5d: 0.0
+    turnover:
+      score_ema_alpha: 0.4
+      entry_rank: 20
+      hold_rank: 35
+      min_holding_days: 5
+      rebalance_threshold: 0.02
+      swap_score_margin: 0.05
+      turnover_penalty_lambda: 1
+      rebalance_every: 100
+      max_new_names_per_day: 3
+    baseline.method: B0_score_tiered
+  parent: HN_rev
+- strategy_id: S_HN_rev_hold21
+  group: sensitivity
+  desc: HN_rev perturbation hold21
+  overrides:
+    score_weights:
+      ret_5d: 0.0
+      ret_20d: 0.0
+      ret_60d: 0.0
+      relative_strength_20d: 0.0
+      relative_strength_60d: 0.0
+      distance_to_52w_high: 0.0
+      institutional_flow_5d: 0.0
+      institutional_flow_20d: 0.0
+      revenue_yoy: 0.7
+      revenue_mom: 0.3
+      volatility_20d: 0.0
+      volume_ratio_5d: 0.0
+    turnover:
+      score_ema_alpha: 0.4
+      entry_rank: 20
+      hold_rank: 35
+      min_holding_days: 5
+      rebalance_threshold: 0.02
+      swap_score_margin: 0.05
+      turnover_penalty_lambda: 1
+      rebalance_every: 100
+      max_new_names_per_day: 3
+    baseline.method: B0_score_tiered
+    strategy_buffers.target_holdings: 21
+    strategy_buffers.target_holdings_min: 20
+    strategy_buffers.target_holdings_max: 23
+  parent: HN_rev
+- strategy_id: S_HN_rev_hold22
+  group: sensitivity
+  desc: HN_rev perturbation hold22
+  overrides:
+    score_weights:
+      ret_5d: 0.0
+      ret_20d: 0.0
+      ret_60d: 0.0
+      relative_strength_20d: 0.0
+      relative_strength_60d: 0.0
+      distance_to_52w_high: 0.0
+      institutional_flow_5d: 0.0
+      institutional_flow_20d: 0.0
+      revenue_yoy: 0.7
+      revenue_mom: 0.3
+      volatility_20d: 0.0
+      volume_ratio_5d: 0.0
+    turnover:
+      score_ema_alpha: 0.4
+      entry_rank: 20
+      hold_rank: 35
+      min_holding_days: 5
+      rebalance_threshold: 0.02
+      swap_score_margin: 0.05
+      turnover_penalty_lambda: 1
+      rebalance_every: 100
+      max_new_names_per_day: 3
+    baseline.method: B0_score_tiered
+    strategy_buffers.target_holdings: 22
+    strategy_buffers.target_holdings_min: 21
+    strategy_buffers.target_holdings_max: 24
+  parent: HN_rev
+- strategy_id: S_HN_rev_hold28
+  group: sensitivity
+  desc: HN_rev perturbation hold28
+  overrides:
+    score_weights:
+      ret_5d: 0.0
+      ret_20d: 0.0
+      ret_60d: 0.0
+      relative_strength_20d: 0.0
+      relative_strength_60d: 0.0
+      distance_to_52w_high: 0.0
+      institutional_flow_5d: 0.0
+      institutional_flow_20d: 0.0
+      revenue_yoy: 0.7
+      revenue_mom: 0.3
+      volatility_20d: 0.0
+      volume_ratio_5d: 0.0
+    turnover:
+      score_ema_alpha: 0.4
+      entry_rank: 20
+      hold_rank: 35
+      min_holding_days: 5
+      rebalance_threshold: 0.02
+      swap_score_margin: 0.05
+      turnover_penalty_lambda: 1
+      rebalance_every: 100
+      max_new_names_per_day: 3
+    baseline.method: B0_score_tiered
+    strategy_buffers.target_holdings: 28
+    strategy_buffers.target_holdings_min: 27
+    strategy_buffers.target_holdings_max: 30
+  parent: HN_rev
+- strategy_id: S_HN_rev_hold29
+  group: sensitivity
+  desc: HN_rev perturbation hold29
+  overrides:
+    score_weights:
+      ret_5d: 0.0
+      ret_20d: 0.0
+      ret_60d: 0.0
+      relative_strength_20d: 0.0
+      relative_strength_60d: 0.0
+      distance_to_52w_high: 0.0
+      institutional_flow_5d: 0.0
+      institutional_flow_20d: 0.0
+      revenue_yoy: 0.7
+      revenue_mom: 0.3
+      volatility_20d: 0.0
+      volume_ratio_5d: 0.0
+    turnover:
+      score_ema_alpha: 0.4
+      entry_rank: 20
+      hold_rank: 35
+      min_holding_days: 5
+      rebalance_threshold: 0.02
+      swap_score_margin: 0.05
+      turnover_penalty_lambda: 1
+      rebalance_every: 100
+      max_new_names_per_day: 3
+    baseline.method: B0_score_tiered
+    strategy_buffers.target_holdings: 29
+    strategy_buffers.target_holdings_min: 28
+    strategy_buffers.target_holdings_max: 30
+  parent: HN_rev
+- strategy_id: S_HN_rev_cash80
+  group: sensitivity
+  desc: HN_rev perturbation cash80
+  overrides:
+    score_weights:
+      ret_5d: 0.0
+      ret_20d: 0.0
+      ret_60d: 0.0
+      relative_strength_20d: 0.0
+      relative_strength_60d: 0.0
+      distance_to_52w_high: 0.0
+      institutional_flow_5d: 0.0
+      institutional_flow_20d: 0.0
+      revenue_yoy: 0.7
+      revenue_mom: 0.3
+      volatility_20d: 0.0
+      volume_ratio_5d: 0.0
+    turnover:
+      score_ema_alpha: 0.4
+      entry_rank: 20
+      hold_rank: 35
+      min_holding_days: 5
+      rebalance_threshold: 0.02
+      swap_score_margin: 0.05
+      turnover_penalty_lambda: 1
+      rebalance_every: 100
+      max_new_names_per_day: 3
+    baseline.method: B0_score_tiered
+    regime.cash_by_regime:
+      risk_on:
+      - 0.024
+      - 0.056
+      neutral:
+      - 0.04
+      - 0.08
+      risk_off:
+      - 0.08
+      - 0.144
+  parent: HN_rev
+- strategy_id: S_HN_rev_turn80
+  group: sensitivity
+  desc: HN_rev perturbation turn80
+  overrides:
+    score_weights:
+      ret_5d: 0.0
+      ret_20d: 0.0
+      ret_60d: 0.0
+      relative_strength_20d: 0.0
+      relative_strength_60d: 0.0
+      distance_to_52w_high: 0.0
+      institutional_flow_5d: 0.0
+      institutional_flow_20d: 0.0
+      revenue_yoy: 0.7
+      revenue_mom: 0.3
+      volatility_20d: 0.0
+      volume_ratio_5d: 0.0
+    turnover:
+      score_ema_alpha: 0.4
+      entry_rank: 20
+      hold_rank: 35
+      min_holding_days: 4
+      rebalance_threshold: 0.016
+      swap_score_margin: 0.05
+      turnover_penalty_lambda: 1
+      rebalance_every: 100
+      max_new_names_per_day: 3
+    baseline.method: B0_score_tiered
+  parent: HN_rev
+- strategy_id: S_HN_rev_cash120
+  group: sensitivity
+  desc: HN_rev perturbation cash120
+  overrides:
+    score_weights:
+      ret_5d: 0.0
+      ret_20d: 0.0
+      ret_60d: 0.0
+      relative_strength_20d: 0.0
+      relative_strength_60d: 0.0
+      distance_to_52w_high: 0.0
+      institutional_flow_5d: 0.0
+      institutional_flow_20d: 0.0
+      revenue_yoy: 0.7
+      revenue_mom: 0.3
+      volatility_20d: 0.0
+      volume_ratio_5d: 0.0
+    turnover:
+      score_ema_alpha: 0.4
+      entry_rank: 20
+      hold_rank: 35
+      min_holding_days: 5
+      rebalance_threshold: 0.02
+      swap_score_margin: 0.05
+      turnover_penalty_lambda: 1
+      rebalance_every: 100
+      max_new_names_per_day: 3
+    baseline.method: B0_score_tiered
+    regime.cash_by_regime:
+      risk_on:
+      - 0.036
+      - 0.084
+      neutral:
+      - 0.06
+      - 0.12
+      risk_off:
+      - 0.12
+      - 0.2
+  parent: HN_rev
+- strategy_id: S_HN_rev_turn120
+  group: sensitivity
+  desc: HN_rev perturbation turn120
+  overrides:
+    score_weights:
+      ret_5d: 0.0
+      ret_20d: 0.0
+      ret_60d: 0.0
+      relative_strength_20d: 0.0
+      relative_strength_60d: 0.0
+      distance_to_52w_high: 0.0
+      institutional_flow_5d: 0.0
+      institutional_flow_20d: 0.0
+      revenue_yoy: 0.7
+      revenue_mom: 0.3
+      volatility_20d: 0.0
+      volume_ratio_5d: 0.0
+    turnover:
+      score_ema_alpha: 0.4
+      entry_rank: 20
+      hold_rank: 35
+      min_holding_days: 6
+      rebalance_threshold: 0.024
+      swap_score_margin: 0.05
+      turnover_penalty_lambda: 1
+      rebalance_every: 100
+      max_new_names_per_day: 3
+    baseline.method: B0_score_tiered
+  parent: HN_rev
+- strategy_id: S_HN_full_w+-10
+  group: sensitivity
+  desc: HN_full perturbation w+-10
+  overrides:
+    score_weights:
+      ret_5d: 0.0
+      ret_20d: 0.198
+      ret_60d: 0.108
+      relative_strength_20d: 0.11
+      relative_strength_60d: 0.054
+      distance_to_52w_high: 0.044
+      institutional_flow_5d: 0.108
+      institutional_flow_20d: 0.088
+      revenue_yoy: 0.126
+      revenue_mom: 0.066
+      volatility_20d: -0.09
+      volume_ratio_5d: 0.0
+    turnover:
+      score_ema_alpha: 0.4
+      entry_rank: 20
+      hold_rank: 35
+      min_holding_days: 5
+      rebalance_threshold: 0.02
+      swap_score_margin: 0.05
+      turnover_penalty_lambda: 1
+      rebalance_every: 100
+      max_new_names_per_day: 3
+    baseline.method: B0_score_tiered
+  parent: HN_full
+- strategy_id: S_HN_full_w-+10
+  group: sensitivity
+  desc: HN_full perturbation w-+10
+  overrides:
+    score_weights:
+      ret_5d: 0.0
+      ret_20d: 0.162
+      ret_60d: 0.132
+      relative_strength_20d: 0.09
+      relative_strength_60d: 0.066
+      distance_to_52w_high: 0.036
+      institutional_flow_5d: 0.132
+      institutional_flow_20d: 0.072
+      revenue_yoy: 0.154
+      revenue_mom: 0.054
+      volatility_20d: -0.11
+      volume_ratio_5d: 0.0
+    turnover:
+      score_ema_alpha: 0.4
+      entry_rank: 20
+      hold_rank: 35
+      min_holding_days: 5
+      rebalance_threshold: 0.02
+      swap_score_margin: 0.05
+      turnover_penalty_lambda: 1
+      rebalance_every: 100
+      max_new_names_per_day: 3
+    baseline.method: B0_score_tiered
+  parent: HN_full
+- strategy_id: S_HN_full_w+-20
+  group: sensitivity
+  desc: HN_full perturbation w+-20
+  overrides:
+    score_weights:
+      ret_5d: 0.0
+      ret_20d: 0.216
+      ret_60d: 0.096
+      relative_strength_20d: 0.12
+      relative_strength_60d: 0.048
+      distance_to_52w_high: 0.048
+      institutional_flow_5d: 0.096
+      institutional_flow_20d: 0.096
+      revenue_yoy: 0.112
+      revenue_mom: 0.072
+      volatility_20d: -0.08
+      volume_ratio_5d: 0.0
+    turnover:
+      score_ema_alpha: 0.4
+      entry_rank: 20
+      hold_rank: 35
+      min_holding_days: 5
+      rebalance_threshold: 0.02
+      swap_score_margin: 0.05
+      turnover_penalty_lambda: 1
+      rebalance_every: 100
+      max_new_names_per_day: 3
+    baseline.method: B0_score_tiered
+  parent: HN_full
+- strategy_id: S_HN_full_w-+20
+  group: sensitivity
+  desc: HN_full perturbation w-+20
+  overrides:
+    score_weights:
+      ret_5d: 0.0
+      ret_20d: 0.144
+      ret_60d: 0.144
+      relative_strength_20d: 0.08
+      relative_strength_60d: 0.072
+      distance_to_52w_high: 0.032
+      institutional_flow_5d: 0.144
+      institutional_flow_20d: 0.064
+      revenue_yoy: 0.168
+      revenue_mom: 0.048
+      volatility_20d: -0.12
+      volume_ratio_5d: 0.0
+    turnover:
+      score_ema_alpha: 0.4
+      entry_rank: 20
+      hold_rank: 35
+      min_holding_days: 5
+      rebalance_threshold: 0.02
+      swap_score_margin: 0.05
+      turnover_penalty_lambda: 1
+      rebalance_every: 100
+      max_new_names_per_day: 3
+    baseline.method: B0_score_tiered
+  parent: HN_full
+- strategy_id: S_HN_full_hold21
+  group: sensitivity
+  desc: HN_full perturbation hold21
+  overrides:
+    score_weights:
+      ret_5d: 0.0
+      ret_20d: 0.18
+      ret_60d: 0.12
+      relative_strength_20d: 0.1
+      relative_strength_60d: 0.06
+      distance_to_52w_high: 0.04
+      institutional_flow_5d: 0.12
+      institutional_flow_20d: 0.08
+      revenue_yoy: 0.14
+      revenue_mom: 0.06
+      volatility_20d: -0.1
+      volume_ratio_5d: 0.0
+    turnover:
+      score_ema_alpha: 0.4
+      entry_rank: 20
+      hold_rank: 35
+      min_holding_days: 5
+      rebalance_threshold: 0.02
+      swap_score_margin: 0.05
+      turnover_penalty_lambda: 1
+      rebalance_every: 100
+      max_new_names_per_day: 3
+    baseline.method: B0_score_tiered
+    strategy_buffers.target_holdings: 21
+    strategy_buffers.target_holdings_min: 20
+    strategy_buffers.target_holdings_max: 23
+  parent: HN_full
+- strategy_id: S_HN_full_hold22
+  group: sensitivity
+  desc: HN_full perturbation hold22
+  overrides:
+    score_weights:
+      ret_5d: 0.0
+      ret_20d: 0.18
+      ret_60d: 0.12
+      relative_strength_20d: 0.1
+      relative_strength_60d: 0.06
+      distance_to_52w_high: 0.04
+      institutional_flow_5d: 0.12
+      institutional_flow_20d: 0.08
+      revenue_yoy: 0.14
+      revenue_mom: 0.06
+      volatility_20d: -0.1
+      volume_ratio_5d: 0.0
+    turnover:
+      score_ema_alpha: 0.4
+      entry_rank: 20
+      hold_rank: 35
+      min_holding_days: 5
+      rebalance_threshold: 0.02
+      swap_score_margin: 0.05
+      turnover_penalty_lambda: 1
+      rebalance_every: 100
+      max_new_names_per_day: 3
+    baseline.method: B0_score_tiered
+    strategy_buffers.target_holdings: 22
+    strategy_buffers.target_holdings_min: 21
+    strategy_buffers.target_holdings_max: 24
+  parent: HN_full
+- strategy_id: S_HN_full_hold28
+  group: sensitivity
+  desc: HN_full perturbation hold28
+  overrides:
+    score_weights:
+      ret_5d: 0.0
+      ret_20d: 0.18
+      ret_60d: 0.12
+      relative_strength_20d: 0.1
+      relative_strength_60d: 0.06
+      distance_to_52w_high: 0.04
+      institutional_flow_5d: 0.12
+      institutional_flow_20d: 0.08
+      revenue_yoy: 0.14
+      revenue_mom: 0.06
+      volatility_20d: -0.1
+      volume_ratio_5d: 0.0
+    turnover:
+      score_ema_alpha: 0.4
+      entry_rank: 20
+      hold_rank: 35
+      min_holding_days: 5
+      rebalance_threshold: 0.02
+      swap_score_margin: 0.05
+      turnover_penalty_lambda: 1
+      rebalance_every: 100
+      max_new_names_per_day: 3
+    baseline.method: B0_score_tiered
+    strategy_buffers.target_holdings: 28
+    strategy_buffers.target_holdings_min: 27
+    strategy_buffers.target_holdings_max: 30
+  parent: HN_full
+- strategy_id: S_HN_full_hold29
+  group: sensitivity
+  desc: HN_full perturbation hold29
+  overrides:
+    score_weights:
+      ret_5d: 0.0
+      ret_20d: 0.18
+      ret_60d: 0.12
+      relative_strength_20d: 0.1
+      relative_strength_60d: 0.06
+      distance_to_52w_high: 0.04
+      institutional_flow_5d: 0.12
+      institutional_flow_20d: 0.08
+      revenue_yoy: 0.14
+      revenue_mom: 0.06
+      volatility_20d: -0.1
+      volume_ratio_5d: 0.0
+    turnover:
+      score_ema_alpha: 0.4
+      entry_rank: 20
+      hold_rank: 35
+      min_holding_days: 5
+      rebalance_threshold: 0.02
+      swap_score_margin: 0.05
+      turnover_penalty_lambda: 1
+      rebalance_every: 100
+      max_new_names_per_day: 3
+    baseline.method: B0_score_tiered
+    strategy_buffers.target_holdings: 29
+    strategy_buffers.target_holdings_min: 28
+    strategy_buffers.target_holdings_max: 30
+  parent: HN_full
+- strategy_id: S_HN_full_cash80
+  group: sensitivity
+  desc: HN_full perturbation cash80
+  overrides:
+    score_weights:
+      ret_5d: 0.0
+      ret_20d: 0.18
+      ret_60d: 0.12
+      relative_strength_20d: 0.1
+      relative_strength_60d: 0.06
+      distance_to_52w_high: 0.04
+      institutional_flow_5d: 0.12
+      institutional_flow_20d: 0.08
+      revenue_yoy: 0.14
+      revenue_mom: 0.06
+      volatility_20d: -0.1
+      volume_ratio_5d: 0.0
+    turnover:
+      score_ema_alpha: 0.4
+      entry_rank: 20
+      hold_rank: 35
+      min_holding_days: 5
+      rebalance_threshold: 0.02
+      swap_score_margin: 0.05
+      turnover_penalty_lambda: 1
+      rebalance_every: 100
+      max_new_names_per_day: 3
+    baseline.method: B0_score_tiered
+    regime.cash_by_regime:
+      risk_on:
+      - 0.024
+      - 0.056
+      neutral:
+      - 0.04
+      - 0.08
+      risk_off:
+      - 0.08
+      - 0.144
+  parent: HN_full
+- strategy_id: S_HN_full_turn80
+  group: sensitivity
+  desc: HN_full perturbation turn80
+  overrides:
+    score_weights:
+      ret_5d: 0.0
+      ret_20d: 0.18
+      ret_60d: 0.12
+      relative_strength_20d: 0.1
+      relative_strength_60d: 0.06
+      distance_to_52w_high: 0.04
+      institutional_flow_5d: 0.12
+      institutional_flow_20d: 0.08
+      revenue_yoy: 0.14
+      revenue_mom: 0.06
+      volatility_20d: -0.1
+      volume_ratio_5d: 0.0
+    turnover:
+      score_ema_alpha: 0.4
+      entry_rank: 20
+      hold_rank: 35
+      min_holding_days: 4
+      rebalance_threshold: 0.016
+      swap_score_margin: 0.05
+      turnover_penalty_lambda: 1
+      rebalance_every: 100
+      max_new_names_per_day: 3
+    baseline.method: B0_score_tiered
+  parent: HN_full
+- strategy_id: S_HN_full_cash120
+  group: sensitivity
+  desc: HN_full perturbation cash120
+  overrides:
+    score_weights:
+      ret_5d: 0.0
+      ret_20d: 0.18
+      ret_60d: 0.12
+      relative_strength_20d: 0.1
+      relative_strength_60d: 0.06
+      distance_to_52w_high: 0.04
+      institutional_flow_5d: 0.12
+      institutional_flow_20d: 0.08
+      revenue_yoy: 0.14
+      revenue_mom: 0.06
+      volatility_20d: -0.1
+      volume_ratio_5d: 0.0
+    turnover:
+      score_ema_alpha: 0.4
+      entry_rank: 20
+      hold_rank: 35
+      min_holding_days: 5
+      rebalance_threshold: 0.02
+      swap_score_margin: 0.05
+      turnover_penalty_lambda: 1
+      rebalance_every: 100
+      max_new_names_per_day: 3
+    baseline.method: B0_score_tiered
+    regime.cash_by_regime:
+      risk_on:
+      - 0.036
+      - 0.084
+      neutral:
+      - 0.06
+      - 0.12
+      risk_off:
+      - 0.12
+      - 0.2
+  parent: HN_full
+- strategy_id: S_HN_full_turn120
+  group: sensitivity
+  desc: HN_full perturbation turn120
+  overrides:
+    score_weights:
+      ret_5d: 0.0
+      ret_20d: 0.18
+      ret_60d: 0.12
+      relative_strength_20d: 0.1
+      relative_strength_60d: 0.06
+      distance_to_52w_high: 0.04
+      institutional_flow_5d: 0.12
+      institutional_flow_20d: 0.08
+      revenue_yoy: 0.14
+      revenue_mom: 0.06
+      volatility_20d: -0.1
+      volume_ratio_5d: 0.0
+    turnover:
+      score_ema_alpha: 0.4
+      entry_rank: 20
+      hold_rank: 35
+      min_holding_days: 6
+      rebalance_threshold: 0.024
+      swap_score_margin: 0.05
+      turnover_penalty_lambda: 1
+      rebalance_every: 100
+      max_new_names_per_day: 3
+    baseline.method: B0_score_tiered
+  parent: HN_full
+- strategy_id: S_HN_trend_w+-10
+  group: sensitivity
+  desc: HN_trend perturbation w+-10
+  overrides:
+    score_weights:
+      ret_5d: 0.0
+      ret_20d: 0.198
+      ret_60d: 0.108
+      relative_strength_20d: 0.165
+      relative_strength_60d: 0.081
+      distance_to_52w_high: 0.066
+      institutional_flow_5d: 0.162
+      institutional_flow_20d: 0.132
+      revenue_yoy: 0.0
+      revenue_mom: 0.0
+      volatility_20d: -0.09
+      volume_ratio_5d: 0.0
+    turnover:
+      score_ema_alpha: 0.4
+      entry_rank: 20
+      hold_rank: 35
+      min_holding_days: 5
+      rebalance_threshold: 0.02
+      swap_score_margin: 0.05
+      turnover_penalty_lambda: 1
+      rebalance_every: 100
+      max_new_names_per_day: 3
+    baseline.method: B0_score_tiered
+  parent: HN_trend
+- strategy_id: S_HN_trend_w-+10
+  group: sensitivity
+  desc: HN_trend perturbation w-+10
+  overrides:
+    score_weights:
+      ret_5d: 0.0
+      ret_20d: 0.162
+      ret_60d: 0.132
+      relative_strength_20d: 0.135
+      relative_strength_60d: 0.099
+      distance_to_52w_high: 0.054
+      institutional_flow_5d: 0.198
+      institutional_flow_20d: 0.108
+      revenue_yoy: 0.0
+      revenue_mom: 0.0
+      volatility_20d: -0.11
+      volume_ratio_5d: 0.0
+    turnover:
+      score_ema_alpha: 0.4
+      entry_rank: 20
+      hold_rank: 35
+      min_holding_days: 5
+      rebalance_threshold: 0.02
+      swap_score_margin: 0.05
+      turnover_penalty_lambda: 1
+      rebalance_every: 100
+      max_new_names_per_day: 3
+    baseline.method: B0_score_tiered
+  parent: HN_trend
+- strategy_id: S_HN_trend_w+-20
+  group: sensitivity
+  desc: HN_trend perturbation w+-20
+  overrides:
+    score_weights:
+      ret_5d: 0.0
+      ret_20d: 0.216
+      ret_60d: 0.096
+      relative_strength_20d: 0.18
+      relative_strength_60d: 0.072
+      distance_to_52w_high: 0.072
+      institutional_flow_5d: 0.144
+      institutional_flow_20d: 0.144
+      revenue_yoy: 0.0
+      revenue_mom: 0.0
+      volatility_20d: -0.08
+      volume_ratio_5d: 0.0
+    turnover:
+      score_ema_alpha: 0.4
+      entry_rank: 20
+      hold_rank: 35
+      min_holding_days: 5
+      rebalance_threshold: 0.02
+      swap_score_margin: 0.05
+      turnover_penalty_lambda: 1
+      rebalance_every: 100
+      max_new_names_per_day: 3
+    baseline.method: B0_score_tiered
+  parent: HN_trend
+- strategy_id: S_HN_trend_w-+20
+  group: sensitivity
+  desc: HN_trend perturbation w-+20
+  overrides:
+    score_weights:
+      ret_5d: 0.0
+      ret_20d: 0.144
+      ret_60d: 0.144
+      relative_strength_20d: 0.12
+      relative_strength_60d: 0.108
+      distance_to_52w_high: 0.048
+      institutional_flow_5d: 0.216
+      institutional_flow_20d: 0.096
+      revenue_yoy: 0.0
+      revenue_mom: 0.0
+      volatility_20d: -0.12
+      volume_ratio_5d: 0.0
+    turnover:
+      score_ema_alpha: 0.4
+      entry_rank: 20
+      hold_rank: 35
+      min_holding_days: 5
+      rebalance_threshold: 0.02
+      swap_score_margin: 0.05
+      turnover_penalty_lambda: 1
+      rebalance_every: 100
+      max_new_names_per_day: 3
+    baseline.method: B0_score_tiered
+  parent: HN_trend
+- strategy_id: S_HN_trend_hold21
+  group: sensitivity
+  desc: HN_trend perturbation hold21
+  overrides:
+    score_weights:
+      ret_5d: 0.0
+      ret_20d: 0.18
+      ret_60d: 0.12
+      relative_strength_20d: 0.15
+      relative_strength_60d: 0.09
+      distance_to_52w_high: 0.06
+      institutional_flow_5d: 0.18
+      institutional_flow_20d: 0.12
+      revenue_yoy: 0.0
+      revenue_mom: 0.0
+      volatility_20d: -0.1
+      volume_ratio_5d: 0.0
+    turnover:
+      score_ema_alpha: 0.4
+      entry_rank: 20
+      hold_rank: 35
+      min_holding_days: 5
+      rebalance_threshold: 0.02
+      swap_score_margin: 0.05
+      turnover_penalty_lambda: 1
+      rebalance_every: 100
+      max_new_names_per_day: 3
+    baseline.method: B0_score_tiered
+    strategy_buffers.target_holdings: 21
+    strategy_buffers.target_holdings_min: 20
+    strategy_buffers.target_holdings_max: 23
+  parent: HN_trend
+- strategy_id: S_HN_trend_hold22
+  group: sensitivity
+  desc: HN_trend perturbation hold22
+  overrides:
+    score_weights:
+      ret_5d: 0.0
+      ret_20d: 0.18
+      ret_60d: 0.12
+      relative_strength_20d: 0.15
+      relative_strength_60d: 0.09
+      distance_to_52w_high: 0.06
+      institutional_flow_5d: 0.18
+      institutional_flow_20d: 0.12
+      revenue_yoy: 0.0
+      revenue_mom: 0.0
+      volatility_20d: -0.1
+      volume_ratio_5d: 0.0
+    turnover:
+      score_ema_alpha: 0.4
+      entry_rank: 20
+      hold_rank: 35
+      min_holding_days: 5
+      rebalance_threshold: 0.02
+      swap_score_margin: 0.05
+      turnover_penalty_lambda: 1
+      rebalance_every: 100
+      max_new_names_per_day: 3
+    baseline.method: B0_score_tiered
+    strategy_buffers.target_holdings: 22
+    strategy_buffers.target_holdings_min: 21
+    strategy_buffers.target_holdings_max: 24
+  parent: HN_trend
+- strategy_id: S_HN_trend_hold28
+  group: sensitivity
+  desc: HN_trend perturbation hold28
+  overrides:
+    score_weights:
+      ret_5d: 0.0
+      ret_20d: 0.18
+      ret_60d: 0.12
+      relative_strength_20d: 0.15
+      relative_strength_60d: 0.09
+      distance_to_52w_high: 0.06
+      institutional_flow_5d: 0.18
+      institutional_flow_20d: 0.12
+      revenue_yoy: 0.0
+      revenue_mom: 0.0
+      volatility_20d: -0.1
+      volume_ratio_5d: 0.0
+    turnover:
+      score_ema_alpha: 0.4
+      entry_rank: 20
+      hold_rank: 35
+      min_holding_days: 5
+      rebalance_threshold: 0.02
+      swap_score_margin: 0.05
+      turnover_penalty_lambda: 1
+      rebalance_every: 100
+      max_new_names_per_day: 3
+    baseline.method: B0_score_tiered
+    strategy_buffers.target_holdings: 28
+    strategy_buffers.target_holdings_min: 27
+    strategy_buffers.target_holdings_max: 30
+  parent: HN_trend
+- strategy_id: S_HN_trend_hold29
+  group: sensitivity
+  desc: HN_trend perturbation hold29
+  overrides:
+    score_weights:
+      ret_5d: 0.0
+      ret_20d: 0.18
+      ret_60d: 0.12
+      relative_strength_20d: 0.15
+      relative_strength_60d: 0.09
+      distance_to_52w_high: 0.06
+      institutional_flow_5d: 0.18
+      institutional_flow_20d: 0.12
+      revenue_yoy: 0.0
+      revenue_mom: 0.0
+      volatility_20d: -0.1
+      volume_ratio_5d: 0.0
+    turnover:
+      score_ema_alpha: 0.4
+      entry_rank: 20
+      hold_rank: 35
+      min_holding_days: 5
+      rebalance_threshold: 0.02
+      swap_score_margin: 0.05
+      turnover_penalty_lambda: 1
+      rebalance_every: 100
+      max_new_names_per_day: 3
+    baseline.method: B0_score_tiered
+    strategy_buffers.target_holdings: 29
+    strategy_buffers.target_holdings_min: 28
+    strategy_buffers.target_holdings_max: 30
+  parent: HN_trend
+- strategy_id: S_HN_trend_cash80
+  group: sensitivity
+  desc: HN_trend perturbation cash80
+  overrides:
+    score_weights:
+      ret_5d: 0.0
+      ret_20d: 0.18
+      ret_60d: 0.12
+      relative_strength_20d: 0.15
+      relative_strength_60d: 0.09
+      distance_to_52w_high: 0.06
+      institutional_flow_5d: 0.18
+      institutional_flow_20d: 0.12
+      revenue_yoy: 0.0
+      revenue_mom: 0.0
+      volatility_20d: -0.1
+      volume_ratio_5d: 0.0
+    turnover:
+      score_ema_alpha: 0.4
+      entry_rank: 20
+      hold_rank: 35
+      min_holding_days: 5
+      rebalance_threshold: 0.02
+      swap_score_margin: 0.05
+      turnover_penalty_lambda: 1
+      rebalance_every: 100
+      max_new_names_per_day: 3
+    baseline.method: B0_score_tiered
+    regime.cash_by_regime:
+      risk_on:
+      - 0.024
+      - 0.056
+      neutral:
+      - 0.04
+      - 0.08
+      risk_off:
+      - 0.08
+      - 0.144
+  parent: HN_trend
+- strategy_id: S_HN_trend_turn80
+  group: sensitivity
+  desc: HN_trend perturbation turn80
+  overrides:
+    score_weights:
+      ret_5d: 0.0
+      ret_20d: 0.18
+      ret_60d: 0.12
+      relative_strength_20d: 0.15
+      relative_strength_60d: 0.09
+      distance_to_52w_high: 0.06
+      institutional_flow_5d: 0.18
+      institutional_flow_20d: 0.12
+      revenue_yoy: 0.0
+      revenue_mom: 0.0
+      volatility_20d: -0.1
+      volume_ratio_5d: 0.0
+    turnover:
+      score_ema_alpha: 0.4
+      entry_rank: 20
+      hold_rank: 35
+      min_holding_days: 4
+      rebalance_threshold: 0.016
+      swap_score_margin: 0.05
+      turnover_penalty_lambda: 1
+      rebalance_every: 100
+      max_new_names_per_day: 3
+    baseline.method: B0_score_tiered
+  parent: HN_trend
+- strategy_id: S_HN_trend_cash120
+  group: sensitivity
+  desc: HN_trend perturbation cash120
+  overrides:
+    score_weights:
+      ret_5d: 0.0
+      ret_20d: 0.18
+      ret_60d: 0.12
+      relative_strength_20d: 0.15
+      relative_strength_60d: 0.09
+      distance_to_52w_high: 0.06
+      institutional_flow_5d: 0.18
+      institutional_flow_20d: 0.12
+      revenue_yoy: 0.0
+      revenue_mom: 0.0
+      volatility_20d: -0.1
+      volume_ratio_5d: 0.0
+    turnover:
+      score_ema_alpha: 0.4
+      entry_rank: 20
+      hold_rank: 35
+      min_holding_days: 5
+      rebalance_threshold: 0.02
+      swap_score_margin: 0.05
+      turnover_penalty_lambda: 1
+      rebalance_every: 100
+      max_new_names_per_day: 3
+    baseline.method: B0_score_tiered
+    regime.cash_by_regime:
+      risk_on:
+      - 0.036
+      - 0.084
+      neutral:
+      - 0.06
+      - 0.12
+      risk_off:
+      - 0.12
+      - 0.2
+  parent: HN_trend
+- strategy_id: S_HN_trend_turn120
+  group: sensitivity
+  desc: HN_trend perturbation turn120
+  overrides:
+    score_weights:
+      ret_5d: 0.0
+      ret_20d: 0.18
+      ret_60d: 0.12
+      relative_strength_20d: 0.15
+      relative_strength_60d: 0.09
+      distance_to_52w_high: 0.06
+      institutional_flow_5d: 0.18
+      institutional_flow_20d: 0.12
+      revenue_yoy: 0.0
+      revenue_mom: 0.0
+      volatility_20d: -0.1
+      volume_ratio_5d: 0.0
+    turnover:
+      score_ema_alpha: 0.4
+      entry_rank: 20
+      hold_rank: 35
+      min_holding_days: 6
+      rebalance_threshold: 0.024
+      swap_score_margin: 0.05
+      turnover_penalty_lambda: 1
+      rebalance_every: 100
+      max_new_names_per_day: 3
+    baseline.method: B0_score_tiered
+  parent: HN_trend

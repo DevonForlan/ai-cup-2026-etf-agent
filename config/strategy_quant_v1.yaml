@@ -1,0 +1,83 @@
+# Quant Core v1 (Round 03) — FROZEN. Selected strategy: HN_rev (revenue-factor pick & hold).
+# Rationale: best cross-window robustness among 54 tested configs (5 windows x 24 trading days),
+# lowest transaction cost, 0 violations / 0 validation failures / 0 fallbacks, insensitive to
+# cost (x1.5) and 20bp VWAP slippage stress. Its edge over random 25-stock portfolios is SMALL
+# (median +0.40% vs random p50, 3/5 windows) and NOT statistically distinguishable from zero.
+# Any change here = new code_version; do not tune on results (see report §16).
+#   factors      : revenue_yoy 0.70, revenue_mom 0.30 (percentile ranks; others 0)
+#   holdings     : target 25 (24-27), tiered weights, 2330 <= 23.5%, others <= 9%
+#   trading      : buy on day 1, then rebalance_every=100 (= hold; trades only when the unchanged
+#                  portfolio fails a compliance check or a holding becomes ineligible)
+#   cash policy  : breadth regime -> cash target range (soft); official < 25% never touched
+#   active share : strategy target 30% (official 20%), computed vs real issuer top-10 holdings
+strategy_name: quant_core_v1
+team_id: TEAM_TEST
+strategy_buffers:
+  target_holdings: 25
+  target_holdings_min: 24
+  target_holdings_max: 27
+  tsmc_target_cap: 0.235
+  other_target_cap: 0.09
+  cash_target_min: 0.05
+  cash_target_max: 0.12
+  cash_declared_range:
+  - 0.02
+  - 0.2
+  active_share_target: 0.3
+  min_position_weight: 0.01
+  stress_price_shift: 0.05
+baseline:
+  method: B0_score_tiered
+  tiers:
+  - top: 5
+    weight: 1.6
+  - top: 15
+    weight: 1.2
+  - top: 30
+    weight: 1.0
+  tsmc_policy: score
+  tsmc_core_weight: 0.15
+turnover:
+  score_ema_alpha: 0.4
+  entry_rank: 20
+  hold_rank: 35
+  min_holding_days: 5
+  rebalance_threshold: 0.02
+  swap_score_margin: 0.05
+  turnover_penalty_lambda: 1
+  rebalance_every: 100
+  max_new_names_per_day: 3
+score_weights:
+  ret_5d: 0.0
+  ret_20d: 0.0
+  ret_60d: 0.0
+  relative_strength_20d: 0.0
+  relative_strength_60d: 0.0
+  distance_to_52w_high: 0.0
+  institutional_flow_5d: 0.0
+  institutional_flow_20d: 0.0
+  revenue_yoy: 0.7
+  revenue_mom: 0.3
+  volatility_20d: 0.0
+  volume_ratio_5d: 0.0
+regime:
+  risk_off_breadth: 0.35
+  risk_on_breadth: 0.6
+  cash_by_regime:
+    risk_on:
+    - 0.03
+    - 0.07
+    neutral:
+    - 0.05
+    - 0.1
+    risk_off:
+    - 0.1
+    - 0.18
+runtime:
+  model_provider: other
+  model_version: none-quant-only-v0
+  run_cutoff_local: 08:55
+selected_from:
+  strategy_id: HN_rev
+  config_hash: 9c950d1ae6
+  evidence: reports/ROUND_03_STRATEGY_OPTIMIZATION_REPORT.md; reports/strategy_summary.csv
