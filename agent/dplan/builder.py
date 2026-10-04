@@ -85,6 +85,20 @@ def build_graph(trade_date: str, fs, scores: pd.DataFrame, result, prev_holdings
     g.add("Fact", "fact:market", {"topic": "tw_market_breadth", "values": mvals,
                                   "statement": narrator.market_fact_statement(mvals, fs.last_data_date)},
           refs=px_src)
+    mkt_facts = ["fact:market"]
+    ov = {"overnight_sp500_ret": ("sp500_ret_pct", "src:us_overnight"), "overnight_nasdaq_ret": ("nasdaq100_ret_pct", "src:us_overnight"),
+          "overnight_sox_ret": ("sox_ret_pct", "src:us_overnight"), "tsm_adr_ret": ("tsm_adr_ret_pct", "src:us_overnight"),
+          "taiex_futures_night_ret": ("txf_night_ret_pct", "src:taifex_night"), "usd_twd_ret": ("usdtwd_ret_pct", "src:fx")}
+    ovals, orefs = {}, []
+    for k, (name, src) in ov.items():
+        if _ok(mk.get(k)) and src in sources:
+            ovals[name] = round(float(mk[k]) * 100, 2)
+            if src not in orefs:
+                orefs.append(src)
+    if ovals:
+        g.add("Fact", "fact:overnight", {"topic": "overnight", "values": ovals,
+                                         "statement": narrator.overnight_statement(ovals)}, refs=orefs)
+        mkt_facts.append("fact:overnight")
 
     def ticker_fact(t: str) -> str:
         key = f"fact:{t}"
@@ -151,13 +165,13 @@ def build_graph(trade_date: str, fs, scores: pd.DataFrame, result, prev_holdings
 
     g.add("Signal", "sig:regime", {"regime": regime, "stance": stance, "why": why, "cash_target_range": cash_rng,
                                    "net_flow": float(post.net_flow), "nav_prev": float(nav_prev)},
-          refs=["fact:market"])
+          refs=mkt_facts)
     mv_logic = narrator.market_logic(mvals, regime, why, cash_rng, post)
     g.add("MarketView", "mv", {"logic": mv_logic, "regime": regime, "stance": stance,
                                "posture": {"net_exposure_intent": post.net_exposure_intent,
                                            "target_cash_pct_range": list(post.target_cash_pct_range)},
                                "counter_evidence": narrator.market_counter(mvals, regime)},
-          refs=["fact:market"])
+          refs=mkt_facts)
 
     if not info["fallback"]:
         from agent.portfolio.baseline import turnover_params

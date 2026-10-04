@@ -123,7 +123,8 @@ def export_dplan(g: EvidenceGraph, team_id: str, metadata: dict) -> tuple[dict, 
         # replace {{internal_key}} placeholders with exported IDs (e.g. {{fact:2330}} -> O5)
         if not isinstance(text, str):
             return text
-        return re.sub(r"\{\{([^}]+)\}\}", lambda m: idmap.get(m.group(1), "?"), text)
+        out = re.sub(r"\{\{([^}]+)\}\}", lambda m: ("、" + idmap[m.group(1)]) if m.group(1) in idmap else "", text)
+        return out.replace("（、", "（").replace("；、", "；")
 
     for i in inferences:
         i["logic"] = sub(i["logic"])

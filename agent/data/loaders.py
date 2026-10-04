@@ -6,6 +6,8 @@ Tables: daily_prices, institutional, monthly_revenue, corporate_actions, etf_hol
 from __future__ import annotations
 
 import json
+import os
+import time
 from pathlib import Path
 
 import pandas as pd
@@ -78,7 +80,15 @@ class HistoryStore:
         if table not in self._cache:
             p = self.path(table)
             if p.exists():
-                df = pd.read_parquet(p)
+                df = None
+                for attempt in range(5):          # tolerate a concurrent writer (non-atomic legacy writers)
+                    try:
+                        df = pd.read_parquet(p)
+                        break
+                    except Exception:  # noqa: BLE001
+                        if attempt == 4:
+                            raise
+                        time.sleep(1.0)
             else:
                 df = pd.DataFrame(columns=list(SCHEMAS[table]))
             self._cache[table] = _coerce(df, table)
@@ -93,7 +103,9 @@ class HistoryStore:
         allr = pd.concat([cur, new], ignore_index=True) if len(cur) else new
         allr = allr.drop_duplicates(subset=KEYS[table], keep="last")
         allr = allr.sort_values(KEYS[table]).reset_index(drop=True)
-        allr.to_parquet(self.path(table), index=False)
+        tmp = self.path(table).with_suffix(f".tmp{os.getpid()}")
+        allr.to_parquet(tmp, index=False)
+        os.replace(tmp, self.path(table))          # atomic on the same volume
         self._cache[table] = allr
         return len(new)
 

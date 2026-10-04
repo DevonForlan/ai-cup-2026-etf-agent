@@ -22,7 +22,7 @@ from agent.features import volume as VLM
 FEATURES = ["ret_5d", "ret_20d", "ret_60d", "relative_strength_20d", "relative_strength_60d",
             "volume_ratio_5d", "volatility_20d", "distance_to_52w_high", "institutional_flow_5d",
             "institutional_flow_20d", "revenue_yoy", "revenue_mom"]
-FEATURE_VERSION = "features-v1"
+FEATURE_VERSION = "features-v2"   # v2: overnight/market regime inputs
 
 
 @dataclass
@@ -104,7 +104,38 @@ def build_features(view: PITView, universe: list[str], trade_date: str) -> Featu
             "decliners_1d": int((f["ret_1d"] < 0).sum()),
             "n_with_price": int(f["close_prev"].notna().sum()),
         }
+        # equal-weight universe index (TAIEX proxy): 20d trend and 20d realised vol
+        ew = close.pct_change(fill_method=None).median(axis=1).dropna()
+        if len(ew) >= 20:
+            market["ew_index_ret_20d"] = float((1 + ew.tail(20)).prod() - 1)
+            market["ew_index_vol_20d"] = float(ew.tail(20).std() * np.sqrt(252))
+    market.update(overnight_market_features(view, trade_date))
     return FeatureSet(trade_date, view.as_of, last, f, market, list(view.reads))
+
+
+OVERNIGHT_MAP = {"SPX": "overnight_sp500_ret", "NDX": "overnight_nasdaq_ret", "SOX": "overnight_sox_ret",
+                 "TSM": "tsm_adr_ret", "TXF_NIGHT": "taiex_futures_night_ret", "USDTWD": "usd_twd_ret"}
+
+
+def overnight_market_features(view: PITView, trade_date: str) -> dict:
+    """Latest visible overnight row per symbol with date <= T (PIT: available_at <= as_of).
+    Stale rows (older than T by > 4 calendar days) are ignored."""
+    try:
+        o = view.table("market_overnight")
+    except Exception:  # noqa: BLE001
+        return {}
+    if o is None or len(o) == 0:
+        return {}
+    o = o[o["date"] <= trade_date].sort_values("date")
+    out = {}
+    cutoff = (pd.Timestamp(trade_date) - pd.Timedelta(days=4)).strftime("%Y-%m-%d")
+    for sym, name in OVERNIGHT_MAP.items():
+        g = o[(o["symbol"] == sym) & (o["date"] >= cutoff)]
+        if len(g) and pd.notna(g.iloc[-1]["ret"]):
+            out[name] = float(g.iloc[-1]["ret"])
+            out[name + "_date"] = str(g.iloc[-1]["date"])
+            out[name + "_available_at"] = str(g.iloc[-1]["available_at"])
+    return out
 
 
 def save_features(fs: FeatureSet, out_dir: Path | None = None) -> Path:

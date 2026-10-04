@@ -62,13 +62,19 @@ class TemplateMarketNarrator:
                 parts.append(f"{lab}報酬中位數 {_pct(v[k], 2)}")
         return f"{data_date or ''} 收盤：" + "；".join(parts) if parts else "前一交易日 universe 價量資料"
 
+    def overnight_statement(self, v: dict) -> str:
+        lab = {"sp500_ret_pct": "S&P500", "nasdaq100_ret_pct": "Nasdaq100", "sox_ret_pct": "費城半導體 SOX",
+               "tsm_adr_ret_pct": "TSM ADR", "txf_night_ret_pct": "台指期夜盤(相對前日結算)",
+               "usdtwd_ret_pct": "USD/TWD"}
+        return "隔夜/盤前：" + "；".join(f"{lab[k]} {_pct(x, 2)}" for k, x in v.items() if k in lab)
+
     def market_logic(self, v: dict, regime: str, why: str, cash_range, posture) -> str:
         nf = float(posture.net_flow)
         nav = float(posture.nav)
-        return (f"依規則式市場判斷：{why}（{{{{fact:market}}}}）→ regime={regime}，策略目標現金 "
+        return (f"依規則式市場判斷：{why}（{{{{fact:market}}}}{{{{fact:overnight}}}}）→ regime={regime}，策略目標現金 "
                 f"{cash_range[0]:.0%}–{cash_range[1]:.0%}。本日委託以前日收盤價估算淨流向 {nf:+,.0f} 元"
                 f"（{nf / nav:+.2%} NAV），淨曝險意圖 {posture.net_exposure_intent}；預估委託後現金比 "
-                f"{float(posture.cash_ratio_no_fee):.2%}。MVP-0 尚未納入隔夜美股與期貨夜盤。")
+                f"{float(posture.cash_ratio_no_fee):.2%}。")
 
     def market_counter(self, v: dict, regime: str) -> str | None:
         if regime == "risk_on" and v.get("median_ret_5d_pct", 0) < 0:

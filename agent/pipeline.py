@@ -124,6 +124,25 @@ def build_sources(prev_date: str, mode: str, store_is_fixture: bool, revenue_aso
     return out
 
 
+def add_overnight_sources(out: dict, trade_date: str, market: dict, store_is_fixture: bool) -> dict:
+    pre = "[FIXTURE/SYNTHETIC] " if store_is_fixture else ""
+    if any(k in market for k in ("overnight_sp500_ret", "overnight_sox_ret", "tsm_adr_ret")):
+        out["src:us_overnight"] = SourceInfo(
+            "src:us_overnight", "vendor", "https://fred.stlouisfed.org/series/SP500",
+            pre + "美股隔夜收盤：S&P500/Nasdaq100 (FRED)、SOX 與 TSM ADR (Yahoo chart, 非官方)",
+            market.get("overnight_sp500_ret_available_at") or market.get("overnight_sox_ret_available_at"))
+    if "taiex_futures_night_ret" in market:
+        out["src:taifex_night"] = SourceInfo(
+            "src:taifex_night", "taifex", "https://www.taifex.com.tw/cht/3/futDataDown",
+            pre + "TAIFEX 台指期 TX 盤後交易時段（近月合約）",
+            f"{market['taiex_futures_night_ret_date']}T05:00:00+08:00")
+    if "usd_twd_ret" in market:
+        out["src:fx"] = SourceInfo("src:fx", "other", "https://www.cbc.gov.tw/tw/lp-645-1.html",
+                                   pre + "中央銀行 新台幣對美元銀行間收盤匯率（前一營業日 16:00）",
+                                   market["usd_twd_ret_available_at"])
+    return out
+
+
 @dataclass
 class DayResult:
     trade_date: str
@@ -255,6 +274,7 @@ def run_day(trade_date: str, store: HistoryStore, prev: Settlement, rb: RuleBook
                            regime_tuple[:4] if regime_tuple else None)
     tm["portfolio"] = time.perf_counter() - t2
     sources = build_sources(prev_date or trade_date, mode, store_is_fixture, rev_asof, has_rev)
+    sources = add_overnight_sources(sources, trade_date, fs.market, store_is_fixture)
 
     def make(result_obj):
         ta = time.perf_counter()
