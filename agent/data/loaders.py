@@ -21,11 +21,20 @@ SCHEMAS: dict[str, dict[str, str]] = {
     "institutional": {"date": "str", "ticker": "str", "foreign_net": "Int64", "trust_net": "Int64",
                       "dealer_net": "Int64", "total_net": "Int64", "available_at": "str"},
     "monthly_revenue": {"ticker": "str", "year": "int64", "month": "int64", "revenue": "float64",
-                        "available_at": "str"},
+                        "published_date": "str", "available_at": "str"},
     "corporate_actions": {"ex_date": "str", "ticker": "str", "cash_dividend": "float64",
-                          "stock_dividend_per_share": "float64", "available_at": "str"},
+                          "stock_dividend_per_share": "float64", "capital_change_ratio": "float64",
+                          "action_type": "str", "source": "str", "available_at": "str"},
+    # Active ETF holdings. weight = fraction of ETF NAV (0-1). `date` = holdings as-of date.
     "etf_holdings": {"date": "str", "etf": "str", "ticker": "str", "weight": "float64",
-                     "rank": "int64", "available_at": "str", "synthetic": "bool"},
+                     "rank": "int64", "shares": "float64", "source_url": "str", "published_at": "str",
+                     "fetched_at": "str", "authority": "str", "is_stale": "bool",
+                     "available_at": "str", "synthetic": "bool"},
+    # Overnight / pre-open market data. `date` = the Taiwan TRADE DATE the value is used for
+    # (e.g. US close of 2026-10-26 ET -> date 2026-10-27). symbol e.g. SPX, NDX, SOX, TSM, USDTWD, TXF_NIGHT
+    "market_overnight": {"date": "str", "symbol": "str", "close": "float64", "ret": "float64",
+                         "high": "float64", "low": "float64", "volume": "float64", "source": "str",
+                         "available_at": "str"},
 }
 KEYS = {
     "daily_prices": ["date", "ticker"],
@@ -33,6 +42,7 @@ KEYS = {
     "monthly_revenue": ["ticker", "year", "month"],
     "corporate_actions": ["ex_date", "ticker"],
     "etf_holdings": ["date", "etf", "ticker"],
+    "market_overnight": ["date", "symbol"],
 }
 
 
@@ -46,7 +56,7 @@ def _coerce(df: pd.DataFrame, table: str) -> pd.DataFrame:
         elif t == "Int64":
             df[c] = pd.to_numeric(df[c], errors="coerce").round().astype("Int64")
         elif t == "bool":
-            df[c] = df[c].fillna(False).astype(bool)
+            df[c] = df[c].map(lambda v: str(v).strip().lower() in ("true", "1", "yes") if pd.notna(v) else False).astype(bool)
         else:
             df[c] = pd.to_numeric(df[c], errors="coerce").astype(t)
     return df[list(sch)]
