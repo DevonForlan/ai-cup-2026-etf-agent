@@ -1,0 +1,23 @@
+precomputed features for 120 dates
+40 strategies × 5 windows → 200 jobs, 12 workers
+10/200 done (158s)
+20/200 done (281s)
+30/200 done (404s)
+40/200 done (524s)
+50/200 done (636s)
+60/200 done (668s)
+70/200 done (789s)
+80/200 done (906s)
+90/200 done (1003s)
+100/200 done (1094s)
+110/200 done (1178s)
+120/200 done (1229s)
+130/200 done (1313s)
+140/200 done (1410s)
+150/200 done (1503s)
+160/200 done (1580s)
+170/200 done (1673s)
+180/200 done (1724s)
+190/200 done (1820s)
+200/200 done (1879s)
+wrote C:\Users\devon.tseng\Desktop\個人\AI CUP 2026玉山人工智慧公開挑戰賽\reports\leaderboard_main.csv 200 rows

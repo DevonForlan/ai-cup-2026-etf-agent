@@ -3,26 +3,26 @@
  "machine": "Intel64 Family 6 Model 154 Stepping 3, GenuineIntel",
  "cpu_count": 16,
  "python": "3.13.16",
- "data_load_sec": 11.208,
+ "data_load_sec": 0.792,
  "cold_stage_sec": {
-  "data_features": 12.965,
-  "ranking": 1.057,
-  "portfolio": 0.251,
-  "dplan": 2.089,
-  "validation": 0.954,
-  "total": 18.725
+  "data_features": 0.547,
+  "ranking": 0.012,
+  "portfolio": 0.016,
+  "dplan": 0.344,
+  "validation": 0.03,
+  "total": 1.079
  },
- "cold_wall_sec_incl_logs": 18.781,
+ "cold_wall_sec_incl_logs": 1.085,
  "warm_stage_sec": {
-  "data_features": 2.219,
-  "ranking": 1.328,
-  "portfolio": 0.256,
-  "dplan": 0.168,
-  "validation": 0.479,
-  "total": 6.79
+  "data_features": 0.133,
+  "ranking": 0.013,
+  "portfolio": 0.025,
+  "dplan": 0.018,
+  "validation": 0.032,
+  "total": 0.34
  },
- "cpu_sec_total": 4.266,
- "peak_rss_mb": 242.7,
- "total_incl_startup_sec": 37.515,
+ "cpu_sec_total": 1.0,
+ "peak_rss_mb": 261.2,
+ "total_incl_startup_sec": 2.247,
  "validation_ok": true
 }

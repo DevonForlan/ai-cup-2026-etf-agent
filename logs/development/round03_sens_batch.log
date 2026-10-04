@@ -1,0 +1,21 @@
+precomputed features for 120 dates
+36 strategies × 5 windows → 180 jobs, 12 workers
+10/180 done (141s)
+20/180 done (240s)
+30/180 done (361s)
+40/180 done (448s)
+50/180 done (530s)
+60/180 done (594s)
+70/180 done (657s)
+80/180 done (737s)
+90/180 done (824s)
+100/180 done (900s)
+110/180 done (994s)
+120/180 done (1063s)
+130/180 done (1126s)
+140/180 done (1213s)
+150/180 done (1285s)
+160/180 done (1365s)
+170/180 done (1445s)
+180/180 done (1482s)
+wrote C:\Users\devon.tseng\Desktop\個人\AI CUP 2026玉山人工智慧公開挑戰賽\reports\leaderboard_sens.csv 180 rows

@@ -132,3 +132,37 @@ Live mode (`--mode live`) fetches T-1 TWSE/TPEx data first and uses wall-clock t
 | `data/raw/YYYYMMDD/<source>/` + `manifest.json` | raw responses with url, fetched_at, content_as_of, available_at, sha256, parser_version, authority |
 | `data/history/*.parquet` | normalized PIT tables |
 | `sim_runs/<run_id>/` | strategy/competition/unconfirmed config snapshots, dplan/, settlement/, validation/, logs/, daily.csv, summary.json |
+
+## Round 03 additions
+
+```bat
+:: competition run (blocked if agent/ or config/ has uncommitted changes)
+.venv\Scripts\python.exe agent\run_daily.py --date 2026-10-02 --mode replay --config config\strategy_quant_v1.yaml --competition
+
+:: 24-day simulation of Quant Core v1
+.venv\Scripts\python.exe agent\run_sim.py --config config\strategy_quant_v1.yaml --start 2026-08-28 --days 24
+:: research-only stress
+.venv\Scripts\python.exe agent\run_sim.py --config config\strategy_quant_v1.yaml --start 2026-08-28 --days 24 --cost-mult 1.5 --slippage 0.002 --light
+
+:: data
+.venv\Scripts\python.exe agent\data\fetchers\etf_holdings.py --all            :: real active-ETF holdings (run daily)
+.venv\Scripts\python.exe agent\data\fetchers\corporate_actions.py --start 2024-03-01 --end 2026-10-02
+.venv\Scripts\python.exe agent\data\fetchers\revenue_dates.py --observe        :: MOPS first-seen (run daily, 1st-12th)
+.venv\Scripts\python.exe agent\data\overnight.py --start 2024-03-01 --end 2026-10-02 --taifex
+
+:: research
+.venv\Scripts\python.exe agent\research\evaluate.py --random-only
+.venv\Scripts\python.exe agent\research\evaluate.py --batch main2 --workers 12
+.venv\Scripts\python.exe agent\research\sensitivity.py --ids HN_rev,HN_full,HN_trend
+.venv\Scripts\python.exe agent\research\evaluate.py --batch sens --extra reports\sensitivity_strategies.yaml --groups sensitivity
+.venv\Scripts\python.exe agent\research\analyze.py --inputs reports\leaderboard_main2.csv reports\leaderboard_sens.csv reports\leaderboard_stress.csv
+.venv\Scripts\python.exe agent\research\active_share_report.py --run sim_runs\quant_v1_W5_full
+.venv\Scripts\python.exe agent\tools\benchmark.py --date 2026-10-02 --config config\strategy_quant_v1.yaml
+```
+
+Turnover controls (`turnover:` in strategy YAML): `score_ema_alpha`, `entry_rank`, `hold_rank`, `min_holding_days`,
+`extreme_exit_rank`, `swap_score_margin`, `rebalance_threshold` (alias `no_trade_band`), `turnover_penalty_lambda`,
+`turnover_cost_score_units`, `rebalance_every`, `max_new_names_per_day`, `max_daily_changes`. Round-02 configs keep working.
+Strategy state (score EMA, entry dates) is carried in `Settlement.agent_state` (our own book, not official).
+Odd-share holdings (stock dividends) are locked as NO_TRADE because derive-orders.v2 would emit a non-lot order (NC-7).
+Feature cache: `data/cache/features/<FEATURE_VERSION>_<table-fingerprint>/` (safe to delete).

@@ -1,0 +1,13 @@
+precomputed features for 120 dates
+5 strategies × 5 windows → 100 jobs, 12 workers
+10/100 done (115s)
+20/100 done (215s)
+30/100 done (296s)
+40/100 done (384s)
+50/100 done (461s)
+60/100 done (502s)
+70/100 done (578s)
+80/100 done (652s)
+90/100 done (737s)
+100/100 done (758s)
+wrote C:\Users\devon.tseng\Desktop\個人\AI CUP 2026玉山人工智慧公開挑戰賽\reports\leaderboard_stress.csv 100 rows
