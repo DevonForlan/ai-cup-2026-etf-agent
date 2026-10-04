@@ -105,7 +105,14 @@ class HistoryStore:
         allr = allr.sort_values(KEYS[table]).reset_index(drop=True)
         tmp = self.path(table).with_suffix(f".tmp{os.getpid()}")
         allr.to_parquet(tmp, index=False)
-        os.replace(tmp, self.path(table))          # atomic on the same volume
+        for attempt in range(10):                  # Windows: a concurrent reader may briefly lock the target
+            try:
+                os.replace(tmp, self.path(table))  # atomic on the same volume
+                break
+            except PermissionError:
+                if attempt == 9:
+                    raise
+                time.sleep(0.5)
         self._cache[table] = allr
         return len(new)
 

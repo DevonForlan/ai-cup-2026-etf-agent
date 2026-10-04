@@ -39,7 +39,9 @@ def peak_rss_mb() -> float | None:
     c.cb = ctypes.sizeof(PMC)
     k = ctypes.windll.kernel32
     k.GetCurrentProcess.restype = wintypes.HANDLE
-    ctypes.windll.psapi.GetProcessMemoryInfo(k.GetCurrentProcess(), ctypes.byref(c), c.cb)
+    gpmi = ctypes.windll.psapi.GetProcessMemoryInfo
+    gpmi.argtypes = [wintypes.HANDLE, ctypes.POINTER(PMC), wintypes.DWORD]
+    gpmi(k.GetCurrentProcess(), ctypes.byref(c), c.cb)
     return c.PeakWorkingSetSize / 2**20
 
 
