@@ -112,6 +112,10 @@ def run_competition_day(trade_date: str, team_id: str, mode: str = "dry-run", *,
             rec = reconcile(idict, official, ops_cfg)
             rec["date"] = prev_date
             write_json(path_for(prev_date, "reconciliation", ops_cfg), rec)
+            rl = ops_logger(trade_date, "reconciliation", ops_cfg)
+            rl.info(f"{prev_date} {rec['status']} source={official.get('source')} -> {rec['action']}")
+            for d in rec["diffs"]:
+                rl.info(f"  diff {json.dumps(d, ensure_ascii=False)}")
             sstat["reconciliation"] = rec["status"]
             if rec["status"] != "BLOCK":
                 start = apply_official(internal, official)
@@ -165,6 +169,12 @@ def run_competition_day(trade_date: str, team_id: str, mode: str = "dry-run", *,
         lg.error(traceback.format_exc())
         return finish("BLOCKED", reason=f"program error in run_day: {type(e).__name__}: {e}"[:400])
     durations["quant_dplan_validation"] = round(time.perf_counter() - t0, 2)
+    vl = ops_logger(trade_date, "validation", ops_cfg)
+    vl.info(f"{r.dplan_path.name if r.dplan_path else None} ok={r.validation.ok} {r.validation.summary()} "
+            f"fallback={r.fallback}")
+    for c_ in r.validation.to_dict()["checks"]:
+        if c_["status"] not in ("PASS", "NOT_APPLICABLE"):
+            vl.info(f"  {c_['status']} {c_['rule_id']}: {str(c_['message'])[:200]}")
     durations.update({f"run_day.{k}": round(v, 3) for k, v in r.timings.items()})
     level = 3 if r.fallback else (0 if r.narrative_used_llm else
                                   (2 if data_health and data_health["level"] != "PASS" else 1))

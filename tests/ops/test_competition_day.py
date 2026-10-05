@@ -59,7 +59,10 @@ def test_e2e_two_days_with_official_settlement(fixture_store, ops_cfg, rb):
         assert k in meta
     txt = operator_summary(s2)
     assert "READY_TO_SUBMIT" in txt and s2["sha256"] in txt
-    summ = Path(ops_cfg["paths"]["ops_logs_dir"]) / "20261027" / "competition_day_summary.json"
+    logs = Path(ops_cfg["paths"]["ops_logs_dir"]) / "20261027"
+    for f in ("competition_day.log", "preflight.log", "validation.log", "reconciliation.log"):
+        assert (logs / f).exists(), f
+    summ = logs / "competition_day_summary.json"
     assert json.loads(summ.read_text(encoding="utf-8"))["status"] == "READY_TO_SUBMIT"
 
 
