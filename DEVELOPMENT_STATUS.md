@@ -1,6 +1,7 @@
 # DEVELOPMENT STATUS
 
-> Last update: 2026-10-05 (Round 04). Round 04 report: `reports/ROUND_04_LLM_INTEGRATION_REPORT.md`.
+> Last update: 2026-10-05 (Round 05). Round 05 report: `reports/ROUND_05_OPERATIONAL_READINESS_REPORT.md`, checklist `reports/COMPETITION_READINESS_CHECKLIST.md` — readiness **DRY_RUN_READY**.
+> Round 04 report: `reports/ROUND_04_LLM_INTEGRATION_REPORT.md`.
 > (Round 03 notes below still apply.) Reports: `reports/ROUND_03_STRATEGY_OPTIMIZATION_REPORT.md` (strategy),
 > `logs/development/ROUND_02_DEVELOPMENT_REPORT.md` (MVP-0). AI-generated — human review required (company policy).
 
@@ -24,7 +25,7 @@ Git repo since Round 03 (`git log`). `code_version = git:<short_sha>`; uncommitt
 | P10 Memory | ⏸ | strategy state only |
 
 ## Tests
-`.venv\Scripts\python.exe -m pytest` → **225 passed, 0 failed** (~70 s).
+`.venv\Scripts\python.exe -m pytest` → **267 passed, 0 failed** (~2 min; 42 new in Round 05).
 
 ## Quant Core v1
 `config/strategy_quant_v1.yaml` (frozen; selected = HN_rev: revenue_yoy 0.7 + revenue_mom 0.3, buy day 1 then hold,
@@ -42,7 +43,7 @@ Single run_day (uncontended, 16-core laptop): data load 0.8 s, cold 1.08 s, warm
 4. SOX / TSM ADR come from Yahoo's unofficial chart API; FRED may not be updated by 05:30 for live runs.
 5. Revenue per-company publish times unavailable historically (legal deadline used → slower but leak-free).
 6. All windows use the 2026/7 universe → survivorship/hindsight bias (not corrected this round).
-7. No submission module; live mode not yet exercised in a real 19:30–08:55 window.
+7. Submission is manual (NC-1 unconfirmed): `competition_day.py` produces a READY_TO_SUBMIT package + FINAL_CANDIDATE only; competition mode not yet exercised in a real 19:30–08:55 window.
 8. `data/raw` is large (TPEx all-securities responses; ETF/CA raw files).
 
 ## Unconfirmed rules
@@ -60,3 +61,11 @@ See `config/unconfirmed_rules.yaml` and report §17 (NC-1, NC-2, NC-3, NC-4, NC-
 2. Event-driven rebalance after monthly-revenue deadline (H10_rev-like) as a v1.1 candidate — test, don't assume.
 3. Crash protection research (regime-driven cash, not LLM timing).
 4. Scheduled daily jobs: ETF holdings, MOPS revenue first-seen, overnight data; live dry run; submission mechanism.
+
+## Round 05 (operational readiness)
+- One command: `scripts\competition_dry_run.ps1 -Mode competition -TeamId TEAM_XXX` (→ `agent/competition_day.py`): refresh → settlement reconciliation → preflight → Quant v1 → D-Plan → validation → package → FINAL_CANDIDATE → archive. Never uploads, never logs in, no browser automation.
+- `agent/ops/`: refresh_daily, settlement (+ settle_internal), reconcile (+ human `--accept-official`), preflight, deadline, package_submission, archive_run, healthcheck, audit, runbook, llm_review. Config: `config/ops.yaml`.
+- Docs: `docs/COMPETITION_DAILY_RUNBOOK.md`, `EMERGENCY_RUNBOOK.md`, `STRATEGY_FREEZE_RECORD.md`, `AGENT_AUTONOMY_EVIDENCE.md`, `REAL_LLM_SETUP.md`. Evidence index: `audit/`.
+- Fixes: legal rebalance after passive cash drift (`d6a45ca`, W1–W5 unchanged); observation timestamps use the wall clock (`df6d042`).
+- REAL_LLM_STATUS = BLOCKED_NO_API_KEY → competition uses Template narrative.
+- Outputs (gitignored): `logs/ops/`, `submissions/`, `archive/`, `data/settlement/`, `data/observations/`, `data/raw/active_etf/`.

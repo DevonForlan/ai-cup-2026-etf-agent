@@ -185,3 +185,16 @@ Rules enforced in code: the LLM never produces target_weight / shares / orders /
 fees / posture / funding_for; tickers, sources and fact ids come only from program-provided lists; every
 number must be grounded in the input; failures fall back to templates / no adjustment. Strategy YAML may
 contain an `llm:` block (merged over config/llm.yaml) and `crash_guard: {enabled: true}`.
+
+## Round 05 additions (operational readiness)
+
+```
+scripts\competition_dry_run.ps1 -TeamId TEAM_TEST [-Date 2026-10-27] [-Mode dry-run|competition|historical] [-Initial]
+scripts\refresh_daily.ps1 | scripts\preflight.ps1 | scripts\archive_daily.ps1
+.venv\Scripts\python.exe agent\competition_day.py --date 2026-10-27 --team-id TEAM_TEST --mode dry-run
+.venv\Scripts\python.exe agent\ops\healthcheck.py --date 2026-10-27 --mode competition
+.venv\Scripts\python.exe agent\ops\reconcile.py --date 2026-10-26 [--accept-official --confirmed-by NAME]
+.venv\Scripts\python.exe agent\ops\llm_review.py --llm-config config\llm_narrative_v1.yaml --days 15
+```
+The agent never uploads: it produces `submissions\YYYYMMDD\FINAL_CANDIDATE.txt` + `FINAL\D-Plan_<team>_<date>.json`
+for a human to upload (submission mechanism NC-1 unconfirmed). See `docs\COMPETITION_DAILY_RUNBOOK.md`.
