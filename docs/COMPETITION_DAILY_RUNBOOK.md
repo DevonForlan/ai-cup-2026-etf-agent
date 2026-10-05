@@ -82,3 +82,33 @@ NAV 相對差 >0.005% BLOCK；警告清單不同 → BLOCK。**BLOCK 時系統�
 - 不要手改 `submissions\` 或 `archive\` 內任何檔案（hash 會不符，FINAL 會被拒）。
 - 不要在 `.env` 以外的地方放 API key；不要把 key 貼到任何 log / 對話。
 - 不要用瀏覽器自動化或腳本上傳；不要呼叫任何未公告的官方 API。
+
+## 6. Round 06 更新（2026-10-05）
+
+**送件窗口開啟日**：實作依 `competition.yaml opens_prev_day` = 交易日 T 的**前一個日曆日** 19:30（週一的 D-Plan → 週日 19:30 起；週五晚上產生的週一 D-Plan 會被 C6 拒絕）。「前一日」是日曆日或交易日**未確認**，請向主辦方確認；在確認前依日曆日作業。
+
+**每日流程（取代 §0 的相關列）**
+| 時間 | 動作 |
+|---|---|
+| T-1 收盤後 | `scripts\archive_daily.ps1 -Date <T-1>` → 內部結算 + `reports\ops_daily\<T-1>_EOD.md` |
+| 主辦方公布 T-1 結算後 | `docs\OFFICIAL_SETTLEMENT_ENTRY_SOP.md`（A/B 雙重輸入 → 對帳 → `--confirm`）。未確認 → competition **BLOCK** |
+| T-1 19:30 起 | `scripts\competition_dry_run.ps1 -Mode competition -TeamId TEAM_XXX -Date <T>` |
+| 之後 | 依 `docs\FINAL_OPERATOR_CHECKLIST.md` 上傳 + 記錄回執（`python -m agent.submission.receipt ...`） |
+| 每日 | `scripts\backup_competition_state.ps1` |
+
+**FINAL 凍結**：第一次合法執行產生 FINAL 後即凍結。之後再跑只產生 candidate：
+- `FINAL ACTION: KEPT_IDENTICAL` → 決策相同，什麼都不用做。
+- `FINAL ACTION: KEPT_DIFFERENT` → console / 報告列出差異類別（DECISION / DATA / CONFIG / CODE）與原因；若確定要換：
+  `.venv\Scripts\python.exe agent\ops\final.py replace-final --date <T> --team-id TEAM_XXX --run-id <新 run_id> --reason "原因" --operator "姓名"`（截止後拒絕；舊紀錄保留）。
+- 兩個 candidate 比較：`agent\ops\compare_candidates.py <A> <B>`。
+
+**提交狀態**：`NOT_READY → READY_TO_SUBMIT →（上傳 + 回執）→ SUBMITTED_UNVERIFIED / SUBMISSION_CONFIRMED / REJECTED / UNKNOWN`。檔案產生 ≠ 已提交；只有回執 hash / 隊名 / 日期都吻合且平台 accepted + 回執編號才是 `SUBMISSION_CONFIRMED`。
+
+**休市日**：`config\ops.yaml market_holidays` 只填 TWSE 官方休市日。過去休市由歷史資料自動推得；未登記的未來休市會讓 T-1 行情看似過期 → BLOCK（保守）。
+
+**每日報告**：`reports\ops_daily\<T>_OPERATOR_SUMMARY.md`（上傳前）、`<T>_EOD.md`（收盤後）。Console 決定性資訊永遠在**最後 15 行**。
+
+**斷網**：`agent\competition_day.py --offline` 只用 store 內已有資料：T-1 行情已存 → DEGRADED（L2）可送；沒有 → BLOCK。
+
+**其他工具**：`scripts\soak_test.ps1`、`scripts\verify_release.ps1 -Sha <sha>`、`agent\ops\readiness.py`、`agent\ops\security_scan.py`、
+`agent\ops\rehearsal.py`（多日彩排）、`agent\ops\restore_drill.py`（重開機演練）。

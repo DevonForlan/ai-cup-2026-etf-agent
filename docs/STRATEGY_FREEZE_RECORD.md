@@ -22,6 +22,7 @@
 | 2026-10-05 | `bfbe688`、`db2bf15`、`d30e1ac`、`ec4d0fb` | 新功能（預設關閉）/ fix | bounded fusion、Crash Guard 及其現金漂移修正、事件快取；v1 設定未啟用 | v1 無影響（W5 重現） | Round 04 tests |
 | 2026-10-05 | `29db140` | 營運 | `run_day(as_of_override=…)`：營運時以實際時鐘為 PIT 截止；未設定時行為不變 | 回測不變 | tests/ops |
 | 2026-10-05 | `d6a45ca` | bug fix（Round 05） | 前日組合因現金漂移 >25% 而不合法時，完整再平衡不再被「不交易區間」卡住；NO_TRADE 標的宣告目前權重（不再宣告 water-fill 目標造成假的 R_CASH_NEG） | W1–W5 逐位元相同（此路徑只在持有不合法時觸發） | `tests/portfolio/test_cash_drift_r05.py`（舊程式 3 項失敗） |
+| 2026-10-05 | Round 06（`7af2bd7`…） | 營運 | 無決策路徑修改（`agent/portfolio`、`agent/features`、`agent/engine`、`agent/risk` 未變）；營運層：FINAL 凍結、結算輸入、資料新鮮度（休市感知）、ETF 重試 | W5 replay rehearsal 24 日 NAV 逐日 = baseline | tests/ops/test_round06*.py |
 
 `code_version` 隨每個 commit 更新（`git:<sha>`），寫入每份 D-Plan `agent_metadata.code_version` 與 `run_metadata.json`。
 

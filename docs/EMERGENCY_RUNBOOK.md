@@ -66,3 +66,20 @@
 
 ## 聯絡與紀錄
 每次緊急處置：時間、症狀、決定、依據、執行人，寫在 `logs\ops\<T>\manual_decision.md`，並在隔日 `audit.py` 時一併索引。
+
+## Round 06 新增情境
+
+| 症狀 | 處置 |
+|---|---|
+| `settlement_confirmed: no confirmation record` / `NOT confirmed` / `CHANGED after confirmation` | 依 `docs/OFFICIAL_SETTLEMENT_ENTRY_SOP.md` 重新雙重輸入並 `--confirm`；官方 JSON 被改過必須重新輸入 |
+| settlement_entry `DOUBLE_ENTRY_MISMATCH` | A/B 檔不一致：回到官方畫面逐列核對，不要直接採用任一份 |
+| settlement_entry `NAV != sum(shares x close) + cash` | 股數 / 現金抄錯，或官方 NAV 含應收股利（NC-7）：核對後重填；不要調高容忍度 |
+| data `CACHED`（DEGRADED） | 來源連不上但 T-1 資料已在 store：可送；事後補抓 |
+| T-1 行情 `STALE` 但 T-1 其實是休市日 | 將官方休市日填入 `config/ops.yaml market_holidays` 後重跑（只填官方公告日期） |
+| ETF `STALE_FALLBACK`（例：中信 00983A / 00995A / 00406A） | 沿用已存持股（已標示）；持續 >3 交易日 → WARN，>10 日 preflight BLOCK：人工查看發行商網站 |
+| `clock_skew` WARN / BLOCK | 校正 Windows 時間（設定 → 時間 → 立即同步），重跑 |
+| `FINAL ACTION: KEPT_DIFFERENT` | 決策與已凍結 FINAL 不同：看 `final_comparison`；確定才 `final.py replace-final` |
+| 提交狀態 `UNKNOWN` | 回執 hash / 隊名 / 日期與 FINAL 不符：可能上傳了錯的檔 → 立即核對平台上的檔案 |
+| 殘留 `.partial` 資料夾 | 上次執行中斷的半成品，**永遠不是有效輸出**；保留作證據即可，重跑會用新 run_id |
+| `LockTimeout`（鎖檔被持有） | 先確認沒有其他 agent 程序在跑；擁有者程序已結束且鎖檔 >120 秒會自動回收並記錄 `logs/ops/lock_recovery.jsonl` |
+| 主機故障 | 新機器：`git clone` + 建 venv → `agent/ops/backup.py restore --zip <備份> --target <新資料夾>` → 依 `agent/ops/restore_drill.py` 的流程驗證後再跑 |

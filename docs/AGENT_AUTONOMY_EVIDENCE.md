@@ -30,3 +30,10 @@
 ## 4. 已知限制
 - 人工上傳是必要步驟（無公開 API）；上傳時間與實際上傳檔案只能以平台回執證明。
 - 真實 LLM 未啟用；目前敘事為決定性 Template，「LLM 自主性」證據待 `docs/REAL_LLM_SETUP.md` 完成後補充。
+
+## Round 06 補充
+- 上傳證據：`submissions/<T>/receipts.jsonl`（人工記錄的平台回執，append-only）+ `submission_state.json`（狀態機歷史）；`SUBMISSION_CONFIRMED` 需回執 sha256 = FINAL sha256。
+- 決策指紋：`run_metadata.json.decision_fingerprint`（策略 hash + 資料快照 hash + 結算 hash + 程式版本 + 組合 / 委託；不含時間與敘事文字），相同輸入重跑必相同。
+- FINAL 凍結紀錄：`submissions/<T>/FINAL_FREEZE.json`，替換需 `final.py replace-final`（人名 + 理由），歷史不刪。
+- 官方結算人工輸入：`data/settlement/<T>_confirmation.json`（輸入檔 sha256、雙重輸入結果、操作者、截圖參照）。
+- 稽核完整性：`audit/COMPLETENESS.json`。
