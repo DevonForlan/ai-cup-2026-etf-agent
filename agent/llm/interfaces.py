@@ -119,6 +119,8 @@ class TemplateThesisWriter:
         else:
             s = base + (f"排名超出續抱範圍（前 {c['hold_limit']} 名）或被更高分標的替換，出清部位。"
                         if c.get("rank") else "已不符合合格條件（資料或流動性），出清部位。")
+        if c.get("events"):
+            s += "近期公告事件：" + "；".join(e[:80] for e in c["events"]) + "。"
         if c.get("funding_for"):
             s += "此筆賣出同時支應同日買進資金缺口；選擇此檔讓位之理由為其排名/權重偏離在持股中最不具優先性。"
         return s
