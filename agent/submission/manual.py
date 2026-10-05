@@ -20,7 +20,7 @@ class ManualSubmissionProvider(SubmissionProvider):
         if not hist.exists():
             return None
         lines = [json.loads(x) for x in hist.read_text(encoding="utf-8").splitlines() if x.strip()]
-        active = [x for x in lines if x.get("event", "MARKED") in ("MARKED", "REPLACED")]
+        active = [x for x in lines if x.get("event", "MARKED") in ("MARKED", "REPLACED", "SUPERSEDED_NON_COMPETITION")]
         return active[-1] if active else None
 
     def prepare(self, trade_date: str, team_id: str) -> dict:

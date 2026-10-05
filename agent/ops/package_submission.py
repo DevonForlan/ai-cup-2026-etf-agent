@@ -119,8 +119,11 @@ def history(trade_date: str, ops_cfg: dict | None = None) -> list[dict]:
     return [json.loads(x) for x in p.read_text(encoding="utf-8").splitlines() if x.strip()] if p.exists() else []
 
 
+ACTIVE_EVENTS = ("MARKED", "REPLACED", "SUPERSEDED_NON_COMPETITION")
+
+
 def active_final(trade_date: str, ops_cfg: dict | None = None) -> dict | None:
-    act = [h for h in history(trade_date, ops_cfg) if h.get("event", "MARKED") in ("MARKED", "REPLACED")]
+    act = [h for h in history(trade_date, ops_cfg) if h.get("event", "MARKED") in ACTIVE_EVENTS]
     return act[-1] if act else None
 
 
@@ -194,12 +197,20 @@ def mark_final(pkg: Path, *, team_id: str, trade_date: str, mode: str, ops_cfg: 
                               "run_id": meta["run_id"], "team_id": team_id, "existing_team_id": cur["team_id"]})
         return {"ok": False, "reasons": [f"a FINAL for team {cur['team_id']} already exists for {trade_date}; "
                                          f"refusing to mark/keep for {team_id} (wrong team id?)"]}
-    if cur_ok and not replace:
+    # Round 07 mode precedence: a competition run supersedes a non-competition (dry-run / historical) FINAL;
+    # a non-competition run never replaces a competition FINAL (not even with replace-final).
+    supersede = cur_ok and mode == "competition" and cur.get("mode") != "competition"
+    if cur_ok and mode != "competition" and cur.get("mode") == "competition":
+        _append_history(day, {"event": "REFUSED_COMPETITION_FINAL", "at": datetime.now(TPE).isoformat(),
+                              "run_id": meta["run_id"], "mode": mode, "existing_sha256": cur["sha256"]})
+        return {"ok": False, "kept": True, "existing": cur,
+                "reasons": [f"a COMPETITION FINAL exists ({cur['run_id']}); a {mode} run never replaces it"]}
+    if cur_ok and not replace and not supersede:
         _append_history(day, {"event": "REFUSED_FROZEN", "at": datetime.now(TPE).isoformat(), "run_id": meta["run_id"],
                               "sha256": meta["dplan_sha256"], "existing_sha256": cur["sha256"]})
         return {"ok": False, "kept": True, "existing": cur,
                 "reasons": [f"FINAL already frozen ({cur['run_id']}); use replace-final to change it"]}
-    if replace and cur_ok and (not (reason or "").strip() or not (operator or "").strip() or operator == "agent"):
+    if replace and cur_ok and not supersede and (not (reason or "").strip() or not (operator or "").strip() or operator == "agent"):
         return {"ok": False, "reasons": ["replace-final requires a human operator name and a reason"]}
     final_dir = day / "FINAL"
     final_dir.mkdir(parents=True, exist_ok=True)
@@ -215,7 +226,7 @@ def mark_final(pkg: Path, *, team_id: str, trade_date: str, mode: str, ops_cfg: 
         if old.name != fname:
             old.unlink()                                   # FINAL holds exactly one file; history keeps the trail
     now = datetime.now(TPE).isoformat()
-    rec = {"event": "REPLACED" if (replace and cur_ok) else "MARKED", "marked_at": now, "trade_date": trade_date,
+    rec = {"event": "SUPERSEDED_NON_COMPETITION" if supersede else ("REPLACED" if (replace and cur_ok) else "MARKED"), "marked_at": now, "trade_date": trade_date,
            "team_id": team_id, "file": fname,
            "path": str(dst.relative_to(ROOT)) if dst.is_relative_to(ROOT) else str(dst), "sha256": sha,
            "validation": "PASS", "run_id": meta["run_id"], "git_sha": meta.get("git_sha"),
@@ -223,6 +234,9 @@ def mark_final(pkg: Path, *, team_id: str, trade_date: str, mode: str, ops_cfg: 
            "decision_fingerprint": meta.get("decision_fingerprint")}
     if rec["event"] == "REPLACED":
         rec.update(old_sha256=cur["sha256"], old_run_id=cur["run_id"], reason=reason)
+    elif supersede:
+        rec.update(old_sha256=cur["sha256"], old_run_id=cur["run_id"], old_mode=cur.get("mode"),
+                   reason="competition run supersedes a non-competition FINAL")
     write_json(day / "FINAL_FREEZE.json", {
         "trade_date": trade_date, "team_id": team_id, "file": fname, "sha256": sha, "git_sha": meta.get("git_sha"),
         "decision_fingerprint": meta.get("decision_fingerprint"), "data_snapshot_hash": meta.get("data_snapshot_hash"),
