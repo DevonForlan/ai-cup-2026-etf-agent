@@ -49,6 +49,7 @@ def drill(state_root: Path, next_date: str, team_id: str) -> dict:
     from agent.ops.common import sha256_json
     from agent.ops.rehearsal import rehearsal_ops_cfg
     from agent.sim.models import Settlement
+    state_root = Path(state_root).resolve()
     tmp = Path(tempfile.mkdtemp(prefix="restore_"))
     res = {"state_root": str(state_root), "next_date": next_date, "tmp": str(tmp)}
     z = backup(tmp / "bk", ops_cfg=rehearsal_ops_cfg(state_root), base=state_root)

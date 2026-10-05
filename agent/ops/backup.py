@@ -60,7 +60,7 @@ def _sources(ops_cfg: dict, base: Path) -> list[tuple[Path, str]]:
 
 def backup(dest: Path | None = None, *, ops_cfg: dict | None = None, base: Path | None = None) -> Path:
     ops_cfg = ops_cfg or load_ops_config()
-    base = base or ROOT
+    base = (base or ROOT).resolve()
     dest = dest or ROOT / "backups"
     dest.mkdir(parents=True, exist_ok=True)
     z = dest / f"competition_state_{datetime.now(TPE):%Y%m%d_%H%M%S}.zip"
