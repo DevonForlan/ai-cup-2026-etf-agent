@@ -1,0 +1,37 @@
+{
+ "sequential": {
+  "workers": 1,
+  "duration_sec": 287.8,
+  "error": null,
+  "by_status": {
+   "OK": 27,
+   "STALE_FALLBACK": 3
+  },
+  "fallback": [
+   "00983A",
+   "00995A",
+   "00406A"
+  ]
+ },
+ "parallel": {
+  "workers": 4,
+  "duration_sec": 99.6,
+  "error": null,
+  "by_status": {
+   "OK": 27,
+   "STALE_FALLBACK": 3
+  },
+  "fallback": [
+   "00983A",
+   "00995A",
+   "00406A"
+  ]
+ },
+ "comparison": {
+  "etfs_fetched_both": 27,
+  "data_differences": [],
+  "speedup": 2.89,
+  "status_differences": []
+ },
+ "recommendation": "parallel safe on this run (identical data, no extra errors); keep max_workers small"
+}

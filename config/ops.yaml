@@ -60,7 +60,7 @@ settlement_entry:
   nav_tolerance_rel: 0.0005      # official NAV vs sum(shares x close) + cash
 
 etf_fetch:
-  max_workers: 1                 # see reports/round06_etf_parallel.json before raising (<= 5)
+  max_workers: 3                 # round 06 live test: 4 workers = identical data, 2.9x faster; kept at 3 (<= 5)
   previous_dates: 3              # retry policy: previous published dates before the stored fallback
 
 locks:
