@@ -369,6 +369,45 @@ STORE_PROBES: dict[str, Callable] = {
 }
 
 
+def replay_fetchers() -> dict[str, Callable]:
+    """Historical rehearsal: each source 'refreshes' by reading what the store held for trade_date (no network).
+    Reports the newest usable date and row counts so data_health is produced exactly like a live day; a
+    source without usable rows fails (and is then judged by the same policy)."""
+    def from_probe(name):
+        def f(ctx):
+            latest = STORE_PROBES[name](ctx["store"], ctx["trade_date"])
+            if not latest:
+                raise RuntimeError(f"{name}: no rows in store before {ctx['trade_date']}")
+            return {"records": 0, "latest_available_date": latest, "content_as_of": latest,
+                    "detail": {"mode": "replay-store"}}
+        return f
+
+    def corp(ctx):
+        ca = ctx["store"].load("corporate_actions")
+        n = int((ca["available_at"].astype(str) < ctx["trade_date"]).sum()) if len(ca) else 0
+        return {"records": n, "latest_available_date": prev_weekdays(ctx["trade_date"], 1)[0],
+                "detail": {"mode": "replay-store", "events_visible": n}}
+
+    def revenue(ctx):
+        r = ctx["store"].load("monthly_revenue")
+        r = r[r["available_at"].astype(str) < ctx["trade_date"]] if len(r) else r
+        if not len(r):
+            raise RuntimeError("no revenue visible")
+        ym = max(f"{int(y):04d}-{int(m):02d}" for y, m in zip(r["year"], r["month"]))
+        return {"records": len(r), "latest_available_date": ym, "detail": {"mode": "replay-store"}}
+
+    def material(ctx):
+        m = ctx["store"].load("material_info")
+        m = m[m["published_at"].astype(str) < ctx["trade_date"]] if len(m) else m
+        if not len(m):
+            raise RuntimeError("no material info visible")
+        return {"records": len(m), "latest_available_date": str(max(m["published_at"]))[:10],
+                "detail": {"mode": "replay-store"}}
+    out = {k: from_probe(k) for k in STORE_PROBES}
+    out.update(corporate_actions=corp, mops_revenue_first_seen=revenue, mops_material_info=material)
+    return out
+
+
 def offline_fetchers(reason: str = "network unavailable (offline mode)") -> dict[str, Callable]:
     """Every source 'fails' without touching the network -> each result comes only from a store probe.
     Used for replay rehearsals and the network-down drill."""

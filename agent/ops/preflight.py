@@ -152,6 +152,7 @@ def run_preflight(trade_date: str, *, mode: str = "dry-run", strategy_cfg: str =
         from agent.data.loaders import HistoryStore
         e = (store or HistoryStore()).load("etf_holdings")
         e = e[~e["synthetic"]]
+        e = e[e["date"] < trade_date]          # PIT: never judge freshness with data after the trade date
         if len(e):
             newest = e.groupby("etf")["date"].max()
             age = (date.fromisoformat(trade_date) - date.fromisoformat(newest.min())).days
