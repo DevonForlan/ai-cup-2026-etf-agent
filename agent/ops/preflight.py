@@ -203,6 +203,36 @@ def run_preflight(trade_date: str, *, mode: str = "dry-run", strategy_cfg: str =
     return res
 
 
+def ledger_settlement_status(trade_date: str, ops_cfg: dict | None = None, initial: bool = False):
+    """Standalone preflight: settlement status of T-1 from the ledger (internal + official, reconciled)."""
+    from agent.data.loaders import HistoryStore
+    from agent.ops.reconcile import reconcile
+    from agent.ops.settlement import ManualFileSettlementProvider, load_internal
+    from agent.sim.calendar import TradingCalendar
+    ops_cfg = ops_cfg or load_ops_config()
+    store = HistoryStore()
+    prev = TradingCalendar(store.dates("daily_prices") + [trade_date]).prev(trade_date)
+    if initial:
+        return {"previous_date": prev, "initial_day": True, "previous_available": True, "source": "initial cash"}, None, None
+    internal = load_internal(prev, ops_cfg) if prev else None
+    official = ManualFileSettlementProvider(ops_cfg).get(prev) if prev else None
+    st = {"previous_date": prev, "previous_available": internal is not None or official is not None,
+          "source": "internal+official" if internal and official else ("internal" if internal else
+                                                                     ("official" if official else None))}
+    if internal is not None and official is not None:
+        st["reconciliation"] = reconcile({"holdings": internal.holdings, "cash": str(internal.cash),
+                                          "nav": str(internal.nav), "accrued_dividends": str(internal.accrued_dividends),
+                                          "warnings": [w["rule"] for w in internal.warnings]}, official, ops_cfg)["status"]
+    else:
+        st["reconciliation"] = "UNAVAILABLE"
+    closes = {}
+    if internal is not None and prev:
+        p = store.load("daily_prices")
+        p = p[p["date"] == prev]
+        closes = {r.ticker: D(round(float(r.close), 4)) for r in p.itertuples() if r.close == r.close}
+    return st, internal, closes
+
+
 def main(argv=None) -> int:
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")
     ap = argparse.ArgumentParser()
@@ -210,8 +240,12 @@ def main(argv=None) -> int:
     ap.add_argument("--mode", choices=["dry-run", "competition"], default="dry-run")
     ap.add_argument("--config", default="config/strategy_quant_v1.yaml")
     ap.add_argument("--llm-config", default=None)
+    ap.add_argument("--initial", action="store_true", help="first competition day (start from cash)")
     a = ap.parse_args(argv)
-    r = run_preflight(a.date, mode=a.mode, strategy_cfg=a.config, llm_cfg=a.llm_config)
+    st, internal, closes = ledger_settlement_status(a.date, initial=a.initial)
+    r = run_preflight(a.date, mode=a.mode, strategy_cfg=a.config, llm_cfg=a.llm_config, settlement_status=st,
+                      prev_holdings=internal.holdings if internal else None,
+                      prev_cash=internal.cash if internal else None, closes_prev=closes if internal else None)
     for c in r["checks"]:
         print(f"[{c['level']:5s}] {c['name']:28s} {c['detail']}")
     print("PREFLIGHT:", r["level"])
