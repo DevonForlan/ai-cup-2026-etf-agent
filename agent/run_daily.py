@@ -19,7 +19,7 @@ from agent.data.loaders import HistoryStore  # noqa: E402
 from agent.data.providers import LiveProvider  # noqa: E402
 from agent.engine.rules import load_rulebook  # noqa: E402
 from agent.pipeline import (DirtyWorkingTreeError, code_version, require_clean_tree,  # noqa: E402
-                            run_day, working_tree_dirty)
+                            llm_settings, run_day, working_tree_dirty)
 from agent.sim.calendar import TradingCalendar  # noqa: E402
 from agent.sim.models import Settlement  # noqa: E402
 
@@ -36,6 +36,10 @@ def main(argv=None) -> int:
     ap.add_argument("--out", default=str(ROOT / "out"))
     ap.add_argument("--method", default=None, help="B0_score_tiered|B1_score_equal|B2_momentum|B3_institutional")
     ap.add_argument("--fixture", action="store_true", help="history is a fixture/synthetic store")
+    ap.add_argument("--narrative", choices=["template", "llm"], default=None,
+                    help="template = no LLM; llm = LLM text (falls back to template on any failure)")
+    ap.add_argument("--llm-provider", default=None, help="mock|replay|template|google|openai|anthropic")
+    ap.add_argument("--llm-config", default="config/llm.yaml")
     ap.add_argument("--competition", action="store_true",
                     help="official competition run: refuses to run from a dirty git working tree")
     a = ap.parse_args(argv)
@@ -61,8 +65,12 @@ def main(argv=None) -> int:
         for e in lp.errors:
             print("[live fetch error]", e)
     prev = Settlement.load(a.prev_settlement) if a.prev_settlement else Settlement.initial("initial", rb.rules.initial_cash)
+    llm = llm_settings(cfg, a.narrative, a.llm_provider, a.llm_config)
     r = run_day(a.date, store, prev, rb, cfg, team_id=team, mode=a.mode, out_dir=Path(a.out), method=a.method,
-                store_is_fixture=a.fixture, calendar=cal)
+                store_is_fixture=a.fixture, calendar=cal, llm=llm)
+    if llm:
+        print(f"llm: provider={llm['cfg'].get('provider')} narrative_llm={r.narrative_used_llm} "
+              f"events={len(r.events)} calls={r.llm_summary}")
     v = r.validation
     print(f"D-Plan: {r.dplan_path}")
     print(f"fallback={r.fallback}  decisions={len(r.doc['decisions'])}  no_trade={len(r.doc['no_trade_decisions'])}"

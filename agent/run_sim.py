@@ -29,8 +29,8 @@ from agent.config import ROOT, D, load_strategy  # noqa: E402
 from agent.data.loaders import HistoryStore  # noqa: E402
 from agent.engine.active_share import compute_active_share  # noqa: E402
 from agent.engine.rules import RuleBook, load_rulebook  # noqa: E402
-from agent.pipeline import (as_of_weights, cached_features, code_version, day_market, run_day,  # noqa: E402
-                            update_state_after_settlement, working_tree_dirty)
+from agent.pipeline import (as_of_weights, cached_features, code_version, day_market, llm_settings,  # noqa: E402
+                            run_day, update_state_after_settlement, working_tree_dirty)
 from agent.sim.calendar import TradingCalendar  # noqa: E402
 from agent.sim.metrics import summarize  # noqa: E402
 from agent.sim.models import Settlement  # noqa: E402
@@ -54,7 +54,8 @@ def simulate(start: str, end: str | None = None, *, history: Path, method: str |
              out_root: Path | None = None, fee_rounding: str | None = None, quiet: bool = False,
              light: bool = False, cost_mult: float = 1.0, slippage: float = 0.0,
              data_faults: set[str] | None = None, store: HistoryStore | None = None,
-             keep_scores: bool = False, strategy_id: str | None = None) -> dict:
+             keep_scores: bool = False, strategy_id: str | None = None, narrative: str | None = None,
+             llm_provider: str | None = None, llm_config: str = "config/llm.yaml") -> dict:
     cfg = copy.deepcopy(cfg) if cfg is not None else load_strategy(cfg_path)
     rb = research_rulebook(load_rulebook(), cost_mult, fee_rounding)
     store = store or HistoryStore(history)
@@ -78,10 +79,16 @@ def simulate(start: str, end: str | None = None, *, history: Path, method: str |
     bmult = D(str(1 + slippage)) if slippage else None
     smult = D(str(1 - slippage)) if slippage else None
     t_start = time.perf_counter()
+    llm = llm_settings(cfg, narrative, llm_provider, llm_config, log_root=root / "llm")
+    if llm is not None:
+        from agent.llm.client import make_provider
+        llm["provider"] = make_provider(llm["cfg"])           # one provider per run (budgets are per day)
+        (root / "llm.yaml").write_text(yaml.safe_dump(llm["cfg"], allow_unicode=True, sort_keys=False), encoding="utf-8")
+    llm_rows = []
     for d in sim_days:
         r = run_day(d, store, prev, rb, cfg, team_id=team_id, mode="replay", out_dir=root / "dplan",
                     log_dir=root / "logs" / d.replace("-", ""), method=method, store_is_fixture=fixture,
-                    calendar=cal, light=light, data_faults=data_faults)
+                    calendar=cal, light=light, data_faults=data_faults, llm=llm)
         if not light:
             (root / "validation" / f"{d}.json").write_text(json.dumps(r.validation.to_dict(), ensure_ascii=False,
                                                                       indent=1, default=str), encoding="utf-8")
@@ -114,7 +121,16 @@ def simulate(start: str, end: str | None = None, *, history: Path, method: str |
                      "trades_void": s.trades_void, "active_share_min": None if as_min is None else float(as_min),
                      "active_share_etf": as_etf, "regime": (r.agent_state.get("regime") or {}).get("regime")
                      if r.agent_state.get("regime") else getattr(r.result, "regime", None),
-                     "etf_real": (r.etf_meta or {}).get("n_real"), "runtime_sec": round(r.timings.get("total", 0), 3)})
+                     "etf_real": (r.etf_meta or {}).get("n_real"), "runtime_sec": round(r.timings.get("total", 0), 3),
+                     "guard_state": (r.guard or {}).get("state"), "guard_points": (r.guard or {}).get("points"),
+                     "llm_calls": r.llm_summary.get("calls", 0), "llm_failed": r.llm_summary.get("failed", 0),
+                     "llm_tokens": r.llm_summary.get("input_tokens", 0) + r.llm_summary.get("output_tokens", 0),
+                     "llm_cost": r.llm_summary.get("cost_usd", 0), "llm_latency_p95": r.llm_summary.get("latency_p95", 0),
+                     "narrative_llm": r.narrative_used_llm, "events": len(r.events),
+                     "events_hallucinated": r.event_stats.get("hallucinations", 0),
+                     "events_schema_fail": r.event_stats.get("schema_failures", 0),
+                     "events_raw": r.event_stats.get("events_raw", 0)})
+        llm_rows.append({"date": d, "events": [e.__dict__ for e in r.events]})
         if keep_scores and r.scores is not None:
             score_log[d] = r.scores[["raw_score", "score", "rank", "eligible"]].copy()
             decision_log[d] = [(x["ticker"], x["action"]) for x in r.doc["decisions"]]
@@ -145,7 +161,16 @@ def simulate(start: str, end: str | None = None, *, history: Path, method: str |
         "cost_mult": cost_mult, "slippage": slippage, "faults": sorted(data_faults or []),
         "runtime_sec": round(time.perf_counter() - t_start, 1),
         "avg_day_runtime_sec": float(daily["runtime_sec"].mean()),
+        "p95_day_runtime_sec": float(daily["runtime_sec"].quantile(0.95)),
+        "llm_calls": int(daily["llm_calls"].sum()), "llm_tokens": int(daily["llm_tokens"].sum()),
+        "llm_cost": float(daily["llm_cost"].fillna(0).sum()), "llm_failed": int(daily["llm_failed"].sum()),
+        "llm_latency_p95_max": float(daily["llm_latency_p95"].max()),
+        "event_count": int(daily["events"].sum()), "events_hallucinated": int(daily["events_hallucinated"].sum()),
+        "events_raw": int(daily["events_raw"].sum()), "events_schema_fail": int(daily["events_schema_fail"].sum()),
+        "narrative_llm_days": int(daily["narrative_llm"].sum()),
+        "guard_days": json.dumps(daily["guard_state"].value_counts().to_dict()) if daily["guard_state"].notna().any() else None,
     })
+    (root / "events.json").write_text(json.dumps(llm_rows, ensure_ascii=False, indent=0, default=str), encoding="utf-8")
     (root / "summary.json").write_text(json.dumps(summ, ensure_ascii=False, indent=1, default=str), encoding="utf-8")
     if keep_scores:
         summ["_scores"] = score_log
@@ -171,6 +196,9 @@ def main(argv=None) -> int:
     ap.add_argument("--fixture", action="store_true")
     ap.add_argument("--light", action="store_true")
     ap.add_argument("--run-id", default=None)
+    ap.add_argument("--narrative", choices=["template", "llm"], default=None)
+    ap.add_argument("--llm-provider", default=None, help="mock|replay|template|google|openai|anthropic")
+    ap.add_argument("--llm-config", default="config/llm.yaml")
     a = ap.parse_args(argv)
     if working_tree_dirty():
         print(f"[warning] working tree dirty -> code_version={code_version()}")
@@ -179,7 +207,8 @@ def main(argv=None) -> int:
         rid = None if not a.run_id else (a.run_id + ("" if len(methods) == 1 else f"_{m}"))
         s = simulate(a.start, a.end, days=a.days, history=Path(a.history), method=m, cfg_path=a.config,
                      initial_cash=a.initial_cash, run_id=rid, fixture=a.fixture, fee_rounding=a.fee_rounding,
-                     light=a.light, cost_mult=a.cost_mult, slippage=a.slippage)
+                     light=a.light, cost_mult=a.cost_mult, slippage=a.slippage, narrative=a.narrative,
+                     llm_provider=a.llm_provider, llm_config=a.llm_config)
         print(json.dumps({k: s[k] for k in ("run_id", "final_nav", "total_return", "mdd", "cum_turnover",
                                              "cum_fees", "cum_tax", "warning_count", "dq", "validation_failures",
                                              "fallback_days", "git_sha", "runtime_sec")},

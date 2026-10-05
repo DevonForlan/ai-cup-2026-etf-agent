@@ -49,7 +49,7 @@ class LLMMarketNarrator(TemplateMarketNarrator):
         self.used_llm = True
         self._counter = out.counter_evidence
         # the evidence placeholder is appended by code so the reference is guaranteed
-        return out.logic.rstrip("。") + "（依據 {{fact:market}}{{fact:overnight}}）。"
+        return out.logic.rstrip("。") + "（{{fact:market}}{{fact:overnight}}）。"
 
     def market_counter(self, v: dict, regime: str) -> str | None:
         if self.used_llm:

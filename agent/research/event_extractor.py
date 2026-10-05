@@ -23,6 +23,7 @@ from agent.config import ROOT
 from agent.llm.client import LLMClient
 from agent.llm.grounding import allowed_numbers, bad_refs, ungrounded_numbers
 from agent.llm.schemas import EventItem, EventsOut
+from agent.research.reviewer import FORBIDDEN
 
 DATE_RE = re.compile(r"(\d{2,4})[/\-.年](\d{1,2})[/\-.月](\d{1,2})日?")
 
@@ -69,12 +70,14 @@ class ExtractionStats:
     dropped_source: int = 0
     dropped_number: int = 0
     dropped_fact_ref: int = 0
+    dropped_injection: int = 0
     duplicates: int = 0
     schema_failures: int = 0
 
     @property
     def hallucinations(self) -> int:
-        return self.dropped_ticker + self.dropped_source + self.dropped_number + self.dropped_fact_ref
+        return (self.dropped_ticker + self.dropped_source + self.dropped_number + self.dropped_fact_ref
+                + self.dropped_injection)
 
 
 def fingerprint(ticker: str, event_type: str, published_at: str, text: str) -> str:
@@ -171,7 +174,7 @@ class EventExtractor:
             batch = todo[i:i + self.batch_size]
             got = self._extract_batch(batch, facts)
             by_doc: dict[str, list] = {d.source_id: [] for d in batch}
-            for e in got:
+            for e in got or []:
                 by_doc.setdefault(e.source_ids[0], []).append(e)
             for d in batch:
                 p = self._cache_path(d)
@@ -260,6 +263,9 @@ class EventExtractor:
             return None
         if ungrounded_numbers(" ".join([ev.summary, ev.reason, ev.risk]), allowed_nums):
             self.stats.dropped_number += 1
+            return None
+        if FORBIDDEN.search(" ".join([ev.summary, ev.reason, ev.risk])):
+            self.stats.dropped_injection += 1          # instruction-like text echoed from untrusted input
             return None
         return True
 

@@ -10,7 +10,8 @@ from dataclasses import dataclass, field
 
 from agent.llm.grounding import allowed_numbers, bad_refs, ungrounded_numbers
 
-FORBIDDEN = re.compile(r"(target_weight|下單|買進\s*\d|賣出\s*\d|權重設為|set weight|buy ticker|ignore previous)", re.I)
+FORBIDDEN = re.compile(r"(target_weight|下單|買進\s*\d|賣出\s*\d|權重設為|set\s+(the\s+)?weight|buy\s+ticker|"
+                       r"sell\s+ticker|ignore\s+(all\s+)?previous|system\s+prompt|忽略(先前|以上|之前)的?指令)", re.I)
 
 
 @dataclass

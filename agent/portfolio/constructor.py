@@ -161,23 +161,47 @@ def _guard_scale(prev_h, prev_cash, nav_prev, closes_prev, rb, cfg, guard, etf_h
     need_relever = guard["state"] == "NORMAL" and cash_now > hi + D("0.02")
     if not (need_delever or need_volcap or need_relever):
         return None
-    if need_delever or need_volcap:
-        k = Decimal(1)
-        if need_delever:
-            k = max((1 - mid) / inv, 1 - D(str(guard["max_delever"])) / inv)
-        k = min(k, Decimal(1))
-        what = f"降曝險 ×{float(k):.3f}"
-    else:
-        k = min((1 - mid) / inv, 1 + D(str(guard["max_relever"])) / inv)
-        what = f"回補曝險 ×{float(k):.3f}"
     caps = _caps(prev_h, rb, cfg)
     locked = {t for t, sh in prev_h.items() if sh % lot != 0}
-    w = {}
-    for t, cw in cur_w.items():
-        x = cw if t in locked else cw * k
-        if vcap is not None and t in hv:
-            x = min(x, vcap)
-        w[t] = min(x, caps[t]).quantize(Q, rounding="ROUND_FLOOR")
+    legal_inv = 1 - (rb.rules.cash_max_weight - D("0.06"))       # official cash limit (+stress buffer) wins over the cap
+
+    def weights_for(k):
+        w = {}
+        for t, cw in cur_w.items():
+            x = cw if t in locked else cw * k
+            if vcap is not None and t in hv:
+                x = min(x, vcap)
+            w[t] = min(x, caps[t]).quantize(Q, rounding="ROUND_FLOOR")
+        return w
+
+    def traded_value(w):
+        dec = [{"ticker": t, "decision_id": t, "target_weight": float(w[t])} for t in w
+               if t not in locked and abs(w[t] - cur_w[t]) >= D("0.002")]
+        od = derive_orders(dec, prev_h, nav_prev, closes_prev, lot)
+        return sum((Decimal(o.shares) * D(closes_prev[o.ticker]) for o in od), Decimal(0)) / nav_prev
+
+    if need_delever or need_volcap:
+        cap = D(str(guard["max_delever"]))
+        k = min(max((1 - mid) / inv, 1 - cap / inv), Decimal(1)) if need_delever else Decimal(1)
+        for _ in range(8):                                        # lot flooring can overshoot the daily cap
+            over = traded_value(weights_for(k)) - cap
+            if over <= 0 or not need_delever:
+                break
+            k = min(Decimal(1), k + over / inv + D("0.001"))
+        what = f"降曝險 ×{float(k):.3f}"
+    else:
+        cap = D(str(guard["max_relever"]))
+        k = min((1 - mid) / inv, 1 + cap / inv)
+        if inv * k < legal_inv:                                   # previous portfolio illegal (cash > 25%): fix it
+            k = min((1 - mid) / inv, legal_inv / inv)
+        else:
+            for _ in range(8):
+                over = traded_value(weights_for(k)) - cap
+                if over <= 0:
+                    break
+                k = max(Decimal(1), k - over / inv - D("0.001"))
+        what = f"回補曝險 ×{float(k):.3f}"
+    w = weights_for(k)
     no_trade = set(locked) | {t for t in w if abs(w[t] - cur_w[t]) < D("0.002")}
     notes = [f"Crash Guard {guard['state']}：{what}（現金 {float(cash_now):.1%} → 目標 {float(lo):.0%}–{float(hi):.0%}，"
              f"單日上限 {guard['max_delever']:.0%} NAV）"]

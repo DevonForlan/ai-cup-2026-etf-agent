@@ -157,7 +157,7 @@ class LLMClient:
         if not self.enabled:
             self.logger.log({**base, "status": "disabled"})
             return None
-        why = self.budget.exhausted()
+        why = self.budget.exhausted() if self.provider.name != "replay" else None   # replay costs nothing
         if why:
             self.logger.log({**base, "status": "skipped_budget", "reason": why})
             return None
@@ -197,7 +197,7 @@ class LLMClient:
                                  "latency_sec": time.perf_counter() - t0})
                 if not e.retryable:
                     return None
-            if self.budget.exhausted():
+            if self.provider.name != "replay" and self.budget.exhausted():
                 break
         self.logger.log({**base, "status": "dropped", "error": str(last_err)[:300], "retry_count": retries})
         return None

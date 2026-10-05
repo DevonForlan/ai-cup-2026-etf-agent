@@ -76,9 +76,14 @@ def etf_holdings_from_view(view: PITView, prefer_real: bool = True) -> tuple[dic
     df = view.etf_holdings()
     if len(df) == 0:
         return {}, {}
-    if prefer_real and (~df["synthetic"]).any():
-        real_etfs = set(df.loc[~df["synthetic"], "etf"])
-        df = df[~(df["etf"].isin(real_etfs) & df["synthetic"])]
+    if prefer_real:
+        full = view.store.load("etf_holdings")
+        if len(full) and (~full["synthetic"]).any():
+            # real issuer data exists in the store -> never mix in synthetic benchmarks; ETFs whose real
+            # holdings are not yet visible at as_of are simply missing (reported, not faked)
+            df = df[~df["synthetic"]]
+            if len(df) == 0:
+                return {}, {"date": None, "synthetic": False, "n_real": 0, "n_synthetic": 0, "per_etf_date": {}}
     df = df[df["weight"].notna()]
     last = df.groupby("etf")["date"].transform("max")
     df = df[df["date"] == last].sort_values(["etf", "weight"], ascending=[True, False])
@@ -395,11 +400,36 @@ def run_day(trade_date: str, store: HistoryStore, prev: Settlement, rb: RuleBook
              "notes": notes + list(getattr(result, "notes", [])), "reports": [r.to_dict() for r in reports],
              "pit_reads": reads, "as_of": as_of, "timings_sec": tm, "code_version": code_version()},
             ensure_ascii=False, indent=1, default=str), encoding="utf-8")
-    return DayResult(trade_date, prev_date, path, doc, rep, result, fs, sc, closes_prev,
-                     bool(getattr(result, "is_fallback", False)), notes + list(getattr(result, "notes", [])),
-                     state, tm, etf_meta, getattr(result, "active_share", None), events,
-                     client.logger.summary() if client is not None else {}, ev_stats, guard,
-                     bool(narrator is not None and getattr(narrator, "used_llm", False)))
+    return DayResult(trade_date=trade_date, prev_date=prev_date, dplan_path=path, doc=doc, validation=rep,
+                     result=result, features=fs, scores=sc, closes_prev=closes_prev,
+                     fallback=bool(getattr(result, "is_fallback", False)),
+                     notes=notes + list(getattr(result, "notes", [])), agent_state=state, timings=tm,
+                     etf_meta=etf_meta, active_share=getattr(result, "active_share", None), events=events,
+                     llm_summary=client.logger.summary() if client is not None else {}, event_stats=ev_stats,
+                     guard=guard, narrative_used_llm=bool(narrator is not None and getattr(narrator, "used_llm", False)))
+
+
+def llm_settings(cfg: dict, narrative: str | None = None, provider: str | None = None,
+                 llm_config: str = "config/llm.yaml", provider_instance=None, log_root=None) -> dict | None:
+    """Merge config/llm.yaml with a strategy's optional `llm:` block and CLI overrides.
+    Returns None for a pure-quant run (template narrative, no events, no signal)."""
+    import copy as _copy
+    from agent.llm.client import load_llm_config
+    lc = _copy.deepcopy(load_llm_config(llm_config))
+    for k, v in (cfg.get("llm") or {}).items():
+        if isinstance(v, dict) and isinstance(lc.get(k), dict):
+            lc[k].update(v)
+        else:
+            lc[k] = v
+    if narrative:
+        lc.setdefault("narrative", {})["mode"] = narrative
+    if provider:
+        lc["provider"] = provider
+    active = (lc.get("provider", "template") != "template" and
+              (lc.get("narrative", {}).get("mode") == "llm" or lc.get("events", {}).get("enabled")))
+    if not active:
+        return None
+    return {"cfg": lc, "provider": provider_instance, "log_root": log_root}
 
 
 def _provider_enum(name: str) -> str:
