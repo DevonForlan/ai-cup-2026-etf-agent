@@ -1,6 +1,7 @@
 # DEVELOPMENT STATUS
 
-> Last update: 2026-10-05 (Round 06). Round 06 report: `reports/ROUND_06_COMPETITION_REHEARSAL_REPORT.md`, release candidate `reports/ROUND_06_RELEASE_CANDIDATE.md`, checklist `reports/COMPETITION_READINESS_CHECKLIST.md` — readiness **DRY_RUN_READY** (NC-1 unresolved).
+> Last update: 2026-10-05 (Round 07): Claude CLI **PRODUCTION_CANDIDATE** (`--competition-profile prod`, template fallback), RC `4742d5a`, report `reports/ROUND_07_PRODUCTION_CANDIDATE_REPORT.md`, daily commands `docs/DAILY_COMMANDS.md` — readiness still **DRY_RUN_READY**.
+> Round 06: Round 06 report: `reports/ROUND_06_COMPETITION_REHEARSAL_REPORT.md`, release candidate `reports/ROUND_06_RELEASE_CANDIDATE.md`, checklist `reports/COMPETITION_READINESS_CHECKLIST.md` — readiness **DRY_RUN_READY** (NC-1 unresolved).
 > Round 05 report: `reports/ROUND_05_OPERATIONAL_READINESS_REPORT.md`.
 > Round 04 report: `reports/ROUND_04_LLM_INTEGRATION_REPORT.md`.
 > (Round 03 notes below still apply.) Reports: `reports/ROUND_03_STRATEGY_OPTIMIZATION_REPORT.md` (strategy),
@@ -79,3 +80,10 @@ See `config/unconfirmed_rules.yaml` and report §17 (NC-1, NC-2, NC-3, NC-4, NC-
 - Decision fingerprint, candidate compare, FINAL freeze + replace-final, crash-safe packages/archives, pid-aware stale-lock recovery, holiday-aware staleness, ETF retry/STALE_FALLBACK + 3 workers, store-probe CACHED mode.
 - Soak 100 iterations, failure injection round 2 17/17, restore drill, security scan, readiness score, verify_release.
 - Real LLM still BLOCKED_NO_API_KEY. CTBC ETFs 00983A/00995A/00406A return empty (stored fallback).
+
+## Round 07 (production candidate integration)
+- Claude Code CLI = primary narrative / MOPS research provider via `config/competition_prod.yaml`; TemplateProvider = permanent fallback; global default unchanged.
+- MOPS research pipeline (source fact -> grounded LLM inference attached to existing decisions); decision-contradiction gate.
+- Version pin 2.1.289 (drift = warning), whitelisted auth, `LLM: PRIMARY=... STATUS=READY|DEGRADED FALLBACK=template`, RESTRICTED phase = one narrative call.
+- Official TWSE 2026 calendar (10-26 closed; NC-15 still open); CTBC errors surfaced; FINAL mode precedence fix.
+- Quant unchanged (W5 + 24/24 decision hashes); 417 tests.

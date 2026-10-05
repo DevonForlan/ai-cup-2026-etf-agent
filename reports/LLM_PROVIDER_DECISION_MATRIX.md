@@ -36,3 +36,12 @@
 | 狀態 | 已實作、`--llm-provider claude-cli` 選用；預設 Template |
 | 推薦 | **CLAUDE_CLI_EXPERIMENTAL_ONLY**（需公司授權 + 比賽使用 UNCLEAR） |
 詳見 `reports/ROUND_06B_CLAUDE_CLI_RUNTIME_REPORT.md`。
+
+## Round 07 更新（2026-10-05）
+| 項目 | Claude Code CLI runtime |
+|---|---|
+| 授權 | 公司授權（organization-managed Team account authorized by employer for company competition participation）→ AUTHORIZED_FOR_COMPETITION_USE；主辦方規則未禁止外部 LLM，未特別點名 Claude Code CLI |
+| 角色 | 敘事 + MOPS 研究解讀（NARRATIVE_LOCKED）；決策由 Quant Core v1 |
+| 實測（Round 07） | auth READY、版本 2.1.289 PASS、smoke 1/1、真實 dry-run 3 次呼叫 0 失敗、研究推論 4/4 grounding 通過、決策 hash 與 Template 相同 |
+| 狀態 | `--competition-profile prod`：primary claude-cli、fallback template；全域預設仍 Template |
+| 推薦 | **CLAUDE_CLI_PRODUCTION_CANDIDATE**（Template 永久 fallback；任何失敗不阻擋） |

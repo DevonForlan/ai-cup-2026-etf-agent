@@ -23,6 +23,7 @@
 | 2026-10-05 | `29db140` | 營運 | `run_day(as_of_override=…)`：營運時以實際時鐘為 PIT 截止；未設定時行為不變 | 回測不變 | tests/ops |
 | 2026-10-05 | `d6a45ca` | bug fix（Round 05） | 前日組合因現金漂移 >25% 而不合法時，完整再平衡不再被「不交易區間」卡住；NO_TRADE 標的宣告目前權重（不再宣告 water-fill 目標造成假的 R_CASH_NEG） | W1–W5 逐位元相同（此路徑只在持有不合法時觸發） | `tests/portfolio/test_cash_drift_r05.py`（舊程式 3 項失敗） |
 | 2026-10-05 | Round 06（`7af2bd7`…） | 營運 | 無決策路徑修改（`agent/portfolio`、`agent/features`、`agent/engine`、`agent/risk` 未變）；營運層：FINAL 凍結、結算輸入、資料新鮮度（休市感知）、ETF 重試 | W5 replay rehearsal 24 日 NAV 逐日 = baseline | tests/ops/test_round06*.py |
+| 2026-10-05 | Round 07（`dd98f4a`…`4742d5a`） | 營運 / 敘事 | 無決策路徑修改（`agent/portfolio`、`agent/features`、`agent/engine`、`agent/risk`、`agent/sim`、validator 與 `83af462` diff 為空）；Claude CLI 敘事 / MOPS 研究（只寫 Inference）、官方行事曆、FINAL 模式優先序、CTBC 錯誤回報 | W5 NAV 相同、24/24 日 decision_core_hash 相同；真實 10-06 Claude = Template | tests/ops/test_round07.py、tests/llm/test_mops_research.py |
 
 `code_version` 隨每個 commit 更新（`git:<sha>`），寫入每份 D-Plan `agent_metadata.code_version` 與 `run_metadata.json`。
 
