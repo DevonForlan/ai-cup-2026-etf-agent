@@ -83,3 +83,23 @@
 | 殘留 `.partial` 資料夾 | 上次執行中斷的半成品，**永遠不是有效輸出**；保留作證據即可，重跑會用新 run_id |
 | `LockTimeout`（鎖檔被持有） | 先確認沒有其他 agent 程序在跑；擁有者程序已結束且鎖檔 >120 秒會自動回收並記錄 `logs/ops/lock_recovery.jsonl` |
 | 主機故障 | 新機器：`git clone` + 建 venv → `agent/ops/backup.py restore --zip <備份> --target <新資料夾>` → 依 `agent/ops/restore_drill.py` 的流程驗證後再跑 |
+
+## Round 07 新增：Claude CLI / 資料 / 提交（2026-10-05）
+原則：**Claude 只寫敘事**。任何 Claude 問題 → Template 敘事 → D-Plan 照常產生、決策完全相同。Claude 問題一律**不阻擋**。
+operator summary 會顯示 `LLM: PRIMARY=claude-cli STATUS=READY|DEGRADED FALLBACK=template`。
+
+| 情境 | 現象 | 系統自動 fallback | 操作者動作 | 是否阻擋 |
+|---|---|---|---|---|
+| Claude 未登入 | `STATUS=DEGRADED (NOT_AUTHENTICATED)` | Template 敘事 | 照常上傳。比賽日結束後在本機自己的終端機執行 `claude` 重新登入（不可在程式內處理登入） | 否 |
+| Usage limit（額度用完） | LLM 日誌 `USAGE_LIMIT`；`llm.failed ≥ 1` | 當次及之後的呼叫全改 Template，不重試 | 照常上傳；不要換帳號、不要繞過額度 | 否 |
+| Timeout | `TIMEOUT`（單次 120 s / 全日 300 s 預算） | 子程序終止（含整個程序樹）→ Template | 照常上傳 | 否 |
+| Invalid JSON / schema 錯 | `INVALID_JSON` / `SCHEMA_FAIL` | Template | 照常上傳 | 否 |
+| Grounding / 矛盾失敗 | 未知 fact ID、新 ticker、無來源數字、交易指令、與決策矛盾 | 該段文字丟棄 → Template | 照常上傳（gate 不放寬） | 否 |
+| 版本漂移 | preflight `WARNING_VERSION_DRIFT`（非 2.1.289） | 仍可使用；若呼叫失敗 → Template | 當天照常；收盤後跑 `experiments\claude_cli_runtime\round07_regression.py` 一次確認後再更新 `supported_versions` | 否 |
+| 找不到 CLI | `STATUS=DEGRADED (CLI_NOT_FOUND)` | Template | 照常上傳；收盤後重裝官方 Claude Code | 否 |
+| 接近截止 | deadline RESTRICTED（≤30 min） | 只呼叫 1 次市場敘事；thesis / 研究 → Template | 無 | 否 |
+| 更接近截止 | NO_LLM（≤15）/ PACKAGE_ONLY（≤10） | 不呼叫 Claude；PACKAGE_ONLY 只做量化 + 驗證 + 打包 | 立即上傳 FINAL | 否 |
+| MOPS 過期 / 抓取失敗 | data health WARN（optional 來源） | 研究段落沒有新公告 → 無研究推論；量化不受影響 | 照常上傳 | 否 |
+| ETF 持股過期（含中信 00983A / 00995A / 00406A） | `etf_holdings` STALE_FALLBACK + age | 沿用最近一次持股（記錄 age），Active Share 安全緩衝不降低 | 照常上傳；收盤後重跑 refresh | 否（除非全部 ETF 都無資料 → 依 §A） |
+| 提交平台無法使用 | 上傳失敗 | 無（程式不會自動上傳） | 依主辦方指示（NC-1 提交方式未確認）；保留 FINAL 與截圖，聯絡主辦方 | 人工處理 |
+| 官方結算無法取得 | 次日 preflight：無官方結算 | 競賽模式 BLOCK（不猜持股）；dry-run 可用內部結算 | 依 §C；用 `settlement_entry.py` 人工輸入（NC-1 未確認） | 是（競賽模式） |

@@ -112,3 +112,22 @@ NAV 相對差 >0.005% BLOCK；警告清單不同 → BLOCK。**BLOCK 時系統�
 
 **其他工具**：`scripts\soak_test.ps1`、`scripts\verify_release.ps1 -Sha <sha>`、`agent\ops\readiness.py`、`agent\ops\security_scan.py`、
 `agent\ops\rehearsal.py`（多日彩排）、`agent\ops\restore_drill.py`（重開機演練）。
+
+## 7. Round 07 每日流程（Claude CLI 為主、Template 為 fallback）
+指令全文：`docs\DAILY_COMMANDS.md`。
+
+1. **T-1 收盤後**：`scripts\archive_daily.ps1 -Date <T-1>`（內部結算）→ 主辦方公布後 `settlement_entry.py`（官方結算，雙重輸入）。
+2. **Refresh**：一鍵流程內自動（行情、法人、月營收、MOPS、ETF 持股；optional 來源失敗只降級）。
+3. **Preflight**：`scripts\preflight.ps1 -Mode competition -CompetitionProfile prod`。
+4. **Claude auth / 版本**：同一個 preflight 印出 `LLM: PRIMARY=claude-cli STATUS=READY|DEGRADED FALLBACK=template`；只讀 `loggedIn / authMethod / subscriptionType / apiProvider`。DEGRADED 不阻擋。
+5. **Data readiness**：preflight 的 T-1 可見性 + data health（BLOCK 才處理，見 EMERGENCY_RUNBOOK §A）。
+6. **competition_day**：`scripts\competition_dry_run.ps1 -Mode competition -TeamId TEAM_XXX -Date <T> -CompetitionProfile prod`
+   （Quant Core v1 決策 → Facts / Evidence → Claude CLI 敘事 + MOPS 研究推論 → grounding → D-Plan）。
+7. **Validation**：自動；FAIL → 自動 fallback（維持前日組合）；仍 FAIL → BLOCK。
+8. **Final candidate**：`submissions\<T>\FINAL_CANDIDATE.txt`；第一份 competition FINAL 會取代同日 dry-run FINAL，之後凍結（換檔需 replace-final + 姓名 + 理由）。
+9. **人工上傳**（截止 T 日 08:55）。
+10. **記錄回執**：`python -m agent.submission.receipt ...`。
+11. **結算**（T 日收盤後）→ **對帳**（次日一鍵流程自動 reconciliation）。
+
+**Claude 失敗 → Template**：未登入 / 額度 / 逾時 / JSON / 版本 / CLI 不存在，全部自動改 Template，D-Plan 決策不變（見 EMERGENCY_RUNBOOK Round 07 表）。
+接近截止：≤30 分只呼叫一次市場敘事；≤15 分不呼叫 Claude；≤10 分只打包。
