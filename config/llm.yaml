@@ -31,6 +31,7 @@ events:
   enabled: false            # run the event extractor (adds EventFacts to the evidence graph)
   max_documents_per_day: 200
   lookback_days: 5
+  cache: true               # per-document extraction cache (data/cache/events); disable for benchmarks
 
 llm_signal:                 # bounded event adjustment of the quant score (Phase 5B)
   enabled: false
