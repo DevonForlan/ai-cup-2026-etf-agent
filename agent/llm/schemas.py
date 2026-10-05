@@ -49,6 +49,21 @@ class ThesisOut(_Strict):
     items: list[ThesisItem] = Field(default_factory=list, max_length=60)
 
 
+class ResearchItem(_Strict):
+    """Round 07 MOPS research interpretation (an inference over cited MOPS documents, never a source)."""
+    event_type: EventType
+    summary: str = Field(min_length=10, max_length=300)
+    positive_evidence: list[str] = Field(default_factory=list, max_length=3)
+    negative_evidence: list[str] = Field(default_factory=list, max_length=3)
+    uncertainty: str = Field(min_length=4, max_length=300)
+    affected_tickers: list[str] = Field(min_length=1, max_length=5)
+    fact_refs: list[str] = Field(min_length=1, max_length=5)
+
+
+class ResearchOut(_Strict):
+    items: list[ResearchItem] = Field(default_factory=list, max_length=8)
+
+
 class ReviewOut(_Strict):
     verdict: Literal["PASS", "REWRITE", "FAIL"]
     issues: list[str] = Field(default_factory=list)

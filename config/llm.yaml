@@ -26,6 +26,13 @@ narrative:
   mode: template            # template | llm  (llm text is used only if it passes the grounding reviewer)
   reviewer: deterministic   # deterministic | llm+deterministic
   max_thesis_items: 35
+  thesis_llm: true          # false -> per-decision thesis stays template (runtime budget RESTRICTED phase)
+
+research:                   # Round 07 MOPS research narrative (inference over cited announcements; never a source)
+  enabled: false
+  lookback_days: 5
+  max_documents: 8          # one batched call; max 2 documents per ticker
+  max_inferences: 4
 
 events:
   enabled: false            # run the event extractor (adds EventFacts to the evidence graph)

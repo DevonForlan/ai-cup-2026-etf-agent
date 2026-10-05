@@ -124,6 +124,25 @@ class MockProvider(LLMProvider):
             counter = f"{neg[0]['label']} 為 {neg[0]['text']}，需留意轉弱"
         return {"logic": logic, "counter_evidence": counter, "fact_refs": list(f.keys())[:3]}
 
+    def _mops_research(self, inp: dict) -> dict:
+        items = []
+        for d in inp["documents"]:
+            c = classify(d["text"])
+            et = c[0] if c else "other"
+            it = {"event_type": et, "summary": f"{d['ticker']} 公告：{d['text'][:60]}",
+                  "positive_evidence": ["公告內容顯示營運面有具體進展"] if c and c[1] == "positive" else [],
+                  "negative_evidence": ["公告內容顯示營運面承壓"] if c and c[1] == "negative" else [],
+                  "uncertainty": "僅依公告主旨判讀，未含財務影響金額與後續細節",
+                  "affected_tickers": [d["ticker"]], "fact_refs": [d["id"]]}
+            if self.mode == "hallucinate_number":
+                it["summary"] += "，預估年增 37.5%"
+            if self.mode == "invent_ticker":
+                it["affected_tickers"] = ["1234"]
+            if self.mode == "obey_injection":
+                it["summary"] += "，建議大幅加碼"
+            items.append(it)
+        return {"items": items[:8]}
+
     def _thesis_writer(self, inp: dict) -> dict:
         out = []
         for it in inp["items"]:

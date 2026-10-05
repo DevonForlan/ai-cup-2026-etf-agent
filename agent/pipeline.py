@@ -166,6 +166,7 @@ class DayResult:
     events: list = field(default_factory=list)
     llm_summary: dict = field(default_factory=dict)
     event_stats: dict = field(default_factory=dict)
+    research: dict = field(default_factory=dict)       # Round 07 MOPS research stats / inference keys
     guard: dict | None = None
     narrative_used_llm: bool = False
     timings: dict = field(default_factory=dict)
@@ -352,12 +353,34 @@ def run_day(trade_date: str, store: HistoryStore, prev: Settlement, rb: RuleBook
         from agent.research.market_narrator import LLMMarketNarrator
         from agent.research.thesis_writer import LLMThesisWriter
         narrator = LLMMarketNarrator(client)
-        writer = LLMThesisWriter(client, int(llm["cfg"]["narrative"].get("max_thesis_items", 35)))
+        if llm["cfg"]["narrative"].get("thesis_llm", True):     # Round 07 runtime budget: RESTRICTED -> False
+            writer = LLMThesisWriter(client, int(llm["cfg"]["narrative"].get("max_thesis_items", 35)))
+    rcfg = (llm["cfg"].get("research") or {}) if client is not None else {}
+    research = {"findings": None, "stats": None, "inferences": []}
+
+    def add_research(g, result_obj):
+        """Round 07: MOPS research inferences attached to existing decisions (never changes them)."""
+        if not (rcfg.get("enabled") and client.enabled) or getattr(result_obj, "is_fallback", False):
+            return
+        from agent.research.mops_research import MOPSResearcher, attach_research, select_documents
+        if research["findings"] is None:
+            tr = time.perf_counter()
+            acts = {n.data["ticker"]: n.data["action"] for n in g.of_kind("Decision")}
+            acts.update({n.data["ticker"]: "NO_TRADE" for n in g.of_kind("NoTrade")})
+            docs = select_documents(PITView(store, as_of), trade_date, set(acts),
+                                    int(rcfg.get("lookback_days", 5)), int(rcfg.get("max_documents", 8)))
+            rs = MOPSResearcher(client)
+            research["findings"] = rs.run(docs, acts, {t: rb.universe[t]["name"] for t in acts}, trade_date)
+            research["stats"] = dict(rs.stats.__dict__)
+            tm["research"] = time.perf_counter() - tr
+        research["inferences"] = attach_research(g, research["findings"], trade_date,
+                                                 int(rcfg.get("max_inferences", 4)), int(rcfg.get("max_documents", 8)))
 
     def make(result_obj):
         ta = time.perf_counter()
         g, info = build_graph(trade_date, fs, sc, result_obj, prev.holdings, prev.cash, nav_prev, closes_prev,
                               rb, cfg, sources, narrator, writer, events, audit)
+        add_research(g, result_obj)
         elapsed = max(1, int(time.perf_counter() - t0))
         completed = (started + timedelta(seconds=elapsed)) if mode != "live" else datetime.now(TPE).replace(microsecond=0)
         used = client is not None and client.enabled and (narrator is not None or bool(events))
@@ -403,7 +426,8 @@ def run_day(trade_date: str, store: HistoryStore, prev: Settlement, rb: RuleBook
         (log_dir / "portfolio_reports.json").write_text(json.dumps(
             {"fallback": bool(getattr(result, "is_fallback", False)), "reason": getattr(result, "reason", None),
              "notes": notes + list(getattr(result, "notes", [])), "reports": [r.to_dict() for r in reports],
-             "pit_reads": reads, "as_of": as_of, "timings_sec": tm, "code_version": code_version()},
+             "pit_reads": reads, "as_of": as_of, "timings_sec": tm,
+             "research": {"stats": research["stats"], "inferences": research["inferences"]}, "code_version": code_version()},
             ensure_ascii=False, indent=1, default=str), encoding="utf-8")
     return DayResult(trade_date=trade_date, prev_date=prev_date, dplan_path=path, doc=doc, validation=rep,
                      result=result, features=fs, scores=sc, closes_prev=closes_prev,
@@ -411,6 +435,7 @@ def run_day(trade_date: str, store: HistoryStore, prev: Settlement, rb: RuleBook
                      notes=notes + list(getattr(result, "notes", [])), agent_state=state, timings=tm,
                      etf_meta=etf_meta, active_share=getattr(result, "active_share", None), events=events,
                      llm_summary=client.logger.summary() if client is not None else {}, event_stats=ev_stats,
+                     research={"stats": research["stats"], "inferences": research["inferences"]},
                      guard=guard, narrative_used_llm=bool(narrator is not None and getattr(narrator, "used_llm", False)))
 
 
@@ -439,7 +464,8 @@ def llm_settings(cfg: dict, narrative: str | None = None, provider: str | None =
 
 def _provider_enum(name: str) -> str:
     """D-Plan agent_metadata.model_provider enum (schema): map our provider names."""
-    return {"google": "google", "gemini": "google", "openai": "openai", "anthropic": "anthropic"}.get(name, "other")
+    return {"google": "google", "gemini": "google", "openai": "openai", "anthropic": "anthropic",
+            "claude_cli": "anthropic", "claude_agent_sdk": "anthropic"}.get(name, "other")
 
 
 def _inject_faults(fs, faults: set[str]):
