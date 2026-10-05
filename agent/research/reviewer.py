@@ -14,6 +14,27 @@ FORBIDDEN = re.compile(r"(target_weight|下單|買進\s*\d|賣出\s*\d|權重設
                        r"sell\s+ticker|ignore\s+(all\s+)?previous|system\s+prompt|忽略(先前|以上|之前)的?指令)", re.I)
 
 
+# Round 07: the narrative must never recommend an action or contradict the quant decision
+RECOMMEND = re.compile(r"(建議|宜|應該?|可考慮|不妨)\s*(大幅|適度|小幅|逢低|逢高|積極)?\s*"
+                       r"(加碼|減碼|增持|減持|買進|賣出|出清|進場|出場|布局|調高|調降)")
+TRADE_UP = re.compile(r"(加碼|增持|買進|調高持股)")
+TRADE_DOWN = re.compile(r"(減碼|減持|賣出|出清|調降持股)")
+
+
+def decision_contradiction(text: str, action: str | None) -> str | None:
+    """None when consistent. action: NO_TRADE / BUY / SELL (thesis) or hold / increase / decrease (market posture)."""
+    if RECOMMEND.search(text or ""):
+        return "recommends an investment action"
+    a = (action or "").upper()
+    if a in ("NO_TRADE", "HOLD") and (TRADE_UP.search(text or "") or TRADE_DOWN.search(text or "")):
+        return f"text describes trading but the decision is {a}"
+    if a in ("BUY", "INCREASE") and TRADE_DOWN.search(text or ""):
+        return f"text describes selling but the decision is {a}"
+    if a in ("SELL", "DECREASE") and TRADE_UP.search(text or ""):
+        return f"text describes buying but the decision is {a}"
+    return None
+
+
 @dataclass
 class Review:
     verdict: str
@@ -34,6 +55,10 @@ def review_text(logic: str, counter: str | None, refs: list[str], payload: dict,
         issues.append(f"ungrounded numbers {un}")
     if FORBIDDEN.search((logic or "") + (counter or "")):
         issues.append("contains trading instruction")
+    action = payload.get("net_exposure_intent") or (payload.get("item") or {}).get("action")
+    contra = decision_contradiction((logic or "") + " " + (counter or ""), action)
+    if contra:
+        issues.append(f"decision contradiction: {contra}")
     if issues:
         return Review("FAIL", issues)
     if not refs:
