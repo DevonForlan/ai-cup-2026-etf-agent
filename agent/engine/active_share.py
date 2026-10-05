@@ -35,12 +35,12 @@ def _top_n(w: dict[str, Decimal], n: int = 10) -> dict[str, Decimal]:
 
 
 def _norm(w: dict[str, Decimal]) -> dict[str, Decimal]:
-    s = sum(w.values())
+    s = sum((w[k] for k in sorted(w)), Decimal(0))
     return {k: v / s for k, v in w.items()} if s > 0 else dict(w)
 
 
 def active_share(port: dict[str, Decimal], bench: dict[str, Decimal]) -> Decimal:
-    keys = set(port) | set(bench)
+    keys = sorted(set(port) | set(bench))          # sorted: deterministic summation order (hash seed independent)
     return sum((abs(port.get(k, Decimal(0)) - bench.get(k, Decimal(0))) for k in keys),
                Decimal(0)) / 2
 

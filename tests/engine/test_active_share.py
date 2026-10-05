@@ -15,7 +15,7 @@ def test_identical_top10_is_zero():
 
 def test_disjoint_normalized_is_one():
     port = {t: 0.05 for t in ["2603", "2609", "2615", "1101", "2002", "1301", "1303", "1326", "2912", "1216"]}
-    assert active_share_mode(port, BENCH, ActiveShareMode.TOP10_NORMALIZED) == Decimal(1)
+    assert abs(active_share_mode(port, BENCH, ActiveShareMode.TOP10_NORMALIZED) - Decimal(1)) < Decimal("1e-20")
     # NAV-weight mode: 1/2*(0.5 + 0.595) on disjoint sets
     assert active_share_mode(port, BENCH, ActiveShareMode.NAV_WEIGHT) == Decimal("0.5475")
 
