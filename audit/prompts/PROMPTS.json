@@ -1,0 +1,25 @@
+{
+ "generated_at": "2026-10-05T12:16:52.146451+08:00",
+ "prompts": [
+  {
+   "file": "agent/llm/prompts/event_extractor_v1.txt",
+   "version": "event_extractor_v1@ed7a8419",
+   "sha256": "sha256:ed7a8419e8373adf4c9f718cc1ea3616968a639c5a2a917555837622f393f6de"
+  },
+  {
+   "file": "agent/llm/prompts/market_narrator_v1.txt",
+   "version": "market_narrator_v1@7426916e",
+   "sha256": "sha256:7426916e454f4b7399247fcb46e24b5784d70158f86598f3f71e6d205a4480cd"
+  },
+  {
+   "file": "agent/llm/prompts/reviewer_v1.txt",
+   "version": "reviewer_v1@89fd70c5",
+   "sha256": "sha256:89fd70c5dfb75ee2be49d611547a7def21a068423a972bc80f9a5f4fe9f81ef1"
+  },
+  {
+   "file": "agent/llm/prompts/thesis_writer_v1.txt",
+   "version": "thesis_writer_v1@57fb84d2",
+   "sha256": "sha256:57fb84d20123dfa993a5e76a5bb1f6ff530f2a1e01e6bcb20bd770453b1fdd65"
+  }
+ ]
+}

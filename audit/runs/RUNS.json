@@ -1,0 +1,66 @@
+{
+ "generated_at": "2026-10-05T12:16:52.146451+08:00",
+ "archive_root": "archive/",
+ "runs": [
+  {
+   "trade_date": "2026-10-01",
+   "run_id": "20260930_193000_gitdf6d042",
+   "mode": "dry-run",
+   "manifest": "20261001/20260930_193000_gitdf6d042/ARCHIVE_MANIFEST.json",
+   "manifest_sha256": "sha256:8fba2b53c0c2b4719164a5121ce001ab275cbe03e9277d7c22f5b0719651e53e",
+   "dplan_sha256": "sha256:65cb5e2748598b2e5b295abfef41da9cf54407a7992c50422026b352c74911ad",
+   "git_sha": "git:df6d042",
+   "files": 23
+  },
+  {
+   "trade_date": "2026-10-01",
+   "run_id": "20261001_083000_gitdf6d042",
+   "mode": "dry-run",
+   "manifest": "20261001/20261001_083000_gitdf6d042/ARCHIVE_MANIFEST.json",
+   "manifest_sha256": "sha256:09a94395041f1792cb896c8610b22aa296826e3160b9c358e505b35a47f50e14",
+   "dplan_sha256": "sha256:c79db39884b868999357b88028de2dcf557e66c2452913c68432e1e43e5780f4",
+   "git_sha": "git:df6d042",
+   "files": 24
+  },
+  {
+   "trade_date": "2026-10-01",
+   "run_id": "20261001_084200_gitdf6d042",
+   "mode": "dry-run",
+   "manifest": "20261001/20261001_084200_gitdf6d042/ARCHIVE_MANIFEST.json",
+   "manifest_sha256": "sha256:e204b0dda08f3e1a4e684cb47edefd7b919c5f93720c70db822e8ad11106428d",
+   "dplan_sha256": "sha256:6f103513957231f98906a35b694aa1111956f4c6458ed7095f49abb7b6d56d57",
+   "git_sha": "git:df6d042",
+   "files": 24
+  },
+  {
+   "trade_date": "2026-10-01",
+   "run_id": "20261001_084700_gitdf6d042",
+   "mode": "dry-run",
+   "manifest": "20261001/20261001_084700_gitdf6d042/ARCHIVE_MANIFEST.json",
+   "manifest_sha256": "sha256:5c65615ff13a6074a7263f8aa67e845388a20b21af9ae08969bdd6744c481c54",
+   "dplan_sha256": "sha256:f93e75396cd10ab875294089d53e6a79bfcee0f4fa79780942a099199badc9e1",
+   "git_sha": "git:df6d042",
+   "files": 24
+  },
+  {
+   "trade_date": "2026-10-02",
+   "run_id": "20261005_120318_gitcf6e084",
+   "mode": "historical",
+   "manifest": "20261002/20261005_120318_gitcf6e084/ARCHIVE_MANIFEST.json",
+   "manifest_sha256": "sha256:5171c607acd68e4978c64be8c40cece54462839d6b9e4cef7ae12e54e8b0cfdb",
+   "dplan_sha256": "sha256:7cee5bd161d4b11cd2189de9b351d9949c24a770e10dcd41f9c0dec71b88c64a",
+   "git_sha": "git:cf6e084",
+   "files": 22
+  },
+  {
+   "trade_date": "2026-10-05",
+   "run_id": "20261004_200000_gitcf6e084-dirty",
+   "mode": "dry-run",
+   "manifest": "20261005/20261004_200000_gitcf6e084-dirty/ARCHIVE_MANIFEST.json",
+   "manifest_sha256": "sha256:b74c0bb2af47d8977133493f5f47fc14eeee706f346820d41ba255eaae78b036",
+   "dplan_sha256": "sha256:f74768c89ad7be2cd0a852e23e9cbbfd3f8515ffa22cd3f15c0c7e82d0bc0943",
+   "git_sha": "git:cf6e084-dirty",
+   "files": 24
+  }
+ ]
+}

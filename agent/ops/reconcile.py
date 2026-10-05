@@ -83,12 +83,41 @@ def reconcile_date(date: str, cfg: dict | None = None, provider=None) -> dict:
     return res
 
 
+def accept_official(date: str, confirmed_by: str, note: str = "", cfg: dict | None = None) -> dict:
+    """HUMAN decision after a BLOCK: the official settlement is correct. The internal ledger is replaced by
+    official holdings/cash/NAV (agent_state and history kept); the old file is kept as *_superseded_<ts>.json."""
+    import shutil
+    from datetime import datetime
+    from agent.ops.common import TPE
+    from agent.ops.settlement import apply_official, save_internal
+    if not confirmed_by.strip():
+        raise ValueError("confirmed_by is required: this is a human decision")
+    cfg = cfg or load_ops_config()
+    internal = load_internal(date, cfg)
+    official = ManualFileSettlementProvider(cfg).get(date)
+    if internal is None or official is None:
+        raise RuntimeError("both the internal and the official settlement must exist")
+    ts = datetime.now(TPE)
+    src = path_for(date, "internal", cfg)
+    shutil.copy2(src, src.with_name(src.stem + f"_superseded_{ts:%Y%m%d_%H%M%S}.json"))
+    save_internal(apply_official(internal, official), cfg)
+    rec = reconcile_date(date, cfg)
+    rec.update(human_decision={"accepted": "official", "confirmed_by": confirmed_by, "note": note,
+                               "at": ts.isoformat()})
+    write_json(path_for(date, "reconciliation", cfg), rec)
+    return rec
+
+
 def main(argv=None) -> int:
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")
     ap = argparse.ArgumentParser()
     ap.add_argument("--date", required=True, help="settlement date (the previous trading day)")
+    ap.add_argument("--accept-official", action="store_true",
+                    help="HUMAN decision: official settlement is correct; replace the internal ledger")
+    ap.add_argument("--confirmed-by", default="", help="name of the person making the decision (required)")
+    ap.add_argument("--note", default="")
     a = ap.parse_args(argv)
-    r = reconcile_date(a.date)
+    r = accept_official(a.date, a.confirmed_by, a.note) if a.accept_official else reconcile_date(a.date)
     print(f"RECONCILIATION {a.date}: {r['status']} -> {r['action']}")
     for d in r["diffs"]:
         print("  ", d)

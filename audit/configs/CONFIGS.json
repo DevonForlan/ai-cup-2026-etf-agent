@@ -1,0 +1,42 @@
+{
+ "generated_at": "2026-10-05T12:16:52.146451+08:00",
+ "freeze": {
+  "strategy_config": "config/strategy_quant_v1.yaml",
+  "strategy_sha256": "sha256:f34fa02e924011b20c52a4bd42e961169f97e1950e76e04b7e78dc43ac23d2e0",
+  "frozen_in_commit": "f4dfb66"
+ },
+ "configs": [
+  {
+   "file": "config/competition.yaml",
+   "sha256": "sha256:9e7bf459d419b68e6e5f86319166be9c8710cb7584a7e02a71bf5b74ab119ba0"
+  },
+  {
+   "file": "config/data_sources.yaml",
+   "sha256": "sha256:8371fc2077a11d56ff70bbe74102736e6812eff1162705df81b1b8a3d667a607"
+  },
+  {
+   "file": "config/llm.yaml",
+   "sha256": "sha256:48b8db0eeb7dce274ac7acaecc5371ae99c8f275aa2aed4341875528eb69b2d9"
+  },
+  {
+   "file": "config/llm_narrative_v1.yaml",
+   "sha256": "sha256:77eda0cba1b7824c43dbd7d5feb50ab9356ae9f0e22a6e7ef8839daf32f0fcd3"
+  },
+  {
+   "file": "config/ops.yaml",
+   "sha256": "sha256:9a3bddc548f1656961363d2257faaf9db378f046ea3a5c95fe46b9dce26def55"
+  },
+  {
+   "file": "config/strategy.yaml",
+   "sha256": "sha256:49c949fa16553534999c21eedf6ce53c85f180c44be95f3a92a46dc152d554a6"
+  },
+  {
+   "file": "config/strategy_quant_v1.yaml",
+   "sha256": "sha256:f34fa02e924011b20c52a4bd42e961169f97e1950e76e04b7e78dc43ac23d2e0"
+  },
+  {
+   "file": "config/unconfirmed_rules.yaml",
+   "sha256": "sha256:f430f315b346390d6ca82872dbe91ce55ad9160b9a0cbdae2926b26cfea60f4b"
+  }
+ ]
+}

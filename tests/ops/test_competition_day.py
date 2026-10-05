@@ -154,3 +154,35 @@ def test_critical_source_failure_blocks(fixture_store, ops_cfg):
     s = run(fixture_store, ops_cfg, T1, CLK1, initial=True, skip_refresh=False,
             refresh_fetchers=_fake(latest="2026-10-23", fail={"twse_prices"}))
     assert s["status"] == "BLOCKED" and "twse_prices" in s["reason"]
+
+
+def test_human_accept_official_after_block_then_run_proceeds(fixture_store, ops_cfg, rb):
+    from agent.ops.reconcile import accept_official
+    _, st = day1_settled(fixture_store, ops_cfg, rb)
+    h = dict(st.holdings)
+    h[sorted(h)[0]] += 1000
+    save_official(official_from(st, holdings=h, cash=str(st.cash - 50000), nav=str(st.nav)), ops_cfg)
+    assert run(fixture_store, ops_cfg, T2, CLK2)["status"] == "BLOCKED"
+    with pytest.raises(ValueError):
+        accept_official(T1, "  ", cfg=ops_cfg)                    # never without a named human
+    rec = accept_official(T1, "operator A", "back-office screenshot checked", cfg=ops_cfg)
+    assert rec["human_decision"]["confirmed_by"] == "operator A"
+    assert load_internal(T1, ops_cfg).holdings == h and load_internal(T1, ops_cfg).agent_state
+    assert list(Path(ops_cfg["paths"]["settlement_dir"]).glob("*_superseded_*.json"))
+    s2 = run(fixture_store, ops_cfg, T2, CLK2)
+    assert s2["status"] == "READY_TO_SUBMIT", s2.get("reason")
+
+
+def test_healthcheck_levels(fixture_store, ops_cfg):
+    from agent.ops.healthcheck import healthcheck
+    from tests.ops.conftest import DIRTY_GIT
+    none = healthcheck(T1, mode="competition", ops_cfg=ops_cfg, clock=Clock(CLK1), git=CLEAN_GIT)
+    assert none["status"] == "BLOCKED" and none["components"]["dplan"]["status"] == "BLOCKED"
+    run(fixture_store, ops_cfg, T1, CLK1, initial=True)
+    h = healthcheck(T1, mode="competition", ops_cfg=ops_cfg, clock=Clock(CLK1), git=CLEAN_GIT)
+    c = {k: v["status"] for k, v in h["components"].items()}
+    assert c["dplan"] == "HEALTHY" and c["settlement"] == "HEALTHY" and c["strategy"] == "HEALTHY"
+    assert h["status"] == "DEGRADED"                          # refresh skipped -> data DEGRADED
+    assert healthcheck(T1, mode="competition", ops_cfg=ops_cfg, clock=Clock(CLK1), git=DIRTY_GIT)["status"] == "BLOCKED"
+    late = healthcheck(T1, mode="competition", ops_cfg=ops_cfg, clock=Clock("2026-10-26T09:00:00+08:00"), git=CLEAN_GIT)
+    assert late["components"]["clock"]["status"] == "BLOCKED"
