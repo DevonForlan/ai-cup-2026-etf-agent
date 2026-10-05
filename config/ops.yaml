@@ -70,4 +70,22 @@ locks:
 # Official TWSE market holidays (休市日期) that fall in or just before the competition period. FILL FROM THE
 # OFFICIAL TWSE SCHEDULE ONLY (not guessed). Past closures are inferred from the stored price history; an
 # unlisted future holiday makes T-1 prices look STALE -> BLOCK (safe side; see EMERGENCY_RUNBOOK §A).
-market_holidays: []
+market_holidays:              # 2026 TWSE official (config/trading_calendar_2026.yaml, retrieved 2026-10-05)
+  - '2026-01-01'
+  - '2026-02-12'
+  - '2026-02-13'
+  - '2026-02-16'
+  - '2026-02-17'
+  - '2026-02-18'
+  - '2026-02-19'
+  - '2026-02-20'
+  - '2026-02-27'
+  - '2026-04-03'
+  - '2026-04-06'
+  - '2026-05-01'
+  - '2026-06-19'
+  - '2026-09-25'
+  - '2026-09-28'
+  - '2026-10-09'
+  - '2026-10-26'
+  - '2026-12-25'
