@@ -302,7 +302,8 @@ def run_day(trade_date: str, store: HistoryStore, prev: Settlement, rb: RuleBook
             docs = visible_documents(PITView(store, as_of), trade_date, set(rb.universe),
                                      int(lcfg["events"].get("lookback_days", 5)),
                                      int(lcfg["events"].get("max_documents_per_day", 200)))
-            ex = EventExtractor(client, rb.universe, ROOT / "data" / "cache" / "events")
+            ex = EventExtractor(client, rb.universe, (ROOT / "data" / "cache" / "events")
+                                if lcfg["events"].get("cache", True) else None)
             events = ex.extract(docs, revenue_facts(fs.features, sorted({d.ticker for d in docs})))
             ev_stats = dict(ex.stats.__dict__, hallucinations=ex.stats.hallucinations)
             tm["events"] = time.perf_counter() - te

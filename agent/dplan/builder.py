@@ -237,7 +237,8 @@ def build_graph(trade_date: str, fs, scores: pd.DataFrame, result, prev_holdings
                    "rank": rank_of.get(t), "n_eligible": n_elig, "score": sc.get(t),
                    "hold_limit": tpar["hold_rank"],
                    "funding_for": bool(funding.get(d["decision_id"])), "values": vals,
-                   "events": [g.get(k).data["statement"] for k in evk]}
+                   "events": [g.get(k).data["statement"] for k in evk],
+                   "guard_note": (tp.notes[0] if sel_info.get("guard_scale") and tp.notes else None)}
             g.add("Signal", f"sig:{t}", {"rank": ctx["rank"], "score": ctx["score"], "n_eligible": n_elig})
             g.add("Inference", f"inf:{t}", {"logic": writer.decision_logic(ctx),
                                             "counter_evidence": writer.counter_evidence(ctx),

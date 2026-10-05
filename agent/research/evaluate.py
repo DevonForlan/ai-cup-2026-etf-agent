@@ -193,6 +193,12 @@ def run_job(job: dict) -> dict:
         **ich, "git_sha": s["git_sha"], "config_hash": job["config_hash"], "dataset_version": job["dataset_version"],
         "runtime_sec": round(time.perf_counter() - t0, 1), "avg_day_runtime_sec": s["avg_day_runtime_sec"],
         "regime_days": json.dumps(daily["regime"].value_counts().to_dict(), ensure_ascii=False),
+        "llm_calls": s.get("llm_calls", 0), "llm_tokens": s.get("llm_tokens", 0), "llm_cost": s.get("llm_cost", 0),
+        "llm_failed": s.get("llm_failed", 0), "llm_latency": s.get("llm_latency_p95_max", 0),
+        "event_count": s.get("event_count", 0), "events_hallucinated": s.get("events_hallucinated", 0),
+        "events_raw": s.get("events_raw", 0), "events_schema_fail": s.get("events_schema_fail", 0),
+        "narrative_llm_days": s.get("narrative_llm_days", 0), "guard_days": s.get("guard_days"),
+        "p95_day_runtime_sec": s.get("p95_day_runtime_sec"),
     }
     return row
 
@@ -233,6 +239,7 @@ def main(argv=None):
     ap.add_argument("--stress", default=None, help="comma-separated strategy ids for cost/slippage stress")
     ap.add_argument("--extra", default=None, help="YAML file with extra strategies (sensitivity)")
     ap.add_argument("--out", default=None, help="leaderboard csv path")
+    ap.add_argument("--r04", action="store_true", help="use the Round 04 registry (Quant v1 vs LLM vs Crash Guard)")
     a = ap.parse_args(argv)
     REPORTS.mkdir(exist_ok=True)
     store = HistoryStore(a.history)
@@ -257,7 +264,11 @@ def main(argv=None):
         return
 
     base = load_strategy()
-    strategies = registry()
+    if a.r04:
+        from agent.research.strategies_r04 import registry_r04, resolve_r04
+        strategies = registry_r04()
+    else:
+        strategies = registry()
     if a.extra:
         strategies += yaml.safe_load(Path(a.extra).read_text(encoding="utf-8"))
     if a.only:
@@ -272,7 +283,7 @@ def main(argv=None):
     variants = [("official", 1.0, 0.0, [])]
     stress_ids = set(a.stress.split(",")) if a.stress else set()
     for st in strategies:
-        cfg = resolve(base, st)
+        cfg = resolve_r04(st) if a.r04 else resolve(base, st)
         vlist = variants + ([("cost_x1.25", 1.25, 0.0, []), ("cost_x1.5", 1.5, 0.0, []),
                              ("slip_20bp", 1.0, 0.002, [])] if st["strategy_id"] in stress_ids else [])
         for wid, w in wins.items():

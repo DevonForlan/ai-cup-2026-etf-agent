@@ -110,6 +110,9 @@ class TemplateThesisWriter:
         v, a = c["values"], c["action"]
         rk = f"量化綜合評分排名 {c['rank']}/{c['n_eligible']}" if c.get("rank") else "未列入合格排名"
         base = f"{rk}（{self._drivers(v)}；{{{{fact:{c['ticker']}}}}}）。"
+        if c.get("guard_note"):
+            return (base + f"{c['guard_note']}；本檔依比例由 {c['current_weight']:.2%} 調整至 {c['target_weight']:.2%}，"
+                    "屬風險控管之曝險調整，非個股看法改變。")
         if a == "BUY":
             s = base + f"符合本 ETF 動能＋籌碼＋營收之多因子選股規則，新建部位至目標權重 {c['target_weight']:.2%}。"
         elif a == "ADD":

@@ -166,8 +166,14 @@ class EventExtractor:
         todo = []
         for d in docs:
             p = self._cache_path(d)
+            cached = None
             if p and p.exists():
-                events += [EventFact(**e) for e in json.loads(p.read_text(encoding="utf-8"))]
+                try:                                   # tolerate a concurrent/partial write -> cache miss
+                    cached = [EventFact(**e) for e in json.loads(p.read_text(encoding="utf-8"))]
+                except (json.JSONDecodeError, TypeError, OSError):
+                    cached = None
+            if cached is not None:
+                events += cached
             else:
                 todo.append(d)
         for i in range(0, len(todo), self.batch_size):
@@ -179,9 +185,15 @@ class EventExtractor:
             for d in batch:
                 p = self._cache_path(d)
                 if p and got is not None:
+                    import os
                     p.parent.mkdir(parents=True, exist_ok=True)
-                    p.write_text(json.dumps([asdict(e) for e in by_doc.get(d.source_id, [])], ensure_ascii=False),
-                                 encoding="utf-8")
+                    tmp = p.with_suffix(f".tmp{os.getpid()}")
+                    tmp.write_text(json.dumps([asdict(e) for e in by_doc.get(d.source_id, [])], ensure_ascii=False),
+                                   encoding="utf-8")
+                    try:
+                        os.replace(tmp, p)             # atomic
+                    except PermissionError:
+                        tmp.unlink(missing_ok=True)
             events += got or []
         # dedupe (same ticker/type/day/text from several sources)
         seen, out = set(), []
