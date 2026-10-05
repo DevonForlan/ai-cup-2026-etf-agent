@@ -1,0 +1,87 @@
+{
+ "run_at": "2026-10-05T22:59:43+08:00",
+ "healthcheck": {
+  "primary": "claude-cli",
+  "status": "READY",
+  "fallback": "template",
+  "binary": "found",
+  "binary_kind": "native",
+  "version": "2.1.289",
+  "version_check": "PASS",
+  "supported_versions": [
+   "2.1.289"
+  ],
+  "loggedIn": true,
+  "authMethod": "claude.ai",
+  "subscriptionType": "team",
+  "apiProvider": "firstParty",
+  "profile": "NARRATIVE_LOCKED",
+  "detail": "READY",
+  "line": "LLM: PRIMARY=claude-cli STATUS=READY FALLBACK=template"
+ },
+ "smoke": {
+  "task": "mops_research",
+  "docs": 2,
+  "latency_sec": 24.0,
+  "stats": {
+   "docs": 2,
+   "returned": 2,
+   "accepted": 2,
+   "rejected": [],
+   "called": true
+  },
+  "accepted": 2,
+  "items": [
+   {
+    "event_type": "capex",
+    "summary": "華邦電代子公司Winbond Electronics Malaysia Sdn. Bhd.(WEM)發布更正公告：向關係人Kamaya Electric (M) Sdn. Bhd.取得位於馬來西亞Perak的不動產使用權資產，面積10,035平方公尺（3,035.59 坪），使用權金額為馬幣 12,145,043元(折合新台幣 94,731,335元)，董事會通過日期為民國115年8月21日。",
+    "positive_evidence": [
+     "公告列明取得原因為「業務需求」，代表子公司在馬來西亞有場地使用需求",
+     "交易單位數量、金額與交易相對人均有具體揭露"
+    ],
+    "negative_evidence": [
+     "交易相對人為關係人（華新科技股份有限公司之子公司），屬關係人交易",
+     "發布的是更正公告，代表原公告內容曾需修正"
+    ],
+    "uncertainty": "本則為更正公告，公告未列出更正前後的差異；原文第8項後段內容被截斷，可能有未揭露資訊。公告未說明該場地的具體用途、使用期間及對營運的實際影響，選定關係人的原因也只寫「業務需求」。",
+    "affected_tickers": [
+     "2344"
+    ],
+    "fact_refs": [
+     "MOPS-001"
+    ]
+   },
+   {
+    "event_type": "other",
+    "summary": "南亞科代子公司南亞科技國際有限公司公告，董事會於115/10/02決議現金增資，資金來源為母公司現金增資，發行總金額為21億美元；2,100股，每股面額與發行價格皆為1佰萬美元，原股東認購比例100%，資金用途為「降低母公司外匯避險成本」。",
+    "positive_evidence": [
+     "公告列明增資目的為降低母公司外匯避險成本，屬財務管理安排",
+     "增資由母公司全數認購（原股東認購比例100%），屬集團內部資金調度"
+    ],
+    "negative_evidence": [
+     "增資金額為21億美元，規模不小，代表母公司有相應的資金移轉",
+     "公告未提及這筆增資與產能或營運擴充的關聯"
+    ],
+    "uncertainty": "公告未說明降低外匯避險成本的具體機制與預期效果，也未揭露增資款的實際撥付時程，以及此安排對母公司財務的影響。這次增資屬集團內部資金調度，對營運面的意義無法只從公告文字判斷。",
+    "affected_tickers": [
+     "2408"
+    ],
+    "fact_refs": [
+     "MOPS-002"
+    ]
+   }
+  ],
+  "llm": {
+   "calls": 1,
+   "ok": 1,
+   "failed": 0,
+   "skipped_budget": 0,
+   "retries": 0,
+   "input_tokens": 2,
+   "output_tokens": 1218,
+   "cost_usd": 0,
+   "latency_mean": 23.9464,
+   "latency_p95": 23.9464
+  }
+ }
+}
