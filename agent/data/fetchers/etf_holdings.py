@@ -578,6 +578,10 @@ def fetch_ctbc(session, etf, fund_id, qdate):
                        {"token": tok, "FID": fund_id, "StartDate": sd}, _CTBC_HDR)
         if json.loads(b).get("ResultCode") == 0:
             break
+    else:   # Round 07: daytime runs saw every attempt fail; surface the API code instead of "empty for latest"
+        j = json.loads(b)
+        raise RuntimeError(f"CTBC ETFHoldingWeight ResultCode={j.get('ResultCode')} "
+                           f"{str(j.get('Message') or j.get('ResultMessage') or '')[:80]}")
     return b, f"{CTBC_API}etf/ETFHoldingWeight#FID={fund_id}&StartDate={sd}", "json"
 
 
