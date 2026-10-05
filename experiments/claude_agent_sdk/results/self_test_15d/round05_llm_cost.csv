@@ -1,0 +1,17 @@
+﻿date,provider,model,requests,input_tokens,output_tokens,price_in_usd_per_1m,price_out_usd_per_1m,daily_cost_usd
+2026-08-28,claude_agent_sdk,unknown,2,240,80,,,PRICE_NOT_CONFIGURED
+2026-08-31,claude_agent_sdk,unknown,2,240,80,,,PRICE_NOT_CONFIGURED
+2026-09-01,claude_agent_sdk,unknown,2,240,80,,,PRICE_NOT_CONFIGURED
+2026-09-02,claude_agent_sdk,unknown,2,240,80,,,PRICE_NOT_CONFIGURED
+2026-09-03,claude_agent_sdk,unknown,2,240,80,,,PRICE_NOT_CONFIGURED
+2026-09-04,claude_agent_sdk,unknown,2,240,80,,,PRICE_NOT_CONFIGURED
+2026-09-07,claude_agent_sdk,unknown,2,240,80,,,PRICE_NOT_CONFIGURED
+2026-09-08,claude_agent_sdk,unknown,2,240,80,,,PRICE_NOT_CONFIGURED
+2026-09-09,claude_agent_sdk,unknown,2,240,80,,,PRICE_NOT_CONFIGURED
+2026-09-10,claude_agent_sdk,unknown,2,240,80,,,PRICE_NOT_CONFIGURED
+2026-09-11,claude_agent_sdk,unknown,2,240,80,,,PRICE_NOT_CONFIGURED
+2026-09-14,claude_agent_sdk,unknown,2,240,80,,,PRICE_NOT_CONFIGURED
+2026-09-15,claude_agent_sdk,unknown,2,240,80,,,PRICE_NOT_CONFIGURED
+2026-09-16,claude_agent_sdk,unknown,2,240,80,,,PRICE_NOT_CONFIGURED
+2026-09-17,claude_agent_sdk,unknown,2,240,80,,,PRICE_NOT_CONFIGURED
+ESTIMATED_24_DAY_TOTAL,claude_agent_sdk,,48,5760,1920,,,PRICE_NOT_CONFIGURED

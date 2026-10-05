@@ -1,0 +1,22 @@
+{
+ "static": {
+  "sandbox_files": [
+   ".cfg",
+   "facts.json",
+   "prompt_meta.json",
+   "schema.json"
+  ],
+  "config_dir_empty": true,
+  "cwd_is_sandbox": true,
+  "cwd_is_project_root": false,
+  "setting_sources": [],
+  "add_dirs": [],
+  "tools": [],
+  "permission_mode": "dontAsk",
+  "bare": true,
+  "env_config_dir_isolated": true,
+  "pass": true
+ },
+ "auth_mode": "NONE",
+ "written_at": "2026-10-05T16:20:39"
+}

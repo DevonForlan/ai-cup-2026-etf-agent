@@ -142,7 +142,8 @@ def human_review_md(d: str, tpl: dict, llm: dict, chk: dict, provider: str, mode
 def run_review(*, days: int = 15, llm_config: str = "config/llm_narrative_v1.yaml", provider: str | None = None,
                provider_instance=None, replay_run: str = "sim_runs/round05_baseline_quant_v1",
                strategy: str = "config/strategy_quant_v1.yaml", out_dir: Path | None = None,
-               store: HistoryStore | None = None, team_id: str = "TEAM_SIM") -> dict:
+               store: HistoryStore | None = None, team_id: str = "TEAM_SIM",
+               human_review_dir: Path | None = None, label: str | None = None) -> dict:
     store = store or HistoryStore()
     rb = load_rulebook()
     cfg = load_strategy(strategy)
@@ -156,9 +157,9 @@ def run_review(*, days: int = 15, llm_config: str = "config/llm_narrative_v1.yam
     if llm is None:
         raise SystemExit("LLM narrative not active (provider=template): set --provider or provider in the llm config")
     lc = llm["cfg"]
-    pname, mock = lc.get("provider"), lc.get("provider") in ("mock", "replay")
+    pname, mock = lc.get("provider"), lc.get("provider") in ("mock", "replay") or label == "FAKE_SDK_SELF_TEST"
     out_dir = out_dir or (ROOT / "reports" / "round05_mock_pipeline_check" if mock else ROOT / "reports")
-    hr_dir = out_dir / "human_review"
+    hr_dir = human_review_dir or out_dir / "human_review"
     hr_dir.mkdir(parents=True, exist_ok=True)
     rows, cost_rows, invariance_fail = [], [], []
     for d in dates:

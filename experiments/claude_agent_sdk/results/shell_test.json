@@ -1,0 +1,29 @@
+{
+ "static": {
+  "tools_empty": true,
+  "bare": true,
+  "permission_dontAsk": true,
+  "setting_sources_empty": true,
+  "strict_mcp": true,
+  "bash_denied": true,
+  "json_schema": true,
+  "flags": [
+   "--output-format",
+   "--verbose",
+   "--system-prompt",
+   "--tools",
+   "--max-turns",
+   "--max-budget-usd",
+   "--disallowedTools",
+   "--permission-mode",
+   "--strict-mcp-config",
+   "--setting-sources=",
+   "--bare",
+   "--json-schema",
+   "--input-format"
+  ],
+  "pass": true
+ },
+ "auth_mode": "NONE",
+ "written_at": "2026-10-05T16:20:42"
+}

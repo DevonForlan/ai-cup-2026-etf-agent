@@ -1,0 +1,13 @@
+{
+ "declared_by_sdk": {
+  "usage": true,
+  "model_usage": true,
+  "total_cost_usd": true,
+  "duration_ms": true,
+  "duration_api_ms": true,
+  "num_turns": true,
+  "session_id": true
+ },
+ "auth_mode": "NONE",
+ "written_at": "2026-10-05T16:20:47"
+}

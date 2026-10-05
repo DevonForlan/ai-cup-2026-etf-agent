@@ -1,0 +1,32 @@
+{
+ "provider": "claude_agent_sdk",
+ "model": "unknown",
+ "days": 15,
+ "mock": true,
+ "invariance_failures": [],
+ "schema_failure_rate": 0.0,
+ "validation_rate": 1.0,
+ "order_invariance_rate": 1.0,
+ "numeric_grounding_rate": 1.0,
+ "hallucinated_ticker_days": 0,
+ "hallucinated_source_days": 0,
+ "fallback_rate": 0.0,
+ "latency_max": 0.36,
+ "tokens_per_day": 320,
+ "checks_pass_rate": {
+  "A_source_refs": 1.0,
+  "B_fact_ids": 1.0,
+  "C_numbers": 1.0,
+  "D_tickers": 1.0,
+  "E_no_instruction": 1.0,
+  "F_decisions_unchanged": 1.0,
+  "G_market_view_consistent": 1.0,
+  "H_counter_evidence": 0.8666666666666667,
+  "I_validator_pass": 1.0
+ },
+ "outputs": {
+  "review_csv": "experiments/claude_agent_sdk/results/self_test_15d/round05_llm_narrative_review.csv",
+  "cost_csv": "experiments/claude_agent_sdk/results/self_test_15d/round05_llm_cost.csv",
+  "human_review": "experiments/claude_agent_sdk/results/self_test_15d/human_review"
+ }
+}

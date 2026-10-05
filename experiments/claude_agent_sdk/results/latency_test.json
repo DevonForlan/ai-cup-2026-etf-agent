@@ -1,0 +1,20 @@
+{
+ "timeout_cleanup": {
+  "outcome": "LLMTimeout",
+  "elapsed_sec": 10.26,
+  "procs_before": 1,
+  "procs_after": 1,
+  "orphan_process": false,
+  "sandbox_leftovers": []
+ },
+ "cli_startup": {
+  "no_credential_round_trip_sec": [
+   7.58,
+   11.88,
+   11.69
+  ],
+  "median": 11.69
+ },
+ "auth_mode": "NONE",
+ "written_at": "2026-10-05T16:24:43"
+}

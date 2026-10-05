@@ -1,0 +1,3 @@
+# Optional: Claude Agent SDK narrative provider (Round 06A spike). NOT needed for the competition default
+# (template narrative). On Windows pip installs the sdist (no bundled CLI): a native Claude Code CLI is required.
+claude-agent-sdk==0.2.163
