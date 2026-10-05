@@ -34,6 +34,11 @@ SCHEMAS: dict[str, dict[str, str]] = {
                      "available_at": "str", "synthetic": "bool"},
     # Overnight / pre-open market data. `date` = the Taiwan TRADE DATE the value is used for
     # (e.g. US close of 2026-10-26 ET -> date 2026-10-27). symbol e.g. SPX, NDX, SOX, TSM, USDTWD, TXF_NIGHT
+    # Company announcements (MOPS 重大訊息 etc.). text = subject/headline (+ body if available).
+    # published_at = official 發言日期+時間 (+08:00); available_at = published_at (+ fetch lag if any).
+    "material_info": {"event_key": "str", "ticker": "str", "published_at": "str", "subject": "str",
+                      "body": "str", "source": "str", "source_url": "str", "authority": "str",
+                      "available_at": "str"},
     "market_overnight": {"date": "str", "symbol": "str", "close": "float64", "ret": "float64",
                          "high": "float64", "low": "float64", "volume": "float64", "source": "str",
                          "available_at": "str"},
@@ -45,6 +50,7 @@ KEYS = {
     "corporate_actions": ["ex_date", "ticker"],
     "etf_holdings": ["date", "etf", "ticker"],
     "market_overnight": ["date", "symbol"],
+    "material_info": ["event_key"],
 }
 
 

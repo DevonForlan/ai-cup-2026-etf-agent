@@ -14,7 +14,7 @@ from agent.data.loaders import HistoryStore
 
 DATE_COL = {"daily_prices": "date", "institutional": "date", "corporate_actions": None,
             "monthly_revenue": None, "etf_holdings": "date",
-            "market_overnight": "date"}
+            "market_overnight": "date", "material_info": None}
 
 
 class LeakageError(RuntimeError):
