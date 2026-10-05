@@ -249,7 +249,10 @@ def _fetch_material(ctx):
     from agent.data.fetchers import material_info as M
     uni = set(load_universe())
     t = date.fromisoformat(ctx["trade_date"])
-    days = [t - timedelta(days=i) for i in (3, 2, 1, 0)]        # T-3..T (listing of D holds D-1 evening too)
+    today = date.fromisoformat(ctx["wall"].now().strftime("%Y-%m-%d"))
+    # T-3..T (listing of D holds D-1 evening too) but never a day after today: MOPS answers a future date with an
+    # error page, and the fetcher's back-off retries would burn minutes before the deadline (Round 06 drill finding)
+    days = [d for d in (t - timedelta(days=i) for i in (3, 2, 1, 0)) if d <= today]
     done = M.load_done()
     for d in days[-2:]:
         done.pop(d.isoformat(), None)                            # always refresh the last two days
