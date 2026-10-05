@@ -1,0 +1,4 @@
+﻿date,provider,model,prompt_version,calls,tokens_in,tokens_out,latency_p50,latency_max,schema_valid,grounding_pass,numeric_grounding_pass,source_reference_pass,reviewer_pass,fallback_used,template_vs_llm_order_equal,human_review_status,A_source_refs,B_fact_ids,C_numbers,D_tickers,E_no_instruction,F_decisions_unchanged,G_market_view_consistent,H_counter_evidence,I_validator_pass
+2026-08-28,claude_cli,unknown,"market_narrator_v1@7426916e,thesis_writer_v1@57fb84d2",2,4,7007,33.797,51.678,True,True,True,True,True,False,True,PENDING,True,True,True,True,True,True,True,True,True
+2026-08-31,claude_cli,unknown,"market_narrator_v1@7426916e,thesis_writer_v1@57fb84d2",2,4,2284,21.454,24.547,True,True,True,True,True,False,True,PENDING,True,True,True,True,True,True,True,True,True
+2026-09-01,claude_cli,unknown,"market_narrator_v1@7426916e,thesis_writer_v1@57fb84d2",2,6,3637,28.172,36.79,True,True,True,True,True,False,True,PENDING,True,True,True,True,True,True,True,True,True

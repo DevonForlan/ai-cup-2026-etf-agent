@@ -1,0 +1,639 @@
+{
+ "calls": 20,
+ "ok": 20,
+ "schema_pass_rate": 1.0,
+ "grounding_pass_rate": 1.0,
+ "unknown_fact_rate": 0.0,
+ "numeric_hallucination_rate": 0.0,
+ "ticker_hallucination_rate": 0.0,
+ "forbidden_wording_rate": 0.0,
+ "parse_failure": 0,
+ "timeout": 0,
+ "nonzero_exit": 0,
+ "tool_violations": 0,
+ "latency_p50": 12.28,
+ "latency_p95": 14.26,
+ "latency_max": 14.26,
+ "variability": {
+  "text_similarity_mean": 0.54,
+  "text_similarity_min": 0.129,
+  "distinct_texts": 20,
+  "fact_ref_sets": [
+   "[\"O1\", \"O2\", \"O3\", \"O4\"]"
+  ],
+  "schema_keys_constant": true
+ },
+ "models": [
+  "claude-opus-5-5"
+ ],
+ "cost_estimate_total_usd": 0.4377,
+ "rows": [
+  {
+   "i": 0,
+   "ok": true,
+   "latency": 11.76,
+   "error": null,
+   "exit_code": 0,
+   "model": "claude-opus-5-5",
+   "tool_violations": 0,
+   "in_tok": 2,
+   "out_tok": 629,
+   "cost": 0.035172,
+   "schema": true,
+   "grounded": true,
+   "unknown_fact": false,
+   "numeric_halluc": false,
+   "ticker_halluc": false,
+   "forbidden": false,
+   "fact_refs": [
+    "O1",
+    "O2",
+    "O3",
+    "O4"
+   ],
+   "g": {
+    "unknown_fact_ids": [],
+    "ungrounded_numbers": [],
+    "new_tickers": [],
+    "forbidden_instruction": false
+   }
+  },
+  {
+   "i": 1,
+   "ok": true,
+   "latency": 11.14,
+   "error": null,
+   "exit_code": 0,
+   "model": "claude-opus-5-5",
+   "tool_violations": 0,
+   "in_tok": 2,
+   "out_tok": 575,
+   "cost": 0.0193424,
+   "schema": true,
+   "grounded": true,
+   "unknown_fact": false,
+   "numeric_halluc": false,
+   "ticker_halluc": false,
+   "forbidden": false,
+   "fact_refs": [
+    "O1",
+    "O2",
+    "O3",
+    "O4"
+   ],
+   "g": {
+    "unknown_fact_ids": [],
+    "ungrounded_numbers": [],
+    "new_tickers": [],
+    "forbidden_instruction": false
+   }
+  },
+  {
+   "i": 2,
+   "ok": true,
+   "latency": 12.38,
+   "error": null,
+   "exit_code": 0,
+   "model": "claude-opus-5-5",
+   "tool_violations": 0,
+   "in_tok": 2,
+   "out_tok": 719,
+   "cost": 0.0222224,
+   "schema": true,
+   "grounded": true,
+   "unknown_fact": false,
+   "numeric_halluc": false,
+   "ticker_halluc": false,
+   "forbidden": false,
+   "fact_refs": [
+    "O1",
+    "O2",
+    "O3",
+    "O4"
+   ],
+   "g": {
+    "unknown_fact_ids": [],
+    "ungrounded_numbers": [],
+    "new_tickers": [],
+    "forbidden_instruction": false
+   }
+  },
+  {
+   "i": 3,
+   "ok": true,
+   "latency": 12.43,
+   "error": null,
+   "exit_code": 0,
+   "model": "claude-opus-5-5",
+   "tool_violations": 0,
+   "in_tok": 2,
+   "out_tok": 716,
+   "cost": 0.022154399999999998,
+   "schema": true,
+   "grounded": true,
+   "unknown_fact": false,
+   "numeric_halluc": false,
+   "ticker_halluc": false,
+   "forbidden": false,
+   "fact_refs": [
+    "O1",
+    "O2",
+    "O3",
+    "O4"
+   ],
+   "g": {
+    "unknown_fact_ids": [],
+    "ungrounded_numbers": [],
+    "new_tickers": [],
+    "forbidden_instruction": false
+   }
+  },
+  {
+   "i": 4,
+   "ok": true,
+   "latency": 12.9,
+   "error": null,
+   "exit_code": 0,
+   "model": "claude-opus-5-5",
+   "tool_violations": 0,
+   "in_tok": 2,
+   "out_tok": 640,
+   "cost": 0.0206584,
+   "schema": true,
+   "grounded": true,
+   "unknown_fact": false,
+   "numeric_halluc": false,
+   "ticker_halluc": false,
+   "forbidden": false,
+   "fact_refs": [
+    "O1",
+    "O2",
+    "O3",
+    "O4"
+   ],
+   "g": {
+    "unknown_fact_ids": [],
+    "ungrounded_numbers": [],
+    "new_tickers": [],
+    "forbidden_instruction": false
+   }
+  },
+  {
+   "i": 5,
+   "ok": true,
+   "latency": 11.19,
+   "error": null,
+   "exit_code": 0,
+   "model": "claude-opus-5-5",
+   "tool_violations": 0,
+   "in_tok": 2,
+   "out_tok": 697,
+   "cost": 0.0217824,
+   "schema": true,
+   "grounded": true,
+   "unknown_fact": false,
+   "numeric_halluc": false,
+   "ticker_halluc": false,
+   "forbidden": false,
+   "fact_refs": [
+    "O1",
+    "O2",
+    "O3",
+    "O4"
+   ],
+   "g": {
+    "unknown_fact_ids": [],
+    "ungrounded_numbers": [],
+    "new_tickers": [],
+    "forbidden_instruction": false
+   }
+  },
+  {
+   "i": 6,
+   "ok": true,
+   "latency": 12.03,
+   "error": null,
+   "exit_code": 0,
+   "model": "claude-opus-5-5",
+   "tool_violations": 0,
+   "in_tok": 2,
+   "out_tok": 625,
+   "cost": 0.0203424,
+   "schema": true,
+   "grounded": true,
+   "unknown_fact": false,
+   "numeric_halluc": false,
+   "ticker_halluc": false,
+   "forbidden": false,
+   "fact_refs": [
+    "O1",
+    "O2",
+    "O3",
+    "O4"
+   ],
+   "g": {
+    "unknown_fact_ids": [],
+    "ungrounded_numbers": [],
+    "new_tickers": [],
+    "forbidden_instruction": false
+   }
+  },
+  {
+   "i": 7,
+   "ok": true,
+   "latency": 10.9,
+   "error": null,
+   "exit_code": 0,
+   "model": "claude-opus-5-5",
+   "tool_violations": 0,
+   "in_tok": 2,
+   "out_tok": 651,
+   "cost": 0.0208624,
+   "schema": true,
+   "grounded": true,
+   "unknown_fact": false,
+   "numeric_halluc": false,
+   "ticker_halluc": false,
+   "forbidden": false,
+   "fact_refs": [
+    "O1",
+    "O2",
+    "O3",
+    "O4"
+   ],
+   "g": {
+    "unknown_fact_ids": [],
+    "ungrounded_numbers": [],
+    "new_tickers": [],
+    "forbidden_instruction": false
+   }
+  },
+  {
+   "i": 8,
+   "ok": true,
+   "latency": 11.33,
+   "error": null,
+   "exit_code": 0,
+   "model": "claude-opus-5-5",
+   "tool_violations": 0,
+   "in_tok": 2,
+   "out_tok": 648,
+   "cost": 0.0208024,
+   "schema": true,
+   "grounded": true,
+   "unknown_fact": false,
+   "numeric_halluc": false,
+   "ticker_halluc": false,
+   "forbidden": false,
+   "fact_refs": [
+    "O1",
+    "O2",
+    "O3",
+    "O4"
+   ],
+   "g": {
+    "unknown_fact_ids": [],
+    "ungrounded_numbers": [],
+    "new_tickers": [],
+    "forbidden_instruction": false
+   }
+  },
+  {
+   "i": 9,
+   "ok": true,
+   "latency": 13.37,
+   "error": null,
+   "exit_code": 0,
+   "model": "claude-opus-5-5",
+   "tool_violations": 0,
+   "in_tok": 2,
+   "out_tok": 680,
+   "cost": 0.0214344,
+   "schema": true,
+   "grounded": true,
+   "unknown_fact": false,
+   "numeric_halluc": false,
+   "ticker_halluc": false,
+   "forbidden": false,
+   "fact_refs": [
+    "O1",
+    "O2",
+    "O3",
+    "O4"
+   ],
+   "g": {
+    "unknown_fact_ids": [],
+    "ungrounded_numbers": [],
+    "new_tickers": [],
+    "forbidden_instruction": false
+   }
+  },
+  {
+   "i": 10,
+   "ok": true,
+   "latency": 14.26,
+   "error": null,
+   "exit_code": 0,
+   "model": "claude-opus-5-5",
+   "tool_violations": 0,
+   "in_tok": 2,
+   "out_tok": 757,
+   "cost": 0.0229744,
+   "schema": true,
+   "grounded": true,
+   "unknown_fact": false,
+   "numeric_halluc": false,
+   "ticker_halluc": false,
+   "forbidden": false,
+   "fact_refs": [
+    "O1",
+    "O2",
+    "O3",
+    "O4"
+   ],
+   "g": {
+    "unknown_fact_ids": [],
+    "ungrounded_numbers": [],
+    "new_tickers": [],
+    "forbidden_instruction": false
+   }
+  },
+  {
+   "i": 11,
+   "ok": true,
+   "latency": 11.12,
+   "error": null,
+   "exit_code": 0,
+   "model": "claude-opus-5-5",
+   "tool_violations": 0,
+   "in_tok": 2,
+   "out_tok": 573,
+   "cost": 0.0193104,
+   "schema": true,
+   "grounded": true,
+   "unknown_fact": false,
+   "numeric_halluc": false,
+   "ticker_halluc": false,
+   "forbidden": false,
+   "fact_refs": [
+    "O1",
+    "O2",
+    "O3",
+    "O4"
+   ],
+   "g": {
+    "unknown_fact_ids": [],
+    "ungrounded_numbers": [],
+    "new_tickers": [],
+    "forbidden_instruction": false
+   }
+  },
+  {
+   "i": 12,
+   "ok": true,
+   "latency": 12.99,
+   "error": null,
+   "exit_code": 0,
+   "model": "claude-opus-5-5",
+   "tool_violations": 0,
+   "in_tok": 2,
+   "out_tok": 654,
+   "cost": 0.020922399999999997,
+   "schema": true,
+   "grounded": true,
+   "unknown_fact": false,
+   "numeric_halluc": false,
+   "ticker_halluc": false,
+   "forbidden": false,
+   "fact_refs": [
+    "O1",
+    "O2",
+    "O3",
+    "O4"
+   ],
+   "g": {
+    "unknown_fact_ids": [],
+    "ungrounded_numbers": [],
+    "new_tickers": [],
+    "forbidden_instruction": false
+   }
+  },
+  {
+   "i": 13,
+   "ok": true,
+   "latency": 11.17,
+   "error": null,
+   "exit_code": 0,
+   "model": "claude-opus-5-5",
+   "tool_violations": 0,
+   "in_tok": 2,
+   "out_tok": 658,
+   "cost": 0.021002399999999997,
+   "schema": true,
+   "grounded": true,
+   "unknown_fact": false,
+   "numeric_halluc": false,
+   "ticker_halluc": false,
+   "forbidden": false,
+   "fact_refs": [
+    "O1",
+    "O2",
+    "O3",
+    "O4"
+   ],
+   "g": {
+    "unknown_fact_ids": [],
+    "ungrounded_numbers": [],
+    "new_tickers": [],
+    "forbidden_instruction": false
+   }
+  },
+  {
+   "i": 14,
+   "ok": true,
+   "latency": 11.61,
+   "error": null,
+   "exit_code": 0,
+   "model": "claude-opus-5-5",
+   "tool_violations": 0,
+   "in_tok": 2,
+   "out_tok": 686,
+   "cost": 0.021578399999999998,
+   "schema": true,
+   "grounded": true,
+   "unknown_fact": false,
+   "numeric_halluc": false,
+   "ticker_halluc": false,
+   "forbidden": false,
+   "fact_refs": [
+    "O1",
+    "O2",
+    "O3",
+    "O4"
+   ],
+   "g": {
+    "unknown_fact_ids": [],
+    "ungrounded_numbers": [],
+    "new_tickers": [],
+    "forbidden_instruction": false
+   }
+  },
+  {
+   "i": 15,
+   "ok": true,
+   "latency": 12.28,
+   "error": null,
+   "exit_code": 0,
+   "model": "claude-opus-5-5",
+   "tool_violations": 0,
+   "in_tok": 2,
+   "out_tok": 705,
+   "cost": 0.021942399999999997,
+   "schema": true,
+   "grounded": true,
+   "unknown_fact": false,
+   "numeric_halluc": false,
+   "ticker_halluc": false,
+   "forbidden": false,
+   "fact_refs": [
+    "O1",
+    "O2",
+    "O3",
+    "O4"
+   ],
+   "g": {
+    "unknown_fact_ids": [],
+    "ungrounded_numbers": [],
+    "new_tickers": [],
+    "forbidden_instruction": false
+   }
+  },
+  {
+   "i": 16,
+   "ok": true,
+   "latency": 12.55,
+   "error": null,
+   "exit_code": 0,
+   "model": "claude-opus-5-5",
+   "tool_violations": 0,
+   "in_tok": 2,
+   "out_tok": 682,
+   "cost": 0.0215064,
+   "schema": true,
+   "grounded": true,
+   "unknown_fact": false,
+   "numeric_halluc": false,
+   "ticker_halluc": false,
+   "forbidden": false,
+   "fact_refs": [
+    "O1",
+    "O2",
+    "O3",
+    "O4"
+   ],
+   "g": {
+    "unknown_fact_ids": [],
+    "ungrounded_numbers": [],
+    "new_tickers": [],
+    "forbidden_instruction": false
+   }
+  },
+  {
+   "i": 17,
+   "ok": true,
+   "latency": 12.65,
+   "error": null,
+   "exit_code": 0,
+   "model": "claude-opus-5-5",
+   "tool_violations": 0,
+   "in_tok": 2,
+   "out_tok": 630,
+   "cost": 0.0204424,
+   "schema": true,
+   "grounded": true,
+   "unknown_fact": false,
+   "numeric_halluc": false,
+   "ticker_halluc": false,
+   "forbidden": false,
+   "fact_refs": [
+    "O1",
+    "O2",
+    "O3",
+    "O4"
+   ],
+   "g": {
+    "unknown_fact_ids": [],
+    "ungrounded_numbers": [],
+    "new_tickers": [],
+    "forbidden_instruction": false
+   }
+  },
+  {
+   "i": 18,
+   "ok": true,
+   "latency": 13.53,
+   "error": null,
+   "exit_code": 0,
+   "model": "claude-opus-5-5",
+   "tool_violations": 0,
+   "in_tok": 2,
+   "out_tok": 718,
+   "cost": 0.022194399999999996,
+   "schema": true,
+   "grounded": true,
+   "unknown_fact": false,
+   "numeric_halluc": false,
+   "ticker_halluc": false,
+   "forbidden": false,
+   "fact_refs": [
+    "O1",
+    "O2",
+    "O3",
+    "O4"
+   ],
+   "g": {
+    "unknown_fact_ids": [],
+    "ungrounded_numbers": [],
+    "new_tickers": [],
+    "forbidden_instruction": false
+   }
+  },
+  {
+   "i": 19,
+   "ok": true,
+   "latency": 11.92,
+   "error": null,
+   "exit_code": 0,
+   "model": "claude-opus-5-5",
+   "tool_violations": 0,
+   "in_tok": 2,
+   "out_tok": 663,
+   "cost": 0.021102399999999997,
+   "schema": true,
+   "grounded": true,
+   "unknown_fact": false,
+   "numeric_halluc": false,
+   "ticker_halluc": false,
+   "forbidden": false,
+   "fact_refs": [
+    "O1",
+    "O2",
+    "O3",
+    "O4"
+   ],
+   "g": {
+    "unknown_fact_ids": [],
+    "ungrounded_numbers": [],
+    "new_tickers": [],
+    "forbidden_instruction": false
+   }
+  }
+ ],
+ "sample_texts": [
+  "量化程式判定市場狀態為 risk_on，部位姿態為 hold，本日無委託。市場廣度偏多：2026-10-02 收盤時，150 檔中有 63.1% 站上 20 日均線，上漲 75 檔、下跌 67 檔（O1）。動能方面，20 日報酬中位數為 +15.80%，5 日報酬中位數為 +2.35%，顯示中短期漲勢仍在延續（O2）。這些數據與 risk_on 的判定一致。由於本日不調整部位，持股維持原狀：2330 現權重 9.80%，2317 現權重 4.10%（O4）；量化程式估計的現金比例為 8.23%。隔夜訊號則好壞參半：台指期夜盤 +0.12%（O3），對開盤影響有限。",
+  "量化程式判定本日市場狀態為 risk_on、部位姿態為 hold，本日無委託，預估現金比重約 8.23%。從市場廣度看，2026-10-02 收盤時 150 檔中有 63.1% 站上 20 日均線，上漲 75 檔、下跌 67 檔，多數個股仍維持在中期均線之上（O1）。報酬動能方面，20 日報酬中位數為 +15.80%，5 日報酬中位數為 +2.35%，中短期動能都是正值（O2）。這些數據與 risk_on 的判定一致。持股方面，2330 目前權重為 9.80%，2317 目前權重為 4.10%，兩者本日都不交易（O4），與 hold 姿態相符。",
+  "量化程式判定市場狀態為 risk_on，部位姿態為 hold，本日無委託。依據如下：2026-10-02 收盤，150 檔中站上 20 日均線的比例為 63.1%，上漲 75 檔、下跌 67 檔，市場廣度偏多（O1）。中期動能也偏強，20 日報酬中位數 +15.80%，5 日報酬中位數 +2.35%（O2），與 risk_on 的判定一致。外部訊號方面，台指期夜盤 +0.12%，小幅偏正（O3）。持股方面，2330 現權重 9.80%，2317 現權重 4.10%，本日都不交易（O4）。量化決策估計現金比例為 8.23%。整體而言，在動能與廣度都偏多的情況下，維持現有部位，本日無委託。",
+  "量化程式判定市場狀態為 risk_on，部位姿態為 hold，本日無委託。從市場廣度看，2026-10-02 收盤時 150 檔中站上 20 日均線的比例為 63.1%，上漲 75 檔、下跌 67 檔，多數個股仍在中期均線之上（O1）。從動能看，20 日報酬中位數 +15.80%，5 日報酬中位數 +2.35%，中短期走勢都偏正面（O2）。這些數據與 risk_on 的判定一致。外部市場方面，台指期夜盤 +0.12%，小幅偏多（O3）。持股方面，2330 現權重 9.80%，2317 現權重 4.10%，本日都不交易（O4）；量化估計現金比重為 8.23%。整體而言，維持既有部位的 hold 姿態，與上述廣度及動能數據相符。",
+  "量化程式判定市場狀態為 risk_on，部位態勢為 hold。依據如下：2026-10-02 收盤時，150 檔中站上 20 日均線的比例為 63.1%，當日上漲 75 檔、下跌 67 檔，多方略占優勢（O1）。中期動能偏強，20 日報酬中位數 +15.80%，5 日報酬中位數 +2.35%，短線仍延續正報酬（O2）。台指期夜盤 +0.12%，小幅偏多（O3）。持股方面，2330 現權重 9.80%，2317 現權重 4.10%，本日不交易（O4）。整體而言，量化決策維持現有配置，本日無委託。"
+ ]
+}

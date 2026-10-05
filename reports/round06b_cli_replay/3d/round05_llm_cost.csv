@@ -1,0 +1,5 @@
+﻿date,provider,model,requests,input_tokens,output_tokens,price_in_usd_per_1m,price_out_usd_per_1m,daily_cost_usd
+2026-08-28,claude_cli,unknown,2,4,7007,,,PRICE_NOT_CONFIGURED
+2026-08-31,claude_cli,unknown,2,4,2284,,,PRICE_NOT_CONFIGURED
+2026-09-01,claude_cli,unknown,2,6,3637,,,PRICE_NOT_CONFIGURED
+ESTIMATED_24_DAY_TOTAL,claude_cli,,48,112,103424,,,PRICE_NOT_CONFIGURED

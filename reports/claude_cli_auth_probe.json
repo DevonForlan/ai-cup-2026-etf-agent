@@ -1,0 +1,24 @@
+{
+ "probed_at": "2026-10-05T21:15:15",
+ "cli_found": true,
+ "cli_kind": "native",
+ "claude_code_version": "2.1.289",
+ "subscriptionType": "team",
+ "apiProvider": "firstParty",
+ "authMethod": "claude.ai",
+ "loggedIn": true,
+ "ORG_MANAGED_ACCOUNT": true,
+ "fields_seen": [
+  "analyticsDisabled",
+  "apiProvider",
+  "authMethod",
+  "configDirectory",
+  "email",
+  "loggedIn",
+  "orgId",
+  "orgName",
+  "projectsDirectory",
+  "subscriptionType"
+ ],
+ "exit_code": 0
+}

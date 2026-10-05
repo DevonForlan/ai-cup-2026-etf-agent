@@ -143,7 +143,8 @@ def run_review(*, days: int = 15, llm_config: str = "config/llm_narrative_v1.yam
                provider_instance=None, replay_run: str = "sim_runs/round05_baseline_quant_v1",
                strategy: str = "config/strategy_quant_v1.yaml", out_dir: Path | None = None,
                store: HistoryStore | None = None, team_id: str = "TEAM_SIM",
-               human_review_dir: Path | None = None, label: str | None = None) -> dict:
+               human_review_dir: Path | None = None, label: str | None = None,
+               log_root: Path | None = None, save_docs: bool = False) -> dict:
     store = store or HistoryStore()
     rb = load_rulebook()
     cfg = load_strategy(strategy)
@@ -152,7 +153,7 @@ def run_review(*, days: int = 15, llm_config: str = "config/llm_narrative_v1.yam
     cal = TradingCalendar(store.dates("daily_prices"))
     universe = set(load_universe())
     work = Path(tempfile.mkdtemp(prefix="r5llm_"))
-    log_root = work / "llm_logs"
+    log_root = log_root or work / "llm_logs"
     llm = llm_settings(cfg, "llm", provider, llm_config, provider_instance=provider_instance, log_root=log_root)
     if llm is None:
         raise SystemExit("LLM narrative not active (provider=template): set --provider or provider in the llm config")
@@ -170,6 +171,10 @@ def run_review(*, days: int = 15, llm_config: str = "config/llm_narrative_v1.yam
                       calendar=cal, light=True)
         r_l = run_day(d, store, copy.deepcopy(prev), rb, cfg, team_id=team_id, out_dir=work / "llm", log_dir=None,
                       calendar=cal, light=True, llm=llm)
+        if save_docs:
+            (out_dir / "docs").mkdir(parents=True, exist_ok=True)
+            (out_dir / "docs" / f"{d}_llm.json").write_text(json.dumps(r_l.doc, ensure_ascii=False), encoding="utf-8")
+            (out_dir / "docs" / f"{d}_template.json").write_text(json.dumps(r_t.doc, ensure_ascii=False), encoding="utf-8")
         orders_eq = r_t.doc["orders"] == r_l.doc["orders"]
         port_eq = (r_t.result.est_holdings == r_l.result.est_holdings and r_t.result.est_cash == r_l.result.est_cash
                    and r_t.result.weights == r_l.result.weights)

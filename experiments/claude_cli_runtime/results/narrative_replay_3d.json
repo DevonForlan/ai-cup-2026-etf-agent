@@ -1,0 +1,63 @@
+{
+ "provider": "claude_cli",
+ "model": "unknown",
+ "days": 3,
+ "mock": false,
+ "invariance_failures": [],
+ "schema_failure_rate": 0.0,
+ "validation_rate": 1.0,
+ "order_invariance_rate": 1.0,
+ "numeric_grounding_rate": 1.0,
+ "hallucinated_ticker_days": 0,
+ "hallucinated_source_days": 0,
+ "fallback_rate": 0.0,
+ "latency_max": 51.678,
+ "tokens_per_day": 4314,
+ "checks_pass_rate": {
+  "A_source_refs": 1.0,
+  "B_fact_ids": 1.0,
+  "C_numbers": 1.0,
+  "D_tickers": 1.0,
+  "E_no_instruction": 1.0,
+  "F_decisions_unchanged": 1.0,
+  "G_market_view_consistent": 1.0,
+  "H_counter_evidence": 1.0,
+  "I_validator_pass": 1.0
+ },
+ "outputs": {
+  "review_csv": "reports/round06b_cli_replay/3d/round05_llm_narrative_review.csv",
+  "cost_csv": "reports/round06b_cli_replay/3d/round05_llm_cost.csv",
+  "human_review": "reports/human_review_cli"
+ },
+ "wall_sec": 178.4,
+ "replay_check": {
+  "days": 3,
+  "all_identical": true,
+  "rows": [
+   {
+    "date": "2026-08-28",
+    "narrative_identical": true,
+    "decision_core_identical": true,
+    "dplan_identical_except_metadata": true,
+    "validation_ok": true,
+    "used_llm_text": true
+   },
+   {
+    "date": "2026-08-31",
+    "narrative_identical": true,
+    "decision_core_identical": true,
+    "dplan_identical_except_metadata": true,
+    "validation_ok": true,
+    "used_llm_text": true
+   },
+   {
+    "date": "2026-09-01",
+    "narrative_identical": true,
+    "decision_core_identical": true,
+    "dplan_identical_except_metadata": true,
+    "validation_ok": true,
+    "used_llm_text": true
+   }
+  ]
+ }
+}

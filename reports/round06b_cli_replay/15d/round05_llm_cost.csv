@@ -1,0 +1,17 @@
+﻿date,provider,model,requests,input_tokens,output_tokens,price_in_usd_per_1m,price_out_usd_per_1m,daily_cost_usd
+2026-08-28,claude_cli,unknown,2,4,9012,,,PRICE_NOT_CONFIGURED
+2026-08-31,claude_cli,unknown,2,6,5273,,,PRICE_NOT_CONFIGURED
+2026-09-01,claude_cli,unknown,2,4,2586,,,PRICE_NOT_CONFIGURED
+2026-09-02,claude_cli,unknown,2,4,2588,,,PRICE_NOT_CONFIGURED
+2026-09-03,claude_cli,unknown,2,4,2763,,,PRICE_NOT_CONFIGURED
+2026-09-04,claude_cli,unknown,2,4,2418,,,PRICE_NOT_CONFIGURED
+2026-09-07,claude_cli,unknown,2,4,2634,,,PRICE_NOT_CONFIGURED
+2026-09-08,claude_cli,unknown,2,4,2815,,,PRICE_NOT_CONFIGURED
+2026-09-09,claude_cli,unknown,2,4,2921,,,PRICE_NOT_CONFIGURED
+2026-09-10,claude_cli,unknown,2,4,2722,,,PRICE_NOT_CONFIGURED
+2026-09-11,claude_cli,unknown,2,4,2432,,,PRICE_NOT_CONFIGURED
+2026-09-14,claude_cli,unknown,2,4,2894,,,PRICE_NOT_CONFIGURED
+2026-09-15,claude_cli,unknown,2,4,2774,,,PRICE_NOT_CONFIGURED
+2026-09-16,claude_cli,unknown,2,4,2429,,,PRICE_NOT_CONFIGURED
+2026-09-17,claude_cli,unknown,2,4,2679,,,PRICE_NOT_CONFIGURED
+ESTIMATED_24_DAY_TOTAL,claude_cli,,48,99,78304,,,PRICE_NOT_CONFIGURED

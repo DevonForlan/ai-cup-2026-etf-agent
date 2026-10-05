@@ -1,0 +1,16 @@
+﻿date,provider,model,prompt_version,calls,tokens_in,tokens_out,latency_p50,latency_max,schema_valid,grounding_pass,numeric_grounding_pass,source_reference_pass,reviewer_pass,fallback_used,template_vs_llm_order_equal,human_review_status,A_source_refs,B_fact_ids,C_numbers,D_tickers,E_no_instruction,F_decisions_unchanged,G_market_view_consistent,H_counter_evidence,I_validator_pass
+2026-08-28,claude_cli,unknown,"market_narrator_v1@7426916e,thesis_writer_v1@57fb84d2",2,4,9012,43.686,68.226,True,True,True,True,True,False,True,PENDING,True,True,True,True,True,True,True,True,True
+2026-08-31,claude_cli,unknown,"market_narrator_v1@7426916e,thesis_writer_v1@57fb84d2",2,6,5273,34.93,53.74,True,True,True,True,True,False,True,PENDING,True,True,True,True,True,True,True,True,True
+2026-09-01,claude_cli,unknown,"market_narrator_v1@7426916e,thesis_writer_v1@57fb84d2",2,4,2586,20.373,21.011,True,True,True,True,True,False,True,PENDING,True,True,True,True,True,True,True,True,True
+2026-09-02,claude_cli,unknown,"market_narrator_v1@7426916e,thesis_writer_v1@57fb84d2",2,4,2588,22.865,24.737,True,True,True,True,True,False,True,PENDING,True,True,True,True,True,True,True,True,True
+2026-09-03,claude_cli,unknown,"market_narrator_v1@7426916e,thesis_writer_v1@57fb84d2",2,4,2763,21.648,23.73,True,True,True,True,True,False,True,PENDING,True,True,True,True,True,True,True,True,True
+2026-09-04,claude_cli,unknown,"market_narrator_v1@7426916e,thesis_writer_v1@57fb84d2",2,4,2418,18.782,21.111,True,True,True,True,True,False,True,PENDING,True,True,True,True,True,True,True,True,True
+2026-09-07,claude_cli,unknown,"market_narrator_v1@7426916e,thesis_writer_v1@57fb84d2",2,4,2634,21.931,24.839,True,True,True,True,True,False,True,PENDING,True,True,True,True,True,True,True,True,True
+2026-09-08,claude_cli,unknown,"market_narrator_v1@7426916e,thesis_writer_v1@57fb84d2",2,4,2815,20.84,23.581,True,True,True,True,True,False,True,PENDING,True,True,True,True,True,True,True,True,True
+2026-09-09,claude_cli,unknown,"market_narrator_v1@7426916e,thesis_writer_v1@57fb84d2",2,4,2921,22.799,23.466,True,True,True,True,True,False,True,PENDING,True,True,True,True,True,True,True,True,True
+2026-09-10,claude_cli,unknown,"market_narrator_v1@7426916e,thesis_writer_v1@57fb84d2",2,4,2722,20.549,22.675,True,True,True,True,True,False,True,PENDING,True,True,True,True,True,True,True,True,True
+2026-09-11,claude_cli,unknown,"market_narrator_v1@7426916e,thesis_writer_v1@57fb84d2",2,4,2432,20.248,23.256,True,True,True,True,True,False,True,PENDING,True,True,True,True,True,True,True,True,True
+2026-09-14,claude_cli,unknown,"market_narrator_v1@7426916e,thesis_writer_v1@57fb84d2",2,4,2894,21.454,23.75,True,True,True,True,True,False,True,PENDING,True,True,True,True,True,True,True,True,True
+2026-09-15,claude_cli,unknown,"market_narrator_v1@7426916e,thesis_writer_v1@57fb84d2",2,4,2774,21.965,23.222,True,True,True,True,True,False,True,PENDING,True,True,True,True,True,True,True,True,True
+2026-09-16,claude_cli,unknown,"market_narrator_v1@7426916e,thesis_writer_v1@57fb84d2",2,4,2429,21.733,23.019,True,True,True,True,True,False,True,PENDING,True,True,True,True,True,True,True,True,True
+2026-09-17,claude_cli,unknown,"market_narrator_v1@7426916e,thesis_writer_v1@57fb84d2",2,4,2679,21.022,24.224,True,True,True,True,True,False,True,PENDING,True,True,True,True,True,True,True,True,True
