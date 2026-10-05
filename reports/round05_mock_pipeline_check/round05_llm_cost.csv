@@ -1,0 +1,12 @@
+﻿date,provider,model,requests,input_tokens,output_tokens,price_in_usd_per_1m,price_out_usd_per_1m,daily_cost_usd
+2026-08-28,mock,mock-rules-v1,2,4601,2441,,,PRICE_NOT_CONFIGURED
+2026-08-31,mock,mock-rules-v1,2,1783,443,,,PRICE_NOT_CONFIGURED
+2026-09-01,mock,mock-rules-v1,2,1777,432,,,PRICE_NOT_CONFIGURED
+2026-09-02,mock,mock-rules-v1,2,1782,433,,,PRICE_NOT_CONFIGURED
+2026-09-03,mock,mock-rules-v1,2,1778,445,,,PRICE_NOT_CONFIGURED
+2026-09-04,mock,mock-rules-v1,2,1777,455,,,PRICE_NOT_CONFIGURED
+2026-09-07,mock,mock-rules-v1,2,1779,442,,,PRICE_NOT_CONFIGURED
+2026-09-08,mock,mock-rules-v1,2,1778,452,,,PRICE_NOT_CONFIGURED
+2026-09-09,mock,mock-rules-v1,2,1775,454,,,PRICE_NOT_CONFIGURED
+2026-09-10,mock,mock-rules-v1,2,1779,453,,,PRICE_NOT_CONFIGURED
+ESTIMATED_24_DAY_TOTAL,mock,,48,49462,15480,,,PRICE_NOT_CONFIGURED

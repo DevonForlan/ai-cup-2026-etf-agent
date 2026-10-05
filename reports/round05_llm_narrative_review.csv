@@ -1,0 +1,2 @@
+﻿date,provider,model,prompt_version,calls,tokens_in,tokens_out,latency_p50,latency_max,schema_valid,grounding_pass,numeric_grounding_pass,source_reference_pass,reviewer_pass,fallback_used,template_vs_llm_order_equal,human_review_status,A_source_refs,B_fact_ids,C_numbers,D_tickers,E_no_instruction,F_decisions_unchanged,G_market_view_consistent,H_counter_evidence,I_validator_pass
+ALL,google,,,,,,,,,,,,,,,BLOCKED_NO_API_KEY,,,,,,,,,

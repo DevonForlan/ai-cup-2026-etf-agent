@@ -1,0 +1,32 @@
+{
+ "provider": "mock",
+ "model": "mock-rules-v1",
+ "days": 10,
+ "mock": true,
+ "invariance_failures": [],
+ "schema_failure_rate": 0.0,
+ "validation_rate": 1.0,
+ "order_invariance_rate": 1.0,
+ "numeric_grounding_rate": 1.0,
+ "hallucinated_ticker_days": 0,
+ "hallucinated_source_days": 0,
+ "fallback_rate": 0.0,
+ "latency_max": 0.002,
+ "tokens_per_day": 2705.9,
+ "checks_pass_rate": {
+  "A_source_refs": 1.0,
+  "B_fact_ids": 1.0,
+  "C_numbers": 1.0,
+  "D_tickers": 1.0,
+  "E_no_instruction": 1.0,
+  "F_decisions_unchanged": 1.0,
+  "G_market_view_consistent": 1.0,
+  "H_counter_evidence": 0.9,
+  "I_validator_pass": 1.0
+ },
+ "outputs": {
+  "review_csv": "C:\\Users\\devon.tseng\\Desktop\\\u500b\u4eba\\AI CUP 2026\u7389\u5c71\u4eba\u5de5\u667a\u6167\u516c\u958b\u6311\u6230\u8cfd\\reports\\round05_mock_pipeline_check\\round05_llm_narrative_review.csv",
+  "cost_csv": "C:\\Users\\devon.tseng\\Desktop\\\u500b\u4eba\\AI CUP 2026\u7389\u5c71\u4eba\u5de5\u667a\u6167\u516c\u958b\u6311\u6230\u8cfd\\reports\\round05_mock_pipeline_check\\round05_llm_cost.csv",
+  "human_review": "C:\\Users\\devon.tseng\\Desktop\\\u500b\u4eba\\AI CUP 2026\u7389\u5c71\u4eba\u5de5\u667a\u6167\u516c\u958b\u6311\u6230\u8cfd\\reports\\round05_mock_pipeline_check\\human_review"
+ }
+}

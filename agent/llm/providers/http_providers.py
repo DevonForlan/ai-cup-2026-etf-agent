@@ -9,8 +9,8 @@ import time
 
 import httpx
 
-from agent.llm.base import (LLMProvider, LLMRateLimited, LLMRawResponse, LLMRequest, LLMServerError,
-                            LLMTimeout, LLMUnavailable)
+from agent.llm.base import (LLMFormatError, LLMProvider, LLMRateLimited, LLMRawResponse, LLMRequest,
+                            LLMServerError, LLMTimeout, LLMUnavailable)
 from agent.llm.env import get_key
 
 
@@ -25,6 +25,7 @@ def _raise_for(r: httpx.Response) -> None:
 
 class _HTTPProvider(LLMProvider):
     key_env = ""
+    key_env_alt: tuple[str, ...] = ()
     endpoint = ""
 
     def __init__(self, model: str, endpoint: str | None = None):
@@ -32,8 +33,15 @@ class _HTTPProvider(LLMProvider):
         if endpoint:
             self.endpoint = endpoint
 
+    def key(self) -> str | None:
+        for n in (self.key_env, *self.key_env_alt):
+            v = get_key(n)
+            if v:
+                return v
+        return None
+
     def available(self) -> bool:
-        return bool(get_key(self.key_env))
+        return bool(self.key())
 
     def _post(self, url: str, headers: dict, body: dict, timeout: float) -> tuple[dict, float]:
         t0 = time.perf_counter()
@@ -44,12 +52,16 @@ class _HTTPProvider(LLMProvider):
         except httpx.HTTPError as e:
             raise LLMServerError(str(e)) from e
         _raise_for(r)
-        return r.json(), time.perf_counter() - t0
+        try:
+            return r.json(), time.perf_counter() - t0
+        except ValueError as e:
+            raise LLMFormatError(f"non-JSON HTTP body: {e}") from e
 
 
 class GeminiProvider(_HTTPProvider):
     name = "google"
     key_env = "GEMINI_API_KEY"
+    key_env_alt = ("GOOGLE_API_KEY",)
     endpoint = "https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
 
     def build(self, req: LLMRequest) -> dict:
@@ -63,14 +75,19 @@ class GeminiProvider(_HTTPProvider):
 
     @staticmethod
     def parse(j: dict) -> tuple[str, int | None, int | None, str]:
-        text = "".join(p.get("text", "") for p in j["candidates"][0]["content"]["parts"])
+        cands = j.get("candidates") or []
+        parts = ((cands[0].get("content") or {}).get("parts") or []) if cands else []
+        text = "".join(p.get("text", "") for p in parts if not p.get("thought"))
+        if not text:   # blocked prompt / SAFETY / MAX_TOKENS with no text -> format error (client falls back)
+            why = (j.get("promptFeedback") or {}).get("blockReason") or (cands[0].get("finishReason") if cands else None)
+            raise LLMFormatError(f"gemini: empty response ({why})")
         u = j.get("usageMetadata", {})
         return text, u.get("promptTokenCount"), u.get("candidatesTokenCount"), j.get("modelVersion", "")
 
     def complete(self, req: LLMRequest) -> LLMRawResponse:
-        key = get_key(self.key_env)
+        key = self.key()
         if not key:
-            raise LLMUnavailable("GEMINI_API_KEY not set")
+            raise LLMUnavailable("GEMINI_API_KEY / GOOGLE_API_KEY not set")
         j, lat = self._post(self.endpoint.format(model=self.model), {"x-goog-api-key": key}, self.build(req), req.timeout)
         text, it, ot, mv = self.parse(j)
         return LLMRawResponse(text, mv or self.model, it, ot, lat)
@@ -93,11 +110,14 @@ class OpenAIProvider(_HTTPProvider):
     @staticmethod
     def parse(j: dict) -> tuple[str, int | None, int | None, str]:
         u = j.get("usage", {})
-        return (j["choices"][0]["message"]["content"], u.get("prompt_tokens"), u.get("completion_tokens"),
-                j.get("model", ""))
+        ch = j.get("choices") or []
+        text = ((ch[0].get("message") or {}).get("content") or "") if ch else ""
+        if not text:
+            raise LLMFormatError(f"openai: empty response ({ch[0].get('finish_reason') if ch else 'no choices'})")
+        return text, u.get("prompt_tokens"), u.get("completion_tokens"), j.get("model", "")
 
     def complete(self, req: LLMRequest) -> LLMRawResponse:
-        key = get_key(self.key_env)
+        key = self.key()
         if not key:
             raise LLMUnavailable("OPENAI_API_KEY not set")
         j, lat = self._post(self.endpoint, {"Authorization": f"Bearer {key}"}, self.build(req), req.timeout)
@@ -118,11 +138,13 @@ class AnthropicProvider(_HTTPProvider):
     @staticmethod
     def parse(j: dict) -> tuple[str, int | None, int | None, str]:
         text = "".join(b.get("text", "") for b in j.get("content", []) if b.get("type") == "text")
+        if not text:
+            raise LLMFormatError(f"anthropic: empty response ({j.get('stop_reason')})")
         u = j.get("usage", {})
         return text, u.get("input_tokens"), u.get("output_tokens"), j.get("model", "")
 
     def complete(self, req: LLMRequest) -> LLMRawResponse:
-        key = get_key(self.key_env)
+        key = self.key()
         if not key:
             raise LLMUnavailable("ANTHROPIC_API_KEY not set")
         headers = {"x-api-key": key, "anthropic-version": "2023-06-01"}
