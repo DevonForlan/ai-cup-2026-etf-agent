@@ -111,6 +111,11 @@ def assess(tests: dict | None = None) -> dict:
            # Round 06A: a real LLM narrative is an OPTIONAL capability (template narrative is the competition
            # default); it is never a COMPETITION_READY requirement and never changes the level.
            "real_llm_role": "OPTIONAL_CAPABILITY",
+           # Round 07: Claude CLI narrative / research via --competition-profile prod, template fallback;
+           # informational only — never changes the level
+           "llm_runtime": ("CLAUDE_CLI_PRODUCTION_CANDIDATE" if (ROOT / "config" / "competition_prod.yaml").exists()
+                           else "TEMPLATE_ONLY"),
+           "llm_fallback": "template",
            "llm_keys_present": {k: ("PRESENT" if v else "ABSENT") for k, v in keys.items()}}
     write_json(ROOT / "reports" / "round06_readiness.json", res)
     return res

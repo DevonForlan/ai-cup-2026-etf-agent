@@ -90,5 +90,14 @@
  ],
  "nc1_status": "unknown",
  "cap_reason": "NC-1 unresolved -> max DRY_RUN_READY",
- "real_llm": "BLOCKED_NO_API_KEY"
+ "real_llm": "BLOCKED_NO_API_KEY",
+ "real_llm_role": "OPTIONAL_CAPABILITY",
+ "llm_runtime": "CLAUDE_CLI_PRODUCTION_CANDIDATE",
+ "llm_fallback": "template",
+ "llm_keys_present": {
+  "GEMINI_API_KEY": "ABSENT",
+  "GOOGLE_API_KEY": "ABSENT",
+  "OPENAI_API_KEY": "ABSENT",
+  "ANTHROPIC_API_KEY": "ABSENT"
+ }
 }

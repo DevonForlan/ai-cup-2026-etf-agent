@@ -209,3 +209,11 @@ def test_ctbc_persistent_error_is_surfaced(monkeypatch):
     with pytest.raises(RuntimeError, match="ResultCode=9"):
         E.fetch_ctbc(None, "00995A", "E0036", "2026-10-05")
     assert len(calls) == 6
+
+
+def test_readiness_reports_llm_runtime_without_changing_level(monkeypatch, tmp_path):
+    from agent.ops import readiness as R
+    monkeypatch.setattr(R, "write_json", lambda path, obj: None)
+    r = R.assess({"ok": True, "failed": 0, "summary": "x"})
+    assert r["llm_runtime"] == "CLAUDE_CLI_PRODUCTION_CANDIDATE" and r["llm_fallback"] == "template"
+    assert r["level"] != "COMPETITION_READY"                      # NC-1 / NC-15 still open
