@@ -103,6 +103,13 @@ def deterministic_checks(llm_doc: dict, tpl_doc: dict, validation_ok: bool, univ
             "_bad_numbers": bad_nums[:20], "_bad_tickers": bad_tk}
 
 
+def _rel(p: Path) -> str:
+    try:
+        return p.relative_to(ROOT).as_posix()
+    except ValueError:
+        return str(p)
+
+
 def _calls(log_root: Path, d: str) -> list[dict]:
     p = log_root / d.replace("-", "") / "calls.jsonl"
     return [json.loads(x) for x in p.read_text(encoding="utf-8").splitlines() if x.strip()] if p.exists() else []
@@ -226,8 +233,8 @@ def run_review(*, days: int = 15, llm_config: str = "config/llm_narrative_v1.yam
         "latency_max": max(all_lat) if all_lat else None,
         "tokens_per_day": statistics.mean([r["tokens_in"] + r["tokens_out"] for r in rows]) if rows else 0,
         "checks_pass_rate": {k: sum(r[k] for r in rows) / n for k in CHECK_COLS},
-        "outputs": {"review_csv": str(review_csv), "cost_csv": str(out_dir / "round05_llm_cost.csv"),
-                    "human_review": str(hr_dir)}}
+        "outputs": {"review_csv": _rel(review_csv), "cost_csv": _rel(out_dir / "round05_llm_cost.csv"),
+                    "human_review": _rel(hr_dir)}}
     (out_dir / "round05_llm_review_summary.json").write_text(json.dumps(summary, indent=1, default=str), encoding="utf-8")
     return summary
 
