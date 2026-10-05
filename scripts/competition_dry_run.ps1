@@ -3,11 +3,13 @@
 # Usage:
 #   powershell -ExecutionPolicy Bypass -File scripts\competition_dry_run.ps1 -TeamId TEAM_TEST [-Date 2026-10-27]
 #   ... -Mode competition -TeamId TEAM_042      (real day: still produces only a READY_TO_SUBMIT package)
+#   ... -Mode competition -TeamId TEAM_042 -CompetitionProfile prod   (Claude CLI narrative, template fallback)
 param(
     [Parameter(Mandatory = $true)][string]$TeamId,
     [string]$Date,
     [ValidateSet('dry-run', 'competition', 'historical')][string]$Mode = 'dry-run',
     [string]$LlmConfig,
+    [ValidateSet('prod')][string]$CompetitionProfile,
     [string]$ReplayRun,
     [switch]$SkipRefresh,
     [switch]$Initial
@@ -16,6 +18,7 @@ param(
 $td = Get-TradeDate $Date
 $cmd = @('agent\competition_day.py', '--date', $td, '--team-id', $TeamId, '--mode', $Mode)
 if ($LlmConfig) { $cmd += @('--llm-config', $LlmConfig) }
+if ($CompetitionProfile) { $cmd += @('--competition-profile', $CompetitionProfile) }
 if ($ReplayRun) { $cmd += @('--replay-run', $ReplayRun) }
 if ($SkipRefresh) { $cmd += '--skip-refresh' }
 if ($Initial) { $cmd += '--initial' }

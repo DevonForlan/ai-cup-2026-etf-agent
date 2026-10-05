@@ -15,7 +15,7 @@ from agent.llm.providers.claude_cli import CLIError, ClaudeCodeCLIProvider, defa
 from agent.llm.providers.mock import MockProvider, TemplateProvider
 
 CFG_PATH = "config/llm_claude_cli.yaml"
-TITLE_TO_TASK = {"NarrativeOut": "market_narrator", "ThesisOut": "thesis_writer"}
+TITLE_TO_TASK = {"NarrativeOut": "market_narrator", "ThesisOut": "thesis_writer", "ResearchOut": "mops_research"}
 
 
 def cfg(**over):
@@ -294,6 +294,13 @@ def test_cli_narrative_decision_invariance_and_replay(fixture_store, rb, tmp_pat
     assert s.narrative_used_llm
     _, s2 = _pair(fixture_store, rb, tmp_path / "r", ReplayProvider([tmp_path / "llmlogs"]))
     assert narrative_text(s2.doc) == narrative_text(s.doc)
+
+
+def test_cli_dplan_metadata_reports_reported_model(fixture_store, rb, tmp_path):
+    """Round 07: agent_metadata names the model the CLI reported (init event), provider enum = anthropic."""
+    _, s = _pair(fixture_store, rb, tmp_path, ClaudeCodeCLIProvider(None, cfg(), runner=mock_runner()))
+    md = s.doc["agent_metadata"]
+    assert md["model_provider"] == "anthropic" and md["model_version"] == "claude-test"
 
 
 @pytest.mark.parametrize("kw", [dict(timed_out=True), dict(stdout="nope", exit_code=1),

@@ -41,7 +41,8 @@ PROFILES = {
     "RESEARCH_READONLY": {"tools": "Read", "allowed": ["Read"], "deny": [t for t in ALL_TOOLS if t != "Read"]},
 }
 TASK_SCHEMAS = {"market_narrator": "NarrativeOut", "thesis_writer": "ThesisOut", "reviewer": "ReviewOut",
-                "event_extractor": "EventsOut"}
+                "event_extractor": "EventsOut",
+                "mops_research": "ResearchOut"}
 CATEGORIES = ("CLI_NOT_FOUND", "NOT_AUTHENTICATED", "TIMEOUT", "NONZERO_EXIT", "INVALID_JSON", "SCHEMA_FAIL",
               "GROUNDING_FAIL", "TOOL_VIOLATION", "RATE_LIMIT", "USAGE_LIMIT", "MODEL_UNAVAILABLE", "UNKNOWN_CLI_ERROR")
 
@@ -127,9 +128,18 @@ def auth_status() -> dict:
         j = json.loads(r.stdout or "{}")
     except Exception as e:  # noqa: BLE001
         return {"loggedIn": False, "authMethod": "unknown", "error": type(e).__name__}
+    # Round 07: exactly four whitelisted fields; nothing else from the status JSON is read or kept
     return {"loggedIn": bool(j.get("loggedIn", r.returncode == 0)), "authMethod": j.get("authMethod"),
-            "subscriptionType": j.get("subscriptionType"),
-            "orgManaged": any(bool(j.get(k)) for k in j if "org" in k.lower())}
+            "subscriptionType": j.get("subscriptionType"), "apiProvider": j.get("apiProvider")}
+
+
+def version_check(version: str | None, supported: list[str] | None) -> str:
+    """Version pin: PASS | WARNING_VERSION_DRIFT (never a block) | CLI_NOT_FOUND."""
+    if not version:
+        return "CLI_NOT_FOUND"
+    if not supported or version in [str(v) for v in supported]:
+        return "PASS"
+    return "WARNING_VERSION_DRIFT"
 
 
 def _sha(s: str) -> str:
@@ -268,14 +278,23 @@ class ClaudeCodeCLIProvider(LLMProvider):
         return self._auth
 
     def available(self) -> bool:
-        return bool(self.cli["path"]) and bool(self.auth().get("loggedIn"))
+        a = self.auth()
+        accepted = self.cfg.get("accepted_auth_methods") or ["claude.ai"]
+        return bool(self.cli["path"]) and bool(a.get("loggedIn")) and (
+            self.runner is not default_runner or a.get("authMethod") in accepted)
 
     def healthcheck(self) -> dict:
+        """READY = CLI found + logged in with an accepted method; anything else = DEGRADED (template fallback).
+        Version drift is only a warning. Never blocks the quant run."""
         a = self.auth()
+        ok = self.available()
         return {"cli_found": bool(self.cli["path"]), "cli_kind": self.cli["kind"], "claude_code_version": self.cli["version"],
-                "loggedIn": a.get("loggedIn"), "authMethod": a.get("authMethod"), "orgManaged": a.get("orgManaged"),
-                "profile": self.profile, "status": "READY" if self.available() else
-                ("CLI_NOT_FOUND" if not self.cli["path"] else "NOT_AUTHENTICATED")}
+                "version_check": version_check(self.cli["version"], self.cfg.get("supported_versions")),
+                "loggedIn": a.get("loggedIn"), "authMethod": a.get("authMethod"),
+                "subscriptionType": a.get("subscriptionType"), "apiProvider": a.get("apiProvider"),
+                "profile": self.profile, "fallback": self.cfg.get("fallback_provider") or "template",
+                "llm_status": "READY" if ok else "DEGRADED",
+                "status": "READY" if ok else ("CLI_NOT_FOUND" if not self.cli["path"] else "NOT_AUTHENTICATED")}
 
     def provider_metadata(self) -> dict:
         return {"provider": self.name, "claude_code_version": self.cli["version"], "auth_method": self.auth().get("authMethod"),

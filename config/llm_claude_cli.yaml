@@ -1,31 +1,72 @@
-# Claude Code CLI runtime narrative provider (Round 06B PoC). DISABLED by default (template narrative).
+# Claude Code CLI runtime — narrative / research provider (Round 07: PRODUCTION_CANDIDATE).
 #
-# Runs the user's own, unmodified, already-logged-in `claude` CLI in non-interactive mode (claude -p).
+# Runs the operator's own, unmodified, already-logged-in `claude` CLI non-interactively (claude -p).
 # Python never reads, copies or stores any credential; authentication is Claude Code's own.
-# NOT production-approved: the login on this machine is an organization-managed (Team) account and
-# competition / scripted use is not explicitly addressed by Anthropic's docs -> see
-# reports/ROUND_06B_CLAUDE_CLI_RUNTIME_REPORT.md. Narrative only: decisions are never touched.
-enabled: false
-provider: claude_cli
-model: null                     # null = the CLI's configured model (recorded per call from the init event)
-prompt_guard: claude_cli_narrative_v1
-timeout_sec: 120                # hard subprocess timeout per call (terminate -> grace -> kill tree)
-total_budget_sec: 300           # whole-day LLM time budget; deadline guard disables LLM in NO_LLM / PACKAGE_ONLY
-retries: 0                      # usage / rate limits must not cause a retry storm: any failure -> template
-max_calls_per_day: 10
-max_tokens_per_day: 200000
-max_cost_per_day_usd: 5.0       # client-side estimate reported by the CLI (subscription usage, not a bill)
-max_turns: 3
-log_calls: true
-narrative:
-  mode: llm
-  reviewer: deterministic
-  max_thesis_items: 35
-events:
-  enabled: false
-llm_signal:
-  enabled: false
-claude_cli:
-  profile: NARRATIVE_LOCKED     # RESEARCH_READONLY exists for experiments only (Read inside the sandbox)
-  working_dir: runtime/claude_cli
+# Account: organization-managed Team account authorized by employer for company competition participation.
+# Role: NARRATIVE_LOCKED — market view / thesis / counter-evidence / MOPS research interpretation only.
+# Stocks, weights, orders, cash, Active Share are decided by Quant Core v1 and are never touched.
+# Any failure -> TemplateProvider (fallback) -> D-Plan. Claude is never a single point of failure.
+# Activated only through --competition-profile prod or --llm-provider claude-cli (global default = template).
+# Loader: agent/llm/client.py load_llm_config() flattens these sections for the runtime.
+
+enabled: false                  # this file alone does not activate the CLI; the profile / flag does
+
+provider:
+  name: claude-cli
+  binary: claude                # official native binary found on PATH / native installer; never a shim or script
+  supported_versions: ["2.1.289"]   # verified in Round 06B; other versions -> WARNING_VERSION_DRIFT (not a block)
+  accepted_auth_methods: ["claude.ai"]   # `claude auth status`: loggedIn=true + authMethod=claude.ai -> READY
+  prompt_guard: claude_cli_narrative_v1
+
+model:
+  name: null                    # null = the CLI's configured model (recorded per call from the init event)
+
+timeout:
+  per_call_sec: 120             # hard subprocess timeout (CTRL_BREAK -> grace -> taskkill /T /F)
+  total_budget_sec: 300         # whole-day LLM wall time; afterwards every call -> template
+  retries: 0                    # usage / rate limits never cause a retry storm
+  max_turns: 3
+  max_calls_per_day: 10
+  max_tokens_per_day: 200000
+  max_cost_per_day_usd: 5.0     # client-side estimate reported by the CLI (subscription usage, not a bill)
+
+tools:
+  profile: NARRATIVE_LOCKED     # --tools "" + deny list; RESEARCH_READONLY exists for experiments only
+  allowed: []
+  forbidden: [Bash, PowerShell, Read, Write, Edit, NotebookEdit, Glob, Grep, WebFetch, WebSearch, "mcp__*",
+              Browser, Git, Task, Agent]
+  research_mode: false          # true only for experiments (RESEARCH_READONLY: Read inside the sandbox)
+
+session:
+  persistence: false            # --no-session-persistence; no --continue / --resume
+  working_dir: runtime/claude_cli   # per-call sandbox holding only prompt / schema / facts
   keep_sandbox: false
+
+fallback:
+  provider: template            # TemplateProvider is permanent
+  triggers: [CLI_NOT_FOUND, NOT_AUTHENTICATED, USAGE_LIMIT, RATE_LIMIT, TIMEOUT, NONZERO_EXIT, INVALID_JSON, SCHEMA_FAIL,
+       GROUNDING_FAIL, TOOL_VIOLATION, DECISION_CONTRADICTION, BUDGET_EXHAUSTED]
+
+deadline_guard:                 # thresholds live in config/ops.yaml deadline (unchanged)
+  NORMAL: full                  # market narrative + thesis + MOPS research
+  RESTRICTED: narrative_only    # <= 30 min: one market-narrative call, thesis/research -> template
+  NO_LLM: template              # <= 15 min
+  PACKAGE_ONLY: template        # <= 10 min: quant + validation + package only
+
+grounding:
+  reviewer: deterministic       # unknown fact id / new ticker / ungrounded number / forbidden action /
+                                # decision contradiction -> FAIL -> template (never loosened)
+  narrative_mode: llm
+  max_thesis_items: 35
+  thesis_llm: true
+  research:
+    enabled: true
+    lookback_days: 5
+    max_documents: 8
+    max_inferences: 4
+  events_enabled: false         # LLM event extraction stays off (it would put LLM text into Fact nodes)
+  llm_signal_enabled: false     # the LLM never adjusts scores
+
+audit:
+  log_calls: true               # logs/llm/<date>/ prompt hash, model, usage, verdict (no credentials)
+  narrative_status: NARRATIVE_LOCKED

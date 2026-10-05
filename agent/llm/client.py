@@ -28,7 +28,48 @@ def load_llm_config(path: str | Path = "config/llm.yaml") -> dict:
     p = Path(path)
     if not p.is_absolute():
         p = ROOT / p
-    return yaml.safe_load(p.read_text(encoding="utf-8"))
+    return flatten_sections(yaml.safe_load(p.read_text(encoding="utf-8")))
+
+
+def flatten_sections(raw: dict) -> dict:
+    """Round 07 sectioned provider config (provider / model / timeout / tools / session / fallback /
+    deadline_guard / grounding / audit) -> the flat keys the runtime uses. Flat configs pass through."""
+    if not isinstance(raw.get("provider"), dict):
+        return raw
+    pv, tm, tl, ss = raw["provider"], raw.get("timeout") or {}, raw.get("tools") or {}, raw.get("session") or {}
+    gr, au, fb = raw.get("grounding") or {}, raw.get("audit") or {}, raw.get("fallback") or {}
+    research_mode = bool(tl.get("research_mode", False))
+    profile = tl.get("profile", "NARRATIVE_LOCKED")
+    if not research_mode and (profile != "NARRATIVE_LOCKED" or tl.get("allowed")):
+        raise ValueError("tools: only NARRATIVE_LOCKED with no allowed tools outside explicit research_mode")
+    if fb.get("provider", "template") != "template":
+        raise ValueError("fallback.provider must be template")
+    out = {"enabled": bool(raw.get("enabled", False)),
+           "provider": str(pv.get("name", "template")).replace("-", "_"),
+           "model": (raw.get("model") or {}).get("name"),
+           "prompt_guard": pv.get("prompt_guard"),
+           "supported_versions": list(pv.get("supported_versions") or []),
+           "accepted_auth_methods": list(pv.get("accepted_auth_methods") or ["claude.ai"]),
+           "timeout_sec": tm.get("per_call_sec", 120), "total_budget_sec": tm.get("total_budget_sec", 300),
+           "retries": tm.get("retries", 0), "max_turns": tm.get("max_turns", 3),
+           "max_calls_per_day": tm.get("max_calls_per_day", 10),
+           "max_tokens_per_day": tm.get("max_tokens_per_day", 200000),
+           "max_cost_per_day_usd": tm.get("max_cost_per_day_usd", 5.0),
+           "log_calls": bool(au.get("log_calls", True)),
+           "fallback_provider": "template", "fallback_on": list(fb.get("triggers") or []),
+           "deadline_guard": dict(raw.get("deadline_guard") or {}),
+           "narrative": {"mode": gr.get("narrative_mode", "llm"), "reviewer": gr.get("reviewer", "deterministic"),
+                         "max_thesis_items": gr.get("max_thesis_items", 35), "thesis_llm": gr.get("thesis_llm", True)},
+           "research": dict(gr.get("research") or {"enabled": False}),
+           "events": {"enabled": bool(gr.get("events_enabled", False))},
+           "llm_signal": {"enabled": bool(gr.get("llm_signal_enabled", False))},
+           "claude_cli": {"profile": "RESEARCH_READONLY" if research_mode else profile,
+                          "working_dir": ss.get("working_dir", "runtime/claude_cli"),
+                          "keep_sandbox": bool(ss.get("keep_sandbox", False))},
+           "tools": dict(tl), "session": dict(ss), "audit": dict(au)}
+    if ss.get("persistence") or ss.get("continue_resume"):
+        raise ValueError("session: persistence / --continue / --resume are not allowed")
+    return out
 
 
 def load_prompt(name: str) -> tuple[str, str, str]:
@@ -125,7 +166,8 @@ class LLMClient:
 
     @property
     def model_version(self) -> str:
-        return getattr(self.provider, "model", "") or ""
+        # Round 07: the model the provider actually reported (CLI init event) wins over the configured name
+        return getattr(self, "_last_model", None) or getattr(self.provider, "model", "") or ""
 
     @property
     def enabled(self) -> bool:
@@ -209,6 +251,8 @@ class LLMClient:
         return None
 
     def _log_ok(self, base, raw: LLMRawResponse, text, parsed, attempt, cost, t0):
+        if self.provider.name == "claude_cli" and raw.model_version not in (None, "", "cli-default", "unknown"):
+            self._last_model = raw.model_version
         self.logger.log({**base, "status": "replay" if self.provider.name == "replay" else "ok",
                          "model_version": raw.model_version, "response": text, "parsed_output": parsed,
                          "latency_sec": round(raw.latency_sec or (time.perf_counter() - t0), 4),

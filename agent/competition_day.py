@@ -27,7 +27,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from agent.config import D, load_strategy  # noqa: E402
+from agent.config import ROOT, D, load_strategy  # noqa: E402
 from agent.data.loaders import HistoryStore  # noqa: E402
 from agent.engine.rules import load_rulebook  # noqa: E402
 from agent.ops import deadline as DL  # noqa: E402
@@ -234,11 +234,14 @@ def run_competition_day(trade_date: str, team_id: str, mode: str = "dry-run", *,
     extra_checks.append(clock_skew_check(clock.now(), reference_time, ops_cfg, mode == "competition"))
     if mode != "historical" and prev_date:
         extra_checks.append(t1_visibility_check(store, prev_date, clock.now()))
+    summary["llm_runtime"] = llm_runtime_status(llm_provider, dls)
     if llm_provider is not None and hasattr(llm_provider, "healthcheck") and dls.allow_llm:
-        hc = llm_provider.healthcheck()              # never BLOCK: an unavailable LLM only means template narrative
+        hc = summary["llm_runtime"]                  # never BLOCK: an unavailable LLM only means template narrative
         extra_checks.append(Check("llm_runtime", PASS if hc.get("status") == "READY" else WARN,
-                                  f"{getattr(llm_provider, 'name', '?')}: {hc.get('status')} "
-                                  f"v{hc.get('claude_code_version')} auth={hc.get('authMethod')}"))
+                                  f"{hc['line']} v{hc.get('version')} auth={hc.get('authMethod')}"))
+        if hc.get("version_check") == "WARNING_VERSION_DRIFT":
+            extra_checks.append(Check("llm_version_pin", WARN, f"WARNING_VERSION_DRIFT: claude {hc.get('version')} "
+                                      f"not in supported {hc.get('supported_versions')} -> rerun the CLI smoke test"))
     if mode != "historical":
         opens = DL.opening_for(trade_date)
         if clock.now() < opens:          # C6 rejects any D-Plan stamped before the window opens
@@ -250,7 +253,7 @@ def run_competition_day(trade_date: str, team_id: str, mode: str = "dry-run", *,
                        llm_cfg=llm_config, clock=clock, ops_cfg=ops_cfg, data_health=data_health,
                        settlement_status=sstat, prev_holdings=start.holdings if start else None,
                        prev_cash=start.cash if start else None, closes_prev=closes_prev, git=git, store=store,
-                       extra=extra_checks)
+                       extra=extra_checks, llm_provider=llm_provider)
     summary["preflight"] = {"level": pf["level"], "blocks": [c for c in pf["checks"] if c["level"] == BLOCK],
                             "warns": [c["name"] for c in pf["checks"] if c["level"] == "WARN"]}
     summary["data_health"] = (data_health or {}).get("level", "NOT_RUN")
@@ -265,6 +268,9 @@ def run_competition_day(trade_date: str, team_id: str, mode: str = "dry-run", *,
         llm = llm_settings(cfg, None, None, llm_config, provider_instance=llm_provider)
         if llm is not None and not dls.allow_noncritical_refresh:
             llm["cfg"]["retries"] = 0                      # restricted phase: no LLM retries
+            llm["cfg"].setdefault("narrative", {})["thesis_llm"] = False   # one market-narrative call only
+            llm["cfg"]["research"] = {"enabled": False}
+            notes.append(f"runtime budget {dls.phase}: LLM limited to the market narrative (thesis/research template)")
     elif llm_config:
         notes.append(f"LLM disabled by deadline guard ({dls.phase}) -> template narrative")
     out_dir = ops_path(ops_cfg, "ops_logs_dir") / ymd(trade_date) / "dplan_work"
@@ -296,7 +302,8 @@ def run_competition_day(trade_date: str, team_id: str, mode: str = "dry-run", *,
         "active_share_min": None if r.active_share is None or r.active_share.minimum_active_share is None
         else float(r.active_share.minimum_active_share),
         "orders": len(r.doc["orders"]), "decisions": len(r.doc["decisions"]),
-        "llm": {"used": r.narrative_used_llm, **{k: r.llm_summary.get(k) for k in ("calls", "failed", "latency_p95")}}
+        "llm": {"used": r.narrative_used_llm, **{k: r.llm_summary.get(k) for k in ("calls", "failed", "latency_p95")},
+                "research_inferences": len((r.research or {}).get("inferences") or [])}
         if llm else {"used": False, "mode": "template"},
     })
     if not r.validation.ok and dls.phase == "PAST_CUTOFF" and mode != "historical":
@@ -376,6 +383,30 @@ def run_competition_day(trade_date: str, team_id: str, mode: str = "dry-run", *,
                   package=str(pkg), archive=str(arch), run_id=run_id)
 
 
+def llm_runtime_status(provider, dls=None) -> dict:
+    """Round 07 healthcheck summary: binary / version pin / auth (whitelisted fields) / profile / fallback.
+    STATUS=READY or DEGRADED (-> template); never blocks the quant run."""
+    if provider is None or not hasattr(provider, "healthcheck"):
+        return {"primary": "template", "status": "TEMPLATE", "fallback": "template",
+                "line": "LLM: PRIMARY=template STATUS=TEMPLATE FALLBACK=template"}
+    primary = "claude-cli" if getattr(provider, "name", "") == "claude_cli" else getattr(provider, "name", "?")
+    if dls is not None and not dls.allow_llm:
+        return {"primary": primary, "status": "DEGRADED", "fallback": "template",
+                "reason": f"deadline guard {dls.phase}",
+                "line": f"LLM: PRIMARY={primary} STATUS=DEGRADED FALLBACK=template ({dls.phase})"}
+    hc = provider.healthcheck()
+    st = hc.get("llm_status") or ("READY" if hc.get("status") == "READY" else "DEGRADED")
+    out = {"primary": primary, "status": st, "fallback": hc.get("fallback", "template"),
+           "binary": "found" if hc.get("cli_found") else "missing", "binary_kind": hc.get("cli_kind"),
+           "version": hc.get("claude_code_version"), "version_check": hc.get("version_check"),
+           "supported_versions": (getattr(provider, "cfg", {}) or {}).get("supported_versions"),
+           "loggedIn": hc.get("loggedIn"), "authMethod": hc.get("authMethod"),
+           "subscriptionType": hc.get("subscriptionType"), "apiProvider": hc.get("apiProvider"),
+           "profile": hc.get("profile"), "detail": hc.get("status")}
+    out["line"] = f"LLM: PRIMARY={primary} STATUS={st} FALLBACK={out['fallback']}" +         ("" if st == "READY" else f" ({hc.get('status')})")
+    return out
+
+
 def operator_summary(s: dict) -> str:
     """Console summary; the decisive facts are always the LAST 15 lines (human-error defence)."""
     L = "=" * 72
@@ -404,6 +435,7 @@ def operator_summary(s: dict) -> str:
     tail = [L, big, L,
             f" RUN STATUS  : {s['status']}" + (f"   ({str(s.get('reason'))[:160]})" if s.get("reason") else ""),
             f" READY       : {'READY TO SUBMIT' if ready else 'NOT READY — DO NOT UPLOAD'}",
+            f" {(s.get('llm_runtime') or {}).get('line', 'LLM: PRIMARY=template STATUS=TEMPLATE FALLBACK=template')}",
             f" MODE        : {s['mode'].upper()}",
             f" TEAM ID     : {s['team_id']}",
             f" TRADE DATE  : {s['trade_date']}",
@@ -415,6 +447,15 @@ def operator_summary(s: dict) -> str:
     return "\n".join(body + tail)
 
 
+def load_competition_profile(name: str) -> dict:
+    import yaml
+    p = ROOT / "config" / f"competition_{name}.yaml"
+    prof = yaml.safe_load(p.read_text(encoding="utf-8"))
+    if (prof.get("llm") or {}).get("fallback") != "template":
+        raise ValueError(f"{p.name}: llm.fallback must be template")
+    return prof
+
+
 def main(argv=None) -> int:
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")
     ap = argparse.ArgumentParser()
@@ -423,9 +464,11 @@ def main(argv=None) -> int:
     ap.add_argument("--mode", choices=["dry-run", "historical", "competition"], default="dry-run")
     ap.add_argument("--config", default="config/strategy_quant_v1.yaml")
     ap.add_argument("--llm-config", default=None)
-    ap.add_argument("--llm-provider", choices=["template", "claude-cli"], default="template",
-                    help="narrative provider; claude-cli = the user's own logged-in Claude Code CLI (Round 06B PoC, "
-                         "not production-approved). Decisions are never affected; any failure -> template.")
+    ap.add_argument("--competition-profile", choices=["prod"], default=None,
+                    help="prod = config/competition_prod.yaml: LLM primary claude-cli, fallback template")
+    ap.add_argument("--llm-provider", choices=["template", "claude-cli"], default=None,
+                    help="narrative provider (default template, or the profile's primary); claude-cli = the operator's "
+                         "own logged-in Claude Code CLI. Decisions are never affected; any failure -> template.")
     ap.add_argument("--clock", default=None, help="simulated wall clock ISO +08:00 (dry-run / tests)")
     ap.add_argument("--skip-refresh", action="store_true")
     ap.add_argument("--offline", action="store_true", help="no network: every source from store probes only")
@@ -439,6 +482,13 @@ def main(argv=None) -> int:
     if a.offline:
         from agent.ops.refresh_daily import offline_fetchers
         fetchers = offline_fetchers()
+    if a.competition_profile:
+        prof = load_competition_profile(a.competition_profile)
+        a.config = prof.get("strategy_config", a.config)
+        a.llm_provider = a.llm_provider or prof["llm"]["primary"]
+        if a.llm_provider == prof["llm"]["primary"]:
+            a.llm_config = a.llm_config or prof["llm"].get("config")
+    a.llm_provider = a.llm_provider or "template"
     provider = None
     if a.llm_provider == "claude-cli":
         from agent.llm.client import load_llm_config

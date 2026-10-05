@@ -71,7 +71,7 @@ def run_preflight(trade_date: str, *, mode: str = "dry-run", strategy_cfg: str =
                   llm_cfg: str | None = None, clock: Clock | None = None, ops_cfg: dict | None = None,
                   data_health: dict | None = None, settlement_status: dict | None = None,
                   prev_holdings: dict | None = None, prev_cash=None, closes_prev: dict | None = None,
-                  git: dict | None = None, extra: list[Check] | None = None, store=None) -> dict:
+                  git: dict | None = None, extra: list[Check] | None = None, store=None, llm_provider=None) -> dict:
     ops_cfg = ops_cfg or load_ops_config()
     clock = clock or Clock()
     pf = ops_cfg["preflight"]
@@ -187,7 +187,7 @@ def run_preflight(trade_date: str, *, mode: str = "dry-run", strategy_cfg: str =
         from agent.llm.client import load_llm_config, make_provider
         lc = load_llm_config(llm_cfg)
         try:
-            pr = make_provider(lc)
+            pr = llm_provider if llm_provider is not None else make_provider(lc)   # Round 07: the real instance
             ok = pr.name != "template" and pr.available()
             checks.append(Check("llm_availability", PASS if ok else WARN,
                                 f"{pr.name} {'available' if ok else 'unavailable -> template narrative'}"))
@@ -244,6 +244,8 @@ def main(argv=None) -> int:
     ap.add_argument("--config", default="config/strategy_quant_v1.yaml")
     ap.add_argument("--llm-config", default=None)
     ap.add_argument("--initial", action="store_true", help="first competition day (start from cash)")
+    ap.add_argument("--competition-profile", choices=["prod"], default=None,
+                    help="also report the profile's LLM runtime (Claude CLI version pin + auth); never blocks")
     a = ap.parse_args(argv)
     st, internal, closes = ledger_settlement_status(a.date, initial=a.initial)
     r = run_preflight(a.date, mode=a.mode, strategy_cfg=a.config, llm_cfg=a.llm_config, settlement_status=st,
@@ -252,6 +254,19 @@ def main(argv=None) -> int:
     for c in r["checks"]:
         print(f"[{c['level']:5s}] {c['name']:28s} {c['detail']}")
     print("PREFLIGHT:", r["level"])
+    if a.competition_profile:                          # Round 07: LLM is optional -> printed, never a BLOCK
+        from agent.competition_day import llm_runtime_status, load_competition_profile
+        from agent.llm.client import load_llm_config
+        prof = load_competition_profile(a.competition_profile)
+        prov = None
+        if prof["llm"]["primary"] == "claude-cli":
+            from agent.llm.providers.claude_cli import ClaudeCodeCLIProvider
+            prov = ClaudeCodeCLIProvider(None, dict(load_llm_config(prof["llm"]["config"]), enabled=True))
+        st = llm_runtime_status(prov)
+        print(f"[{'PASS' if st['status'] in ('READY', 'TEMPLATE') else 'WARN':5s}] {'llm_runtime':28s} "
+              f"binary={st.get('binary', '-')} version={st.get('version', '-')} ({st.get('version_check', '-')}) "
+              f"auth={st.get('authMethod', '-')} profile={st.get('profile', '-')}")
+        print(st["line"])
     return 0 if r["level"] != BLOCK else 2
 
 

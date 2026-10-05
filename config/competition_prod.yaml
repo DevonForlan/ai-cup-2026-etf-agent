@@ -1,0 +1,13 @@
+# Round 07 competition profile "prod" — used by: agent\competition_day.py --competition-profile prod
+# Does NOT change any global default (strategy / llm.yaml stay template). Quant Core v1 is unchanged.
+profile: prod
+status: PRODUCTION_CANDIDATE
+strategy_config: config/strategy_quant_v1.yaml     # frozen Quant Core v1 (decisions, weights, orders)
+llm:
+  primary: claude-cli                              # operator's own logged-in Claude Code CLI (NARRATIVE_LOCKED)
+  config: config/llm_claude_cli.yaml
+  fallback: template                               # any Claude failure -> TemplateProvider -> D-Plan
+  role: narrative_research_only                    # market view / thesis / counter-evidence / MOPS interpretation
+account_authorization: AUTHORIZED_FOR_COMPETITION_USE  # organization-managed Team account authorized by employer
+                                                       # for company competition participation
+submission: prepare_only                           # manual upload by the operator; no automation
