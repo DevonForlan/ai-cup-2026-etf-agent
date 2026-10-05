@@ -30,12 +30,16 @@ DEFAULT = {
     },
     "points": {"caution": 2, "risk_off": 4, "crisis": 7},
     "exit_confirm_days": 2,
+    # Cash ceilings leave room for PASSIVE drift: in a crash NAV falls while cash stays, so the cash
+    # ratio rises by itself (20% cash + 20% equity drop -> 23.8%). Rule §六(十四)(2) warns on the
+    # settled ratio regardless of cause (Round 04 W2 finding).
     "states": {
         "NORMAL": {"cash": [0.03, 0.08], "allow_new": True, "vol_cap": None},
-        "CAUTION": {"cash": [0.08, 0.12], "allow_new": True, "vol_cap": None},
-        "RISK_OFF": {"cash": [0.12, 0.18], "allow_new": False, "vol_cap": 0.06},
-        "CRISIS": {"cash": [0.18, 0.22], "allow_new": False, "vol_cap": 0.05},
+        "CAUTION": {"cash": [0.07, 0.10], "allow_new": True, "vol_cap": None},
+        "RISK_OFF": {"cash": [0.10, 0.14], "allow_new": False, "vol_cap": 0.06},
+        "CRISIS": {"cash": [0.12, 0.16], "allow_new": False, "vol_cap": 0.05},
     },
+    "cash_hard_ceiling": 0.20,   # above this the guard re-invests in ANY state (official limit is 25%)
     "max_deleveraging_per_day": 0.10,
     "max_releveraging_per_day": 0.10,
     "high_vol_quantile": 0.80,
@@ -125,4 +129,5 @@ def step(prev: dict | None, market: dict, port_dd: float, cfg: dict) -> dict:
     return {"state": new, "raw_state": raw, "points": pts, "detail": detail, "calm_days": calm,
             "cash": list(st["cash"]), "allow_new": bool(st["allow_new"]), "vol_cap": st.get("vol_cap"),
             "max_delever": float(p["max_deleveraging_per_day"]), "max_relever": float(p["max_releveraging_per_day"]),
-            "high_vol_quantile": float(p["high_vol_quantile"]), "port_dd": round(port_dd, 4)}
+            "high_vol_quantile": float(p["high_vol_quantile"]), "port_dd": round(port_dd, 4),
+            "cash_hard_ceiling": float(p["cash_hard_ceiling"])}

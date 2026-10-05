@@ -124,3 +124,25 @@ def test_guard_enabled_run_is_valid(fixture_store, rb, cfg, tmp_path):
     r = run_day("2026-10-27", fixture_store, Settlement.initial("x", rb.rules.initial_cash), rb, c,
                 team_id="TEAM_TEST", out_dir=tmp_path, log_dir=tmp_path, store_is_fixture=True, light=True)
     assert r.validation.ok and r.guard is not None and r.agent_state["guard"]["state"] in CG.STATES
+
+
+def test_passive_cash_drift_forces_reinvest_in_crisis(fixture_store, rb, cfg):
+    """Round 04 W2 regression: CRISIS cash + falling prices drift the cash ratio toward 25%.
+    Above the hard ceiling the guard must buy back even in CRISIS, ending well below 25%."""
+    fs, sc, closes, etf, meta, held, cash, nav = _setup(fixture_store, rb, cfg)
+    h, c2 = _scaled(held, closes, nav, 0.82)                            # ~23% cash, still legal
+    g = CG.step(None, CRASH, 0.0, GUARD_ON)
+    assert g["state"] == "CRISIS"
+    g["high_vol"] = []
+    r = construct(sc, h, c2, nav, closes, rb, cfg, fs.market, etf, meta, guard=g)
+    assert isinstance(r, TargetPortfolio), getattr(r, "reason", "")
+    assert any(o.side == "BUY" for o in r.orders)
+    assert c2 / nav > Decimal("0.20")
+    assert r.cash_weight_est <= Decimal("0.20")
+
+
+def test_state_cash_ceilings_leave_drift_room():
+    for name, st in CG.DEFAULT["states"].items():
+        hi = st["cash"][1]
+        # a further 25% equity fall must not push the ceiling cash ratio over 25%
+        assert hi / (hi + (1 - hi) * 0.75) < 0.25, name

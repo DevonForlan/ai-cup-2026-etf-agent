@@ -158,7 +158,12 @@ def _guard_scale(prev_h, prev_cash, nav_prev, closes_prev, rb, cfg, guard, etf_h
     vcap = D(str(guard["vol_cap"])) if guard.get("vol_cap") else None
     need_volcap = bool(vcap) and any(cur_w[t] > vcap + D("0.002") for t in hv if t in cur_w)
     need_delever = cash_now < lo - D("0.005")
-    need_relever = guard["state"] == "NORMAL" and cash_now > hi + D("0.02")
+    ceiling = D(str(guard.get("cash_hard_ceiling", 0.20)))
+    need_relever = (guard["state"] == "NORMAL" and cash_now > hi + D("0.02")) or cash_now > ceiling
+    if cash_now > ceiling:                 # passive drift toward the official 25%: re-invest in any state
+        need_delever = need_volcap = False
+        lo, hi = min(lo, ceiling - D("0.04")), min(hi, ceiling - D("0.02"))
+        mid = (lo + hi) / 2
     if not (need_delever or need_volcap or need_relever):
         return None
     caps = _caps(prev_h, rb, cfg)
@@ -192,8 +197,8 @@ def _guard_scale(prev_h, prev_cash, nav_prev, closes_prev, rb, cfg, guard, etf_h
     else:
         cap = D(str(guard["max_relever"]))
         k = min((1 - mid) / inv, 1 + cap / inv)
-        if inv * k < legal_inv:                                   # previous portfolio illegal (cash > 25%): fix it
-            k = min((1 - mid) / inv, legal_inv / inv)
+        if inv * k < legal_inv or cash_now > ceiling:             # near/over the official limit: fix it now
+            k = max(k, min((1 - mid) / inv, max(legal_inv, 1 - ceiling + D("0.02")) / inv))
         else:
             for _ in range(8):
                 over = traded_value(weights_for(k)) - cap
