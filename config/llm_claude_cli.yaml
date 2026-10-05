@@ -1,0 +1,31 @@
+# Claude Code CLI runtime narrative provider (Round 06B PoC). DISABLED by default (template narrative).
+#
+# Runs the user's own, unmodified, already-logged-in `claude` CLI in non-interactive mode (claude -p).
+# Python never reads, copies or stores any credential; authentication is Claude Code's own.
+# NOT production-approved: the login on this machine is an organization-managed (Team) account and
+# competition / scripted use is not explicitly addressed by Anthropic's docs -> see
+# reports/ROUND_06B_CLAUDE_CLI_RUNTIME_REPORT.md. Narrative only: decisions are never touched.
+enabled: false
+provider: claude_cli
+model: null                     # null = the CLI's configured model (recorded per call from the init event)
+prompt_guard: claude_cli_narrative_v1
+timeout_sec: 120                # hard subprocess timeout per call (terminate -> grace -> kill tree)
+total_budget_sec: 300           # whole-day LLM time budget; deadline guard disables LLM in NO_LLM / PACKAGE_ONLY
+retries: 0                      # usage / rate limits must not cause a retry storm: any failure -> template
+max_calls_per_day: 10
+max_tokens_per_day: 200000
+max_cost_per_day_usd: 5.0       # client-side estimate reported by the CLI (subscription usage, not a bill)
+max_turns: 3
+log_calls: true
+narrative:
+  mode: llm
+  reviewer: deterministic
+  max_thesis_items: 35
+events:
+  enabled: false
+llm_signal:
+  enabled: false
+claude_cli:
+  profile: NARRATIVE_LOCKED     # RESEARCH_READONLY exists for experiments only (Read inside the sandbox)
+  working_dir: runtime/claude_cli
+  keep_sandbox: false

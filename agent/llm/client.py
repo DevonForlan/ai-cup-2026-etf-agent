@@ -54,6 +54,9 @@ def make_provider(cfg: dict) -> LLMProvider:
     if name == "template" or cfg.get("enabled") is False:     # a disabled provider config means template
         from agent.llm.providers.mock import TemplateProvider
         return TemplateProvider()
+    if name in ("claude_cli", "claude-cli"):
+        from agent.llm.providers.claude_cli import ClaudeCodeCLIProvider
+        return ClaudeCodeCLIProvider(model or None, cfg)
     if name in ("claude_agent_sdk", "claude-agent-sdk"):
         from agent.llm.providers.claude_agent_sdk import ClaudeAgentSDKProvider
         return ClaudeAgentSDKProvider(model or None, cfg)
