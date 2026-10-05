@@ -142,8 +142,10 @@ def rehearse(start_date: str, *, end_date: str | None = None, days: int | None =
     rows, prev_settlement, prev_start, run_ids, fail_days = [], None, None, [], []
     t_all = time.perf_counter()
     for i, T in enumerate(tdays):
-        prev_cal = cal.prev(T)
-        clock = Clock(f"{prev_cal}T20:00:00+08:00")
+        # the submission window opens at 19:30 on the CALENDAR day before T (competition.yaml opens_prev_day;
+        # calendar vs trading day is not confirmed) -> run at T-1(calendar) 20:00, e.g. Sunday for a Monday
+        from datetime import date as _d, timedelta as _td
+        clock = Clock(f"{(_d.fromisoformat(T) - _td(days=1)).isoformat()}T20:00:00+08:00")
         cd_mode = "historical" if mode == "replay" else "competition"
         probs, row = [], {"date": T}
         try:
