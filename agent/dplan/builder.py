@@ -60,7 +60,9 @@ def ticker_fact_values(row: pd.Series) -> dict[str, float]:
 
 def build_graph(trade_date: str, fs, scores: pd.DataFrame, result, prev_holdings: dict[str, int],
                 prev_cash, nav_prev, closes_prev: dict, rb: RuleBook, cfg: dict,
-                sources: dict[str, SourceInfo], narrator=None, writer=None) -> tuple[EvidenceGraph, dict]:
+                sources: dict[str, SourceInfo], narrator=None, writer=None,
+                events: list | None = None, signal_audit: dict | None = None) -> tuple[EvidenceGraph, dict]:
+    """events: EventFact list (already validated/grounded); signal_audit: ticker -> fusion audit dict."""
     narrator = narrator or TemplateMarketNarrator()
     writer = writer or TemplateThesisWriter()
     g = EvidenceGraph(trade_date)
@@ -166,12 +168,44 @@ def build_graph(trade_date: str, fs, scores: pd.DataFrame, result, prev_holdings
     g.add("Signal", "sig:regime", {"regime": regime, "stance": stance, "why": why, "cash_target_range": cash_rng,
                                    "net_flow": float(post.net_flow), "nav_prev": float(nav_prev)},
           refs=mkt_facts)
-    mv_logic = narrator.market_logic(mvals, regime, why, cash_rng, post)
+    mv_logic = narrator.market_logic(dict(mvals, **ovals), regime, why, cash_rng, post)
     g.add("MarketView", "mv", {"logic": mv_logic, "regime": regime, "stance": stance,
                                "posture": {"net_exposure_intent": post.net_exposure_intent,
                                            "target_cash_pct_range": list(post.target_cash_pct_range)},
                                "counter_evidence": narrator.market_counter(mvals, regime)},
           refs=mkt_facts)
+
+    ev_by_t: dict[str, list] = {}
+    for e in sorted(events or [], key=lambda x: (-x.confidence, x.published_at)):
+        if len(ev_by_t.get(e.ticker, [])) < 2:
+            ev_by_t.setdefault(e.ticker, []).append(e)
+    n_ev = [0]
+
+    def event_facts(t: str) -> list[str]:
+        """EventFact -> Source (mops) + Fact nodes; returns fact keys (max 2 per ticker, 16 per day)."""
+        keys = []
+        for e in ev_by_t.get(t, []):
+            if n_ev[0] >= 16:
+                break
+            fk = f"event:{e.event_id}"
+            if fk not in g.nodes:
+                src = f"src:ev:{e.source_ids[0]}"
+                if src not in g.nodes:
+                    g.add("Source", src, {"authority": "mops", "url": (e.raw_refs[0] if e.raw_refs and e.raw_refs[0]
+                                                                     else "https://mops.twse.com.tw/mops/#/web/t05st02"),
+                                          "name": f"MOPS 重大訊息 {t}（{e.published_at[:16]}）",
+                                          "content_as_of": e.published_at, "published_at": e.published_at,
+                                          "fetched_at": None, "archive_url": None})
+                vals = {"event_direction": float(e.sign), "event_confidence": round(e.confidence, 2),
+                        "event_horizon_days": float(e.horizon_days)}
+                if signal_audit and t in signal_audit:
+                    vals["event_adjustment_pctile"] = round(signal_audit[t]["adjustment"] * 100, 2)
+                g.add("Fact", fk, {"ticker": t, "topic": "company_event", "values": vals,
+                                   "statement": f"{t} 公告事件（{e.event_type}，{e.direction}）：{e.summary}"[:500]},
+                      refs=[src])
+                n_ev[0] += 1
+            keys.append(fk)
+        return keys
 
     if not info["fallback"]:
         from agent.portfolio.baseline import turnover_params
@@ -179,30 +213,50 @@ def build_graph(trade_date: str, fs, scores: pd.DataFrame, result, prev_holdings
         band = tpar["rebalance_threshold"]
         sc = scores["score"].to_dict() if "score" in scores else {}
         cur_w = {t: Decimal(s) * D(closes_prev[t]) / nav_prev for t, s in prev_h.items()}
+        nts = [p for p in tp.plan if p.action == "NO_TRADE"]
+        if hasattr(writer, "prepare"):            # LLM writer: one batched call AFTER decisions are final
+            items = []
+            for d in decisions:
+                t = d["ticker"]
+                items.append({"key": f"dec:{t}", "ticker_label": f"{t} {rb.universe[t]['name']}", "action": d["action"],
+                              "rank_text": f"{rank_of.get(t)}/{n_elig}" if rank_of.get(t) else "-",
+                              "fact_sets": [(t, g.get(ticker_fact(t)).data["values"])]})
+            for ci in range(0, len(nts), 10):
+                ch = nts[ci:ci + 10]
+                items.append({"key": f"hold:{ci // 10}", "ticker_label": "、".join(p.ticker for p in ch),
+                              "action": "NO_TRADE", "rank_text": "-",
+                              "fact_sets": [(p.ticker, g.get(ticker_fact(p.ticker)).data["values"]) for p in ch]})
+            writer.prepare(items)
         for d in decisions:
             t = d["ticker"]
             fk = ticker_fact(t)
             vals = g.get(fk).data["values"]
+            evk = event_facts(t)
             ctx = {"ticker": t, "name": rb.universe[t]["name"], "action": d["action"],
                    "target_weight": d["target_weight"], "current_weight": float(cur_w.get(t, 0)),
                    "rank": rank_of.get(t), "n_eligible": n_elig, "score": sc.get(t),
                    "hold_limit": tpar["hold_rank"],
-                   "funding_for": bool(funding.get(d["decision_id"])), "values": vals}
+                   "funding_for": bool(funding.get(d["decision_id"])), "values": vals,
+                   "events": [g.get(k).data["statement"] for k in evk]}
             g.add("Signal", f"sig:{t}", {"rank": ctx["rank"], "score": ctx["score"], "n_eligible": n_elig})
             g.add("Inference", f"inf:{t}", {"logic": writer.decision_logic(ctx),
                                             "counter_evidence": writer.counter_evidence(ctx),
-                                            "conclusion": writer.conclusion(ctx)}, refs=[fk])
+                                            "conclusion": writer.conclusion(ctx)}, refs=[fk] + evk)
             ff = [k for k in funding.get(d["decision_id"], [])]
             g.add("Decision", d["decision_id"], {**d, "funding_for": ff,
                                                  "risk_check": writer.risk_check(ctx, rb)}, refs=[f"inf:{t}"])
-        nts = [p for p in tp.plan if p.action == "NO_TRADE"]
         fkeys = [ticker_fact(p.ticker) for p in nts]
         for ci in range(0, len(nts), 10):
             ch = nts[ci:ci + 10]
-            g.add("Inference", f"inf:hold:{ci // 10}",
-                  {"logic": writer.hold_logic([(p.ticker, float(cur_w.get(p.ticker, 0)), float(p.target_weight),
-                                                rank_of.get(p.ticker), p.reason) for p in ch], band),
-                   "counter_evidence": None}, refs=fkeys[ci:ci + 10])
+            hitems = [(p.ticker, float(cur_w.get(p.ticker, 0)), float(p.target_weight), rank_of.get(p.ticker), p.reason)
+                      for p in ch]
+            if hasattr(writer, "hold_logic_keyed"):
+                ph = "".join("{{fact:" + p.ticker + "}}" for p in ch)
+                hl = writer.hold_logic_keyed(f"hold:{ci // 10}", hitems, band, ph)
+            else:
+                hl = writer.hold_logic(hitems, band)
+            g.add("Inference", f"inf:hold:{ci // 10}", {"logic": hl, "counter_evidence": None},
+                  refs=fkeys[ci:ci + 10])
             for p in ch:
                 g.add("NoTrade", f"nt:{p.ticker}", {"ticker": p.ticker,
                                                     "reason": writer.no_trade_reason(p.reason, band)},
