@@ -1,0 +1,29 @@
+{
+ "scanned_files": 3757,
+ "skipped_files": 16,
+ "findings": [],
+ "checks": [
+  {
+   "check": ".env not tracked by git",
+   "ok": true,
+   "detail": []
+  },
+  {
+   "check": ".env in .gitignore",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "logs/llm ignored",
+   "ok": true,
+   "detail": ""
+  }
+ ],
+ "env_keys_present": {
+  "GEMINI_API_KEY": "ABSENT",
+  "GOOGLE_API_KEY": "ABSENT",
+  "OPENAI_API_KEY": "ABSENT",
+  "ANTHROPIC_API_KEY": "ABSENT"
+ },
+ "passed": true
+}
