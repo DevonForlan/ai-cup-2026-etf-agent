@@ -489,3 +489,9 @@ def test_t1_prices_not_yet_visible_blocks_with_clear_reason(fixture_store):
     assert "rerun after" in t1_visibility_check(fixture_store, d, early).detail
     assert t1_visibility_check(fixture_store, d, Clock("2026-10-25T20:00:00+08:00").now()).level == "PASS"
     assert t1_visibility_check(fixture_store, "2030-01-02", early).level == "BLOCK"
+
+
+def test_run_before_window_opens_blocks_with_clear_reason(fixture_store, ops_cfg):
+    """Round 06 current-data drill: a 15:03 run for tomorrow fails C6; preflight now says so up front."""
+    s = run(fixture_store, ops_cfg, T1, "2026-10-25T15:03:00+08:00", mode="dry-run", initial=True)
+    assert s["status"] == "BLOCKED" and "submission_window_open" in s["reason"] and "opens" in s["reason"]

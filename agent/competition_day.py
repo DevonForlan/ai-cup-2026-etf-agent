@@ -233,6 +233,12 @@ def run_competition_day(trade_date: str, team_id: str, mode: str = "dry-run", *,
     extra_checks.append(clock_skew_check(clock.now(), reference_time, ops_cfg, mode == "competition"))
     if mode != "historical" and prev_date:
         extra_checks.append(t1_visibility_check(store, prev_date, clock.now()))
+    if mode != "historical":
+        opens = DL.opening_for(trade_date)
+        if clock.now() < opens:          # C6 rejects any D-Plan stamped before the window opens
+            extra_checks.append(Check("submission_window_open", BLOCK,
+                                      f"window for {trade_date} opens {opens:%m-%d %H:%M}; a D-Plan generated now "
+                                      f"fails C6 — rerun after that time"))
     closes_prev = _closes_on(store, prev_date) if prev_date else {}
     pf = run_preflight(trade_date, mode="competition" if mode == "competition" else "dry-run", strategy_cfg=config,
                        llm_cfg=llm_config, clock=clock, ops_cfg=ops_cfg, data_health=data_health,
