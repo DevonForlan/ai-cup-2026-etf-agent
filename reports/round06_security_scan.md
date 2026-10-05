@@ -1,6 +1,6 @@
 # Security scan (Round 06)
 
-**PASS** — scanned 3600 files (tracked + operational logs), skipped 14 binary/large.
+**PASS** — scanned 3694 files (tracked + operational logs), skipped 14 binary/large.
 
 | check | ok |
 |---|---|

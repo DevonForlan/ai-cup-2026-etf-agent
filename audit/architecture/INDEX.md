@@ -1,6 +1,6 @@
 # Architecture index
 
-generated 2026-10-05T12:46:21.092735+08:00, git:7e7a3b0
+generated 2026-10-05T15:10:50.608149+08:00, git:83af462
 
 ## Documents
 
@@ -11,13 +11,17 @@ generated 2026-10-05T12:46:21.092735+08:00, git:7e7a3b0
 - [docs/EMERGENCY_RUNBOOK.md](../../docs/EMERGENCY_RUNBOOK.md)
 - [docs/AGENT_AUTONOMY_EVIDENCE.md](../../docs/AGENT_AUTONOMY_EVIDENCE.md)
 - [docs/STRATEGY_FREEZE_RECORD.md](../../docs/STRATEGY_FREEZE_RECORD.md)
+- [docs/OFFICIAL_SETTLEMENT_ENTRY_SOP.md](../../docs/OFFICIAL_SETTLEMENT_ENTRY_SOP.md)
+- [docs/COMPETITION_CODE_FREEZE.md](../../docs/COMPETITION_CODE_FREEZE.md)
+- [docs/FINAL_OPERATOR_CHECKLIST.md](../../docs/FINAL_OPERATOR_CHECKLIST.md)
+- [reports/DATA_AVAILABILITY_MATRIX.md](../../reports/DATA_AVAILABILITY_MATRIX.md)
 
 ## Modules (sha256 prefix)
 
 | module | sha256 |
 |---|---|
 | agent/__init__.py | 01ba4719c80b6fe9 |
-| agent/competition_day.py | 72061d5f8ac9a42c |
+| agent/competition_day.py | 5b9dfd109acc196a |
 | agent/config.py | 78ec9eea760473bc |
 | agent/data/__init__.py | 01ba4719c80b6fe9 |
 | agent/data/fetchers/__init__.py | e3b0c44298fc1c14 |
@@ -32,7 +36,8 @@ generated 2026-10-05T12:46:21.092735+08:00, git:7e7a3b0
 | agent/data/fetchers/twse.py | 77dfb5a2bbb8f3f1 |
 | agent/data/http.py | a47965202f6814ac |
 | agent/data/loaders.py | e417b5fade27a752 |
-| agent/data/manifest.py | 8556d33906ba3b6c |
+| agent/data/locks.py | 6389965deb06689f |
+| agent/data/manifest.py | ac719d52c36cf875 |
 | agent/data/normalizers.py | c0fd684de95ebffe |
 | agent/data/overnight.py | 22c9ecab627b7c87 |
 | agent/data/pit.py | a217388bee6225c5 |
@@ -76,19 +81,34 @@ generated 2026-10-05T12:46:21.092735+08:00, git:7e7a3b0
 | agent/llm/replay.py | 3a4e8783da87e57a |
 | agent/llm/schemas.py | 40a979409d2ad678 |
 | agent/ops/__init__.py | 31a9094f2d1cb026 |
-| agent/ops/archive_run.py | 2b41563e8c26ba88 |
-| agent/ops/audit.py | 618eb35599fc4c99 |
+| agent/ops/archive_run.py | b45e1567f59df620 |
+| agent/ops/audit.py | 41f401a54e9448dd |
+| agent/ops/backup.py | 0c69250c82fe7bae |
 | agent/ops/common.py | 311ac31b2dd793e7 |
+| agent/ops/compare_candidates.py | 3925773e7287fc85 |
+| agent/ops/daily_reports.py | 280bf76c36149b5f |
 | agent/ops/deadline.py | 467e37af2cf7847b |
-| agent/ops/healthcheck.py | e91c33266e401b32 |
+| agent/ops/etf_parallel_test.py | bdb751b08cfd0e9c |
+| agent/ops/failure_injection_r2.py | ef0adf7f363be148 |
+| agent/ops/final.py | 653b334abe20d695 |
+| agent/ops/fingerprint.py | ca9f05f72f63eb47 |
+| agent/ops/healthcheck.py | 66ec2ab403466494 |
 | agent/ops/llm_review.py | ceadd8cdeb707cde |
-| agent/ops/package_submission.py | e732f62219df4675 |
-| agent/ops/preflight.py | fd10cb2306d5c3cd |
+| agent/ops/package_submission.py | b1b8311b92adb47b |
+| agent/ops/preflight.py | e4fe3e8c7c68872b |
+| agent/ops/readiness.py | 84db84a93554f17b |
 | agent/ops/reconcile.py | 315a64cc4131a98c |
-| agent/ops/refresh_daily.py | ad8d3e2bd9f0902b |
+| agent/ops/refresh_daily.py | a02c72ad71645972 |
+| agent/ops/rehearsal.py | bf1b8337f61fef17 |
+| agent/ops/restore_drill.py | 03dde9e15f5151c1 |
 | agent/ops/runbook.py | c9b2c4aac62d8f72 |
-| agent/ops/settle_internal.py | a7c675cca8cd1e7b |
-| agent/ops/settlement.py | f9bab48ca45fe2e2 |
+| agent/ops/security_scan.py | bb201abb0faac14b |
+| agent/ops/settle_internal.py | 2af4484df6d2dfa2 |
+| agent/ops/settlement.py | a50a0d38bbf35b41 |
+| agent/ops/settlement_entry.py | 250c3e62be0c1487 |
+| agent/ops/soak.py | 9c0e7d38a947d2dc |
+| agent/ops/source_stats.py | 61e02f0d96bc81de |
+| agent/ops/verify_release.py | d298b04a7c094e92 |
 | agent/pipeline.py | 8178efa1b9a7d71d |
 | agent/portfolio/__init__.py | 01ba4719c80b6fe9 |
 | agent/portfolio/baseline.py | 81620c20e1a0af94 |
@@ -111,6 +131,8 @@ generated 2026-10-05T12:46:21.092735+08:00, git:7e7a3b0
 | agent/research/thesis_writer.py | 67036f3fe0edf26e |
 | agent/risk/__init__.py | e3b0c44298fc1c14 |
 | agent/risk/crash_guard.py | 8cd3e13e1ada19ee |
+| agent/rules/__init__.py | 6f763dd024663963 |
+| agent/rules/organizer_clarifications.py | d2edbe0b62c7f73f |
 | agent/run_daily.py | 06f20b55071acaab |
 | agent/run_sim.py | a69088cc06046e65 |
 | agent/sim/__init__.py | 01ba4719c80b6fe9 |
@@ -118,6 +140,11 @@ generated 2026-10-05T12:46:21.092735+08:00, git:7e7a3b0
 | agent/sim/metrics.py | 3ad6f7d7b87502b8 |
 | agent/sim/models.py | 1fd824358f6d1f24 |
 | agent/sim/settle.py | ef80ff0ca2b0c599 |
+| agent/submission/__init__.py | eb53781a5e4ddd4e |
+| agent/submission/base.py | bf2301acbe00732f |
+| agent/submission/future_api.py | 0a4acd1f7dc03c00 |
+| agent/submission/manual.py | 764686fc2b1cd834 |
+| agent/submission/receipt.py | 3e3c264aeb2b75d7 |
 | agent/tools/__init__.py | 01ba4719c80b6fe9 |
 | agent/tools/backfill.py | 05f18d780fc7909b |
 | agent/tools/benchmark.py | 7db4e349ab5ea4a5 |

@@ -1,0 +1,18 @@
+{
+ "generated_at": "2026-10-05T15:10:50.608149+08:00",
+ "settlement_dir": "C:\\Users\\devon.tseng\\Desktop\\個人\\AI CUP 2026玉山人工智慧公開挑戰賽\\data\\settlement",
+ "files": [
+  {
+   "file": "20260930_reconciliation.json",
+   "sha256": "sha256:c81b408202280e7420e83955e030f0939b0fe12bd6712dc9d3ca04fbcb1ed5dc"
+  },
+  {
+   "file": "20261001_reconciliation.json",
+   "sha256": "sha256:bb03654f2826d71ad31862063f8fa79e3a9e1dcd40baec242aaa88acb41b73ee"
+  },
+  {
+   "file": "20261002_reconciliation.json",
+   "sha256": "sha256:c44fca5a1552140bc1f8a8fd5fcfc6c0d241f83169169ba484fb6ff3f1ce59b2"
+  }
+ ]
+}

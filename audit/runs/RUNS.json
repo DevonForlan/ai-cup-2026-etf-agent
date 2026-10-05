@@ -1,5 +1,5 @@
 {
- "generated_at": "2026-10-05T12:46:21.092735+08:00",
+ "generated_at": "2026-10-05T15:10:50.608149+08:00",
  "archive_root": "archive/",
  "runs": [
   {
@@ -61,6 +61,26 @@
    "dplan_sha256": "sha256:f74768c89ad7be2cd0a852e23e9cbbfd3f8515ffa22cd3f15c0c7e82d0bc0943",
    "git_sha": "git:cf6e084-dirty",
    "files": 24
+  },
+  {
+   "trade_date": "2026-10-05",
+   "run_id": "20261005_020000_gitba1925c",
+   "mode": "dry-run",
+   "manifest": "20261005/20261005_020000_gitba1925c/ARCHIVE_MANIFEST.json",
+   "manifest_sha256": "sha256:77bd5dd3d42fafe5f77c0d250c1443d0a3e2fed5dd9d68f4d5debda2f98d2c3b",
+   "dplan_sha256": "sha256:2702a36c33f6e9e559b3419ae475cbaf8487084036d97b36801376522e3e38e7",
+   "git_sha": "git:ba1925c",
+   "files": 29
+  },
+  {
+   "trade_date": "2026-10-06",
+   "run_id": "20261005_193500_git1b1aed1",
+   "mode": "dry-run",
+   "manifest": "20261006/20261005_193500_git1b1aed1/ARCHIVE_MANIFEST.json",
+   "manifest_sha256": "sha256:4dc4f4a8f3092f74bda162804f32f28dd4f9371000e963a2c2ff73c1952fa229",
+   "dplan_sha256": "sha256:18b1e65ba1c490a8ec8a60190218b95c89d5166d5ed1a2d2190835fed41f65d0",
+   "git_sha": "git:1b1aed1",
+   "files": 28
   }
  ]
 }

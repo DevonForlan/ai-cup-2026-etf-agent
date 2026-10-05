@@ -1,0 +1,20 @@
+{
+ "items": {
+  "architecture": true,
+  "strategy_freeze": true,
+  "prompts": true,
+  "configs": true,
+  "git_sha": true,
+  "daily_runs_archived": true,
+  "settlement_ledger": false,
+  "reconciliation": true,
+  "dplan_packages": true,
+  "final_freeze_records": true,
+  "receipt_schema": true,
+  "archive_manifests_verify": true
+ },
+ "passed": false,
+ "missing": [
+  "settlement_ledger"
+ ]
+}

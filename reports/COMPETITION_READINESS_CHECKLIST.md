@@ -60,7 +60,7 @@
 | # | 項目 | R05 | R06 | 依據 |
 |---|---|---|---|---|
 | 1 | Quant Core v1（凍結） | PASS | PASS | hash = freeze；Round 06 決策路徑 0 行修改 |
-| 2 | Competition Engine / Validator | PASS | PASS | 321 tests |
+| 2 | Competition Engine / Validator | PASS | PASS | 324 tests |
 | 3 | NAV / ledger continuity | PASS | PASS | 24 日彩排每日 T 結算 = T+1 起點（持股 / 現金 / NAV / 股利 / agent_state / entry_date） |
 | 4 | 24-day full dress rehearsal | — | **PASS** | replay 24/24（NAV 逐日 = baseline）；clock-sim（competition 模式）24/24 |
 | 5 | 資料：TWSE / TPEx 行情 | PASS | PASS | 休市感知新鮮度（修正）；斷網時 store 已有 T-1 → CACHED，否則 BLOCK |

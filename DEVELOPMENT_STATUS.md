@@ -26,7 +26,7 @@ Git repo since Round 03 (`git log`). `code_version = git:<short_sha>`; uncommitt
 | P10 Memory | ⏸ | strategy state only |
 
 ## Tests
-`.venv\Scripts\python.exe -m pytest` → **267 passed, 0 failed** (~2 min; 42 new in Round 05).
+`.venv\Scripts\python.exe -m pytest` → **324 passed, 0 failed** (~2–4 min; 42 new in Round 05, 57 new in Round 06).
 
 ## Quant Core v1
 `config/strategy_quant_v1.yaml` (frozen; selected = HN_rev: revenue_yoy 0.7 + revenue_mom 0.3, buy day 1 then hold,

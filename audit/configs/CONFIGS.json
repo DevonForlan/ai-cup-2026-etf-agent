@@ -1,5 +1,5 @@
 {
- "generated_at": "2026-10-05T12:46:21.092735+08:00",
+ "generated_at": "2026-10-05T15:10:50.608149+08:00",
  "freeze": {
   "strategy_config": "config/strategy_quant_v1.yaml",
   "strategy_sha256": "sha256:f34fa02e924011b20c52a4bd42e961169f97e1950e76e04b7e78dc43ac23d2e0",
@@ -24,7 +24,7 @@
   },
   {
    "file": "config/ops.yaml",
-   "sha256": "sha256:9a3bddc548f1656961363d2257faaf9db378f046ea3a5c95fe46b9dce26def55"
+   "sha256": "sha256:11f1317bff3aca3f9a34c4a603b7ce2c24d00cb1be9672151a38ccfed3739391"
   },
   {
    "file": "config/strategy.yaml",
