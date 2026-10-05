@@ -115,7 +115,7 @@ def _fetch_etf(ctx):
     s = E._session()
     snap_dir = ops_path(ctx["ops_cfg"], "etf_snapshots_dir") / ymd(ctx["run_date"])
     snap_dir.mkdir(parents=True, exist_ok=True)
-    stamp = ctx["clock"].now().strftime("%H%M%S")
+    stamp = ctx["wall"].now().strftime("%H%M%S")
     manifest, rows_all, latest, failed = [], [], [], []
     for e in [x["etf"] for x in load_active_etfs()]:
         r = E.fetch_one(s, e, None, save=True)
@@ -133,7 +133,7 @@ def _fetch_etf(ctx):
                          "rows": len(r.rows), "source_url": r.rows[0].get("source_url"),
                          "published_at": r.rows[0].get("published_at"), "fetched_at": r.rows[0].get("fetched_at")})
     mf = snap_dir / f"manifest_{stamp}.json"
-    write_json(mf, {"snapshot_time": ctx["clock"].now().isoformat(), "files": manifest, "failed": failed})
+    write_json(mf, {"snapshot_time": ctx["wall"].now().isoformat(), "files": manifest, "failed": failed})
     n = E.store_rows(rows_all) if rows_all else 0
     if not manifest:
         raise RuntimeError(f"no ETF holdings fetched ({len(failed)} failed)")
@@ -163,7 +163,7 @@ def _fetch_material(ctx):
         done.pop(d.isoformat(), None)                            # always refresh the last two days
     stats = M.run_range(days, ctx["store"], uni, _session(), done)
     return {"records": stats["universe"] if "universe" in stats else stats.get("fetched", 0),
-            "latest_available_date": days[-1].isoformat(), "content_as_of": ctx["clock"].now().isoformat(),
+            "latest_available_date": days[-1].isoformat(), "content_as_of": ctx["wall"].now().isoformat(),
             "detail": stats}
 
 
@@ -203,7 +203,7 @@ def _fetch_revenue_first_seen(ctx):
     obs = observe_mops(first.year, first.month, session=_session())
     uni = set(load_universe())
     obs = [o for o in obs if o["ticker"] in uni]
-    now = ctx["clock"].now().isoformat()
+    now = ctx["wall"].now().isoformat()      # real observation time (never the simulated clock)
     n = append_first_seen(obs, ops_path(ctx["ops_cfg"], "first_seen_ledger"), now, "mops_t21sc03")
     # make newly seen months usable from their first-seen time (never later than the legal deadline)
     if n:
@@ -260,14 +260,19 @@ HEAVY = {"etf_holdings", "corporate_actions", "mops_material_info", "mops_revenu
 
 def refresh(trade_date: str, *, store: HistoryStore | None = None, fetchers: dict | None = None,
             ops_cfg: dict | None = None, clock: Clock | None = None, only: set | None = None,
-            skip: set | None = None, allow_noncritical: bool = True, run_date: str | None = None) -> dict:
+            skip: set | None = None, allow_noncritical: bool = True, run_date: str | None = None,
+            wall_clock: Clock | None = None) -> dict:
+    """`clock` may be simulated (deadline tests / dry runs); every OBSERVATION timestamp (fetched_at, ETF
+    snapshot folder, MOPS first_seen_at, available_at of newly seen revenue) uses `wall_clock` = real time,
+    otherwise a simulated past clock would make data look available earlier than it was (PIT leak)."""
     ops_cfg = ops_cfg or load_ops_config()
     clock = clock or Clock()
     store = store or HistoryStore()
     fetchers = fetchers or DEFAULT_FETCHERS
     lg = ops_logger(trade_date, "refresh", ops_cfg)
-    ctx = {"trade_date": trade_date, "store": store, "ops_cfg": ops_cfg, "clock": clock,
-           "run_date": run_date or clock.now().strftime("%Y-%m-%d")}
+    wall = wall_clock or Clock()
+    ctx = {"trade_date": trade_date, "store": store, "ops_cfg": ops_cfg, "clock": clock, "wall": wall,
+           "run_date": run_date or wall.now().strftime("%Y-%m-%d")}
     out: list[SourceStatus] = []
     for name, meta in ops_cfg["data_sources"].items():
         st = SourceStatus(name, meta["criticality"], trade_date)
@@ -288,7 +293,7 @@ def refresh(trade_date: str, *, store: HistoryStore | None = None, fetchers: dic
             st.latest_available_date = r.get("latest_available_date")
             st.content_as_of = r.get("content_as_of")
             st.detail = r.get("detail", {})
-            st.fetched_at = clock.now().isoformat()
+            st.fetched_at = wall.now().isoformat()
             lag = stale_trading_days(st.latest_available_date, prev_weekdays(trade_date, 1)[0]) \
                 if st.latest_available_date and len(st.latest_available_date) == 10 else None
             st.stale = lag is not None and lag > int(meta.get("max_stale_trading_days", 0))

@@ -233,6 +233,7 @@ def test_final_candidate_single_and_conspicuous(day1, ops_cfg):
     assert [x.name for x in (day / "FINAL").glob("*.json")] == [f"D-Plan_TEAM_TEST_{T1}.json"]
     txt = (day / "FINAL_CANDIDATE.txt").read_text(encoding="utf-8")
     assert b["sha256"] in txt and "TEAM_TEST" in txt and T1 in txt and "VALIDATION       : PASS" in txt
+    assert "UPLOAD THIS FILE" in txt and "DRY-RUN" not in txt
     assert "RUN ID           : r2" in txt
     assert len((day / "final_history.jsonl").read_text(encoding="utf-8").splitlines()) == 2
 
@@ -272,3 +273,16 @@ def test_archive_immutable_with_manifest(day1, ops_cfg):
     assert (a / "config" / "strategy_quant_v1.yaml").exists()
     with pytest.raises(FileExistsError):
         archive_run(T1, rid, package_dir=p, config_files=[], ops_cfg=ops_cfg, readonly=False)
+
+
+def test_refresh_observation_times_use_wall_clock_not_simulated_clock(ops_cfg, fixture_store):
+    """Round 05 dry-run B finding: a simulated (past) clock must never become an observation timestamp."""
+    seen = {}
+
+    def f(ctx):
+        seen["wall"] = ctx["wall"].now().isoformat()
+        return {"records": 1, "latest_available_date": "2026-10-23"}
+    r = refresh(T1, store=fixture_store, fetchers={"twse_prices": f}, ops_cfg=ops_cfg,
+                clock=Clock("2026-10-25T20:00:00+08:00"), wall_clock=Clock("2026-10-26T12:00:00+08:00"))
+    st = next(s for s in r["sources"] if s["source"] == "twse_prices")
+    assert st["fetched_at"].startswith("2026-10-26T12:00") and seen["wall"].startswith("2026-10-26T12:00")

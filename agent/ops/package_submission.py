@@ -142,7 +142,7 @@ def mark_final(pkg: Path, *, team_id: str, trade_date: str, mode: str, ops_cfg: 
     warn = ("*** DRY-RUN — NOT A COMPETITION SUBMISSION — DO NOT UPLOAD ***\n" if mode != "competition" else "")
     (day / "FINAL_CANDIDATE.txt").write_text(
         f"{BANNER}\n{warn}FINAL_CANDIDATE   trade date {trade_date}   team {team_id}\n{BANNER}\n"
-        f"UPLOAD THIS FILE : {rec['path']}\n"
+        f"{'UPLOAD THIS FILE' if mode == 'competition' else 'DRY-RUN FILE    '} : {rec['path']}\n"
         f"FILE NAME        : {fname}\n"
         f"SHA256           : {sha}\n"
         f"VALIDATION       : PASS\n"
