@@ -1,0 +1,18 @@
+﻿case,injected,expected,actual,result,detail,sec
+crash_during_refresh,process killed inside refresh,RECOVERED,RECOVERED,PASS,None,3.7
+crash_before_package,process killed after validation,RECOVERED,RECOVERED,PASS,run_id 20261025_200500_git65702ee-dirty final 20261025_200500_git65702ee-dirty,2.9
+crash_mid_package,process killed while writing package,RECOVERED,RECOVERED,PASS,run_id 20261025_200500_git65702ee-dirty final 20261025_200500_git65702ee-dirty,2.1
+archive_partial_failure,process killed while archiving,RECOVERED,RECOVERED,PASS,run_id 20261025_200500_git65702ee-dirty final 20261025_200000_git65702ee-dirty,2.3
+stale_lock,lock file of a dead process (15 min old),RECOVERED_AUDITED,RECOVERED_AUDITED,PASS,,0.5
+invalid_settlement_csv,garbage CSV,BLOCK,BLOCK,PASS,"['line 2: expected 2 columns', ""bad ticker format 'abc'""]",0.1
+duplicate_settlement_ticker,2330 twice,BLOCK,BLOCK,PASS,"['duplicate ticker 2330', 'NAV 23,000,000.00 != sum(shares x close) + cash = 18,000,000.00 (diff 21.7391% > 0.0500%)']",0.0
+wrong_nav,NAV != sum(shares x close) + cash,BLOCK,BLOCK,PASS,"['NAV 30,000,000.00 != sum(shares x close) + cash = 23,000,000.00 (diff 23.3333% > 0.0500%)']",0.0
+wrong_team,mark FINAL with another team id,REFUSED,REFUSED,PASS,['expected file D-Plan_TEAM_OTHER_2026-10-26.json not in package'],1.4
+wrong_date,mark FINAL for another date,REFUSED,REFUSED,PASS,['expected file D-Plan_TEAM_FI_2026-10-27.json not in package'],1.8
+hash_mismatch,FINAL file edited after freeze,REFUSED,REFUSED,PASS,['FINAL file hash changed'],1.4
+final_replacement,second run + replace without/with reason,EXPLICIT_ONLY,EXPLICIT_ONLY,PASS,REPLACED,3.4
+no_internet_t1_cached,"all sources unreachable, T-1 already stored",DRY_RUN_OK/L2,DRY_RUN_OK/L2,PASS,WARN,1.9
+critical_source_missing,unreachable and T-1 prices not stored,BLOCKED,BLOCKED,PASS,preflight BLOCK: data:twse_prices: STALE latest=2026-10-22 ConnectionError: network unavailable (offline mode); data:tpe,0.8
+optional_source_missing,US / TAIFEX / MOPS unreachable,READY_TO_SUBMIT,READY_TO_SUBMIT,PASS,,1.7
+past_cutoff,run at 08:58,LATE_PAST_CUTOFF,LATE_PAST_CUTOFF,PASS,,1.6
+clock_skew,system clock 15 min off vs reference (competition),BLOCKED,BLOCKED,PASS,"preflight BLOCK: clock_skew: system clock vs reference: 900s (warn > 120s, block > 600s)",0.2
