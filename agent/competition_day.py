@@ -55,7 +55,7 @@ def run_competition_day(trade_date: str, team_id: str, mode: str = "dry-run", *,
                         refresh_fetchers: dict | None = None, skip_refresh: bool = False,
                         settlement_provider=None, initial: bool = False, replay_run: str | None = None,
                         data_faults: set | None = None, git: dict | None = None, llm_provider=None,
-                        archive_readonly: bool = True) -> dict:
+                        archive_readonly: bool = True, store_is_fixture: bool = False) -> dict:
     t_start = time.perf_counter()
     ops_cfg = ops_cfg or load_ops_config()
     clock = clock or Clock()
@@ -137,7 +137,7 @@ def run_competition_day(trade_date: str, team_id: str, mode: str = "dry-run", *,
     pf = run_preflight(trade_date, mode="competition" if mode == "competition" else "dry-run", strategy_cfg=config,
                        llm_cfg=llm_config, clock=clock, ops_cfg=ops_cfg, data_health=data_health,
                        settlement_status=sstat, prev_holdings=start.holdings if start else None,
-                       prev_cash=start.cash if start else None, closes_prev=closes_prev, git=git)
+                       prev_cash=start.cash if start else None, closes_prev=closes_prev, git=git, store=store)
     summary["preflight"] = {"level": pf["level"], "blocks": [c for c in pf["checks"] if c["level"] == BLOCK],
                             "warns": [c["name"] for c in pf["checks"] if c["level"] == "WARN"]}
     durations["preflight"] = round(time.perf_counter() - t0, 2)
@@ -158,7 +158,7 @@ def run_competition_day(trade_date: str, team_id: str, mode: str = "dry-run", *,
     try:
         r = run_day(trade_date, store, start, rb, cfg, team_id=team_id, mode="replay", out_dir=out_dir,
                     log_dir=ops_path(ops_cfg, "ops_logs_dir") / ymd(trade_date) / "run", calendar=cal,
-                    llm=llm, as_of_override=as_of, data_faults=data_faults)
+                    llm=llm, as_of_override=as_of, data_faults=data_faults, store_is_fixture=store_is_fixture)
     except Exception as e:  # noqa: BLE001
         lg.error(traceback.format_exc())
         return finish("BLOCKED", reason=f"program error in run_day: {type(e).__name__}: {e}"[:400])
@@ -179,8 +179,11 @@ def run_competition_day(trade_date: str, team_id: str, mode: str = "dry-run", *,
         "llm": {"used": r.narrative_used_llm, **{k: r.llm_summary.get(k) for k in ("calls", "failed", "latency_p95")}}
         if llm else {"used": False, "mode": "template"},
     })
+    if not r.validation.ok and dls.phase == "PAST_CUTOFF" and mode != "historical":
+        return finish("LATE_PAST_CUTOFF", reason="past submission cutoff (validator rejects late timestamps); "
+                                                 "no package / FINAL produced")
     if not r.validation.ok:
-        return finish("BLOCKED", reason="D-Plan validation FAIL even after deterministic fallback "
+        return finish("BLOCKED",reason="D-Plan validation FAIL even after deterministic fallback "
                                         "(previous portfolio may be illegal: see EMERGENCY_RUNBOOK)")
     # ---------------------------------------------------------------- package + final + archive
     t0 = time.perf_counter()
@@ -199,19 +202,20 @@ def run_competition_day(trade_date: str, team_id: str, mode: str = "dry-run", *,
     pkg = build_package(r, team_id=team_id, trade_date=trade_date, run_id=run_id, mode=mode,
                         data_health=data_health, reconciliation=rec, preflight=pf, run_metadata=meta, ops_cfg=ops_cfg,
                         extra_json={"agent_state.json": r.agent_state})
-    fin = mark_final(pkg, team_id=team_id, trade_date=trade_date, mode=mode, ops_cfg=ops_cfg)
+    late = dls.phase == "PAST_CUTOFF" and mode != "historical"
+    fin = {"ok": False, "reasons": ["past submission cutoff: candidate kept, NOT promoted to FINAL"]} if late         else mark_final(pkg, team_id=team_id, trade_date=trade_date, mode=mode, ops_cfg=ops_cfg)
     durations["package"] = round(time.perf_counter() - t0, 2)
     t0 = time.perf_counter()
     arch = archive_run(trade_date, run_id, package_dir=pkg, ops_cfg=ops_cfg, readonly=archive_readonly,
                        config_files=[config, "config/competition.yaml", "config/unconfirmed_rules.yaml",
                                      "config/ops.yaml"] + ([llm_config] if llm_config else []))
     durations["archive"] = round(time.perf_counter() - t0, 2)
+    if late:
+        return finish("LATE_PAST_CUTOFF", reason=fin["reasons"][0], package=str(pkg), archive=str(arch), run_id=run_id)
     if not fin["ok"]:
         return finish("BLOCKED", reason="FINAL_CANDIDATE refused: " + "; ".join(fin["reasons"]),
                       package=str(pkg), archive=str(arch))
     status = "READY_TO_SUBMIT" if mode == "competition" else ("DRY_RUN_OK" if mode == "dry-run" else "HISTORICAL_OK")
-    if dls.phase == "PAST_CUTOFF":
-        status = "LATE_PAST_CUTOFF"
     return finish(status, final_file=fin["path"], sha256=fin["sha256"], package=str(pkg), archive=str(arch),
                   run_id=run_id)
 

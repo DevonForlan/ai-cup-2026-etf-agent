@@ -71,7 +71,7 @@ def run_preflight(trade_date: str, *, mode: str = "dry-run", strategy_cfg: str =
                   llm_cfg: str | None = None, clock: Clock | None = None, ops_cfg: dict | None = None,
                   data_health: dict | None = None, settlement_status: dict | None = None,
                   prev_holdings: dict | None = None, prev_cash=None, closes_prev: dict | None = None,
-                  git: dict | None = None, extra: list[Check] | None = None) -> dict:
+                  git: dict | None = None, extra: list[Check] | None = None, store=None) -> dict:
     ops_cfg = ops_cfg or load_ops_config()
     clock = clock or Clock()
     pf = ops_cfg["preflight"]
@@ -148,7 +148,7 @@ def run_preflight(trade_date: str, *, mode: str = "dry-run", strategy_cfg: str =
     # ETF holdings freshness (store-level, real rows only)
     try:
         from agent.data.loaders import HistoryStore
-        e = HistoryStore().load("etf_holdings")
+        e = (store or HistoryStore()).load("etf_holdings")
         e = e[~e["synthetic"]]
         if len(e):
             newest = e.groupby("etf")["date"].max()

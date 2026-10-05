@@ -75,8 +75,10 @@ def _fetch_quotes(market: str):
         uni = {t for t, v in load_universe().items() if v["market"] == ("TWSE" if market == "twse" else "TPEx")}
         mod = twse if market == "twse" else tpex
         s = ctx.setdefault("session", _session())
+        have = ctx["store"].load("daily_prices")
         for d in prev_weekdays(ctx["trade_date"], 6):          # newest weekday with data (holidays skipped)
-            if d in ctx.get("known_dates", set()) and not ctx.get("force"):
+            n_have = int(have[(have["date"] == d) & have["ticker"].isin(uni)]["ticker"].nunique()) if len(have) else 0
+            if n_have >= 0.9 * len(uni) and not ctx.get("force"):   # already stored -> no network call needed
                 return {"records": 0, "latest_available_date": d, "content_as_of": f"{d}T13:30:00+08:00",
                         "detail": {"cached": True}}
             rows, _ = mod.fetch_daily_quotes(s, cfg, d, uni, av["daily_prices"])
