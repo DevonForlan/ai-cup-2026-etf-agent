@@ -1,0 +1,17 @@
+﻿case,injected,expected,status,validation,degradation_level,llm_used,final_candidate,result,reason
+baseline,none,DRY_RUN_OK,DRY_RUN_OK,PASS,1,False,True,PASS,
+twse_fail,TWSE price fetch raises,BLOCKED,BLOCKED,,,,False,PASS,preflight BLOCK: data:twse_prices: FAILED latest=None RuntimeError: injected: twse_prices unavailable
+tpex_fail,TPEx price fetch raises,BLOCKED,BLOCKED,,,,False,PASS,preflight BLOCK: data:tpex_prices: FAILED latest=None RuntimeError: injected: tpex_prices unavailable
+etf_fail,ETF holdings fetch raises (stored holdings used),DRY_RUN_OK,DRY_RUN_OK,PASS,2,False,True,PASS,
+mops_fail,MOPS material + revenue first-seen raise,DRY_RUN_OK,DRY_RUN_OK,PASS,2,False,True,PASS,
+us_fail,US market + TAIFEX night raise,DRY_RUN_OK,DRY_RUN_OK,PASS,2,False,True,PASS,
+llm_timeout,LLM provider timeout,DRY_RUN_OK,DRY_RUN_OK,PASS,1,False,True,PASS,
+llm_429,LLM provider 429,DRY_RUN_OK,DRY_RUN_OK,PASS,1,False,True,PASS,
+llm_bad_json,LLM returns invalid JSON,DRY_RUN_OK,DRY_RUN_OK,PASS,1,False,True,PASS,
+disk_full,free disk below threshold (threshold raised to 100000 GB),BLOCKED,BLOCKED,,,,False,PASS,preflight BLOCK: disk_space: 96.5 GB free
+competition_clean,"competition mode, clean git, settlement reconciled",READY_TO_SUBMIT,READY_TO_SUBMIT,PASS,1,False,True,PASS,
+git_dirty,competition mode with dirty agent/ tree,BLOCKED,BLOCKED,,,,False,PASS,preflight BLOCK: git_clean: dirty: ['agent/pipeline.py']
+settlement_mismatch,official shares differ by 1 lot,BLOCKED,BLOCKED,,,,False,PASS,preflight BLOCK: settlement_reconciled: BLOCK
+near_deadline,clock 08:50 (PACKAGE_ONLY) + LLM configured,DRY_RUN_OK,DRY_RUN_OK,PASS,1,False,True,PASS,
+past_cutoff,clock 08:58 (after cutoff),LATE_PAST_CUTOFF,LATE_PAST_CUTOFF,FAIL,3,False,False,PASS,past submission cutoff (validator rejects late timestamps); no package / FINAL produced
+feature_fault,institutional + overnight features missing,DRY_RUN_OK,DRY_RUN_OK,PASS,1,False,True,PASS,

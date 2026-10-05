@@ -1,0 +1,93 @@
+{
+ "trade_date": "2026-10-01",
+ "runs": [
+  {
+   "clock": "2026-09-30T19:30:00+08:00",
+   "phase": "NORMAL",
+   "minutes_left": 805.0,
+   "status": "DRY_RUN_OK",
+   "llm_used": true,
+   "degradation_level": 0,
+   "validation": "PASS",
+   "final_sha256": "sha256:65cb5e2748598b2e5b295abfef41da9cf54407a7992c50422026b352c74911ad",
+   "run_id": "20260930_193000_gitdf6d042",
+   "runtime_sec": 6.45,
+   "notes": [
+    "data refresh skipped (requested)"
+   ],
+   "reason": null
+  },
+  {
+   "clock": "2026-10-01T08:30:00+08:00",
+   "phase": "RESTRICTED",
+   "minutes_left": 25.0,
+   "status": "DRY_RUN_OK",
+   "llm_used": true,
+   "degradation_level": 0,
+   "validation": "PASS",
+   "final_sha256": "sha256:c79db39884b868999357b88028de2dcf557e66c2452913c68432e1e43e5780f4",
+   "run_id": "20261001_083000_gitdf6d042",
+   "runtime_sec": 5.18,
+   "notes": [
+    "data refresh skipped (requested)"
+   ],
+   "reason": null
+  },
+  {
+   "clock": "2026-10-01T08:42:00+08:00",
+   "phase": "NO_LLM",
+   "minutes_left": 13.0,
+   "status": "DRY_RUN_OK",
+   "llm_used": false,
+   "degradation_level": 1,
+   "validation": "PASS",
+   "final_sha256": "sha256:6f103513957231f98906a35b694aa1111956f4c6458ed7095f49abb7b6d56d57",
+   "run_id": "20261001_084200_gitdf6d042",
+   "runtime_sec": 5.16,
+   "notes": [
+    "data refresh skipped (requested)",
+    "LLM disabled by deadline guard (NO_LLM) -> template narrative"
+   ],
+   "reason": null
+  },
+  {
+   "clock": "2026-10-01T08:47:00+08:00",
+   "phase": "PACKAGE_ONLY",
+   "minutes_left": 8.0,
+   "status": "DRY_RUN_OK",
+   "llm_used": false,
+   "degradation_level": 1,
+   "validation": "PASS",
+   "final_sha256": "sha256:f93e75396cd10ab875294089d53e6a79bfcee0f4fa79780942a099199badc9e1",
+   "run_id": "20261001_084700_gitdf6d042",
+   "runtime_sec": 5.22,
+   "notes": [
+    "data refresh skipped (deadline PACKAGE_ONLY)",
+    "LLM disabled by deadline guard (PACKAGE_ONLY) -> template narrative"
+   ],
+   "reason": null
+  },
+  {
+   "clock": "2026-10-01T08:57:00+08:00",
+   "phase": "PAST_CUTOFF",
+   "minutes_left": -2.0,
+   "status": "LATE_PAST_CUTOFF",
+   "llm_used": false,
+   "degradation_level": 3,
+   "validation": "FAIL",
+   "final_sha256": null,
+   "run_id": null,
+   "runtime_sec": 3.73,
+   "notes": [
+    "data refresh skipped (deadline PAST_CUTOFF)",
+    "LLM disabled by deadline guard (PAST_CUTOFF) -> template narrative"
+   ],
+   "reason": "past submission cutoff (validator rejects late timestamps); no package / FINAL produced"
+  }
+ ],
+ "final_history_lines": 4,
+ "final_dir_files": [
+  "D-Plan_TEAM_TEST_2026-10-01.json"
+ ],
+ "nc10_note": "Several candidates were produced; FINAL holds exactly one file (the latest valid run before the cutoff). Whether the platform keeps the last or first upload is UNCONFIRMED (NC-10): upload once."
+}

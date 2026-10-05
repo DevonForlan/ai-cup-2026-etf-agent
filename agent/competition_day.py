@@ -116,6 +116,8 @@ def run_competition_day(trade_date: str, team_id: str, mode: str = "dry-run", *,
             if rec["status"] != "BLOCK":
                 start = apply_official(internal, official)
                 sstat.update(previous_available=True, source=f"official ({official.get('source')}) + internal state")
+            else:                       # both exist but disagree: a human decides, the agent never picks a side
+                sstat.update(previous_available=True, source="internal and official DISAGREE (see reconciliation)")
         elif internal is not None:
             sstat["reconciliation"] = "UNAVAILABLE"
             start = internal
