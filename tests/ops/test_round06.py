@@ -475,3 +475,17 @@ def test_existing_final_of_another_team_is_never_shown_or_kept(fixture_store, op
     from agent.ops.package_submission import active_final, history
     assert active_final(T1, ops_cfg)["team_id"] == "TEAM_TEST"
     assert history(T1, ops_cfg)[-1]["event"] == "REFUSED_OTHER_TEAM"
+
+
+def test_t1_prices_not_yet_visible_blocks_with_clear_reason(fixture_store):
+    """Round 06 current-data drill: run at 14:57, T-1 prices stored with available_at 15:00 -> explicit BLOCK."""
+    from agent.competition_day import t1_visibility_check
+    p = fixture_store.load("daily_prices")
+    d = "2026-10-23"
+    avail = str(p[p["date"] == d]["available_at"].min())
+    hh = avail[11:16]
+    early = Clock(f"{d}T{int(hh[:2]) - 1:02d}:{hh[3:]}:00+08:00").now()
+    assert t1_visibility_check(fixture_store, d, early).level == "BLOCK"
+    assert "rerun after" in t1_visibility_check(fixture_store, d, early).detail
+    assert t1_visibility_check(fixture_store, d, Clock("2026-10-25T20:00:00+08:00").now()).level == "PASS"
+    assert t1_visibility_check(fixture_store, "2030-01-02", early).level == "BLOCK"

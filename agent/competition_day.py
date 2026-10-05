@@ -82,6 +82,21 @@ def clock_skew_check(now: datetime, ref: datetime | None, ops_cfg: dict, competi
     return Check("clock_skew", lvl, f"system clock vs reference: {skew:.0f}s (warn > {warn_s:.0f}s, block > {block_s:.0f}s)")
 
 
+def t1_visibility_check(store: HistoryStore, prev_date: str, now: datetime) -> Check:
+    """Round 06 drill finding: refresh can store T-1 prices that the PIT rule only makes visible later (e.g. 15:00).
+    The quant would then see 'incomplete data' and fall back to an invalid plan; say so explicitly instead."""
+    p = store.load("daily_prices")
+    rows = p[p["date"] == prev_date]
+    if not len(rows):
+        return Check("pit_t1_prices_visible", BLOCK, f"no {prev_date} prices in the store")
+    avail = str(rows["available_at"].dropna().min()) if "available_at" in rows else ""
+    if avail and avail > now.isoformat():
+        return Check("pit_t1_prices_visible", BLOCK,
+                     f"{prev_date} prices are stored but become available at {avail} under the PIT rule "
+                     f"(now {now:%m-%d %H:%M}); rerun after that time")
+    return Check("pit_t1_prices_visible", PASS, f"{prev_date} prices visible (available_at {avail or '-'})")
+
+
 def sla_check(durations: dict, ops_cfg: dict) -> list[dict]:
     sla = ops_cfg.get("sla") or {}
     m = {"quant_sec": durations.get("run_day.total", 0) - durations.get("run_day.validation", 0),
@@ -216,6 +231,8 @@ def run_competition_day(trade_date: str, team_id: str, mode: str = "dry-run", *,
     if reference_time is None and mode == "competition" and clock.fixed is None:   # real clock only
         reference_time = http_reference_time()
     extra_checks.append(clock_skew_check(clock.now(), reference_time, ops_cfg, mode == "competition"))
+    if mode != "historical" and prev_date:
+        extra_checks.append(t1_visibility_check(store, prev_date, clock.now()))
     closes_prev = _closes_on(store, prev_date) if prev_date else {}
     pf = run_preflight(trade_date, mode="competition" if mode == "competition" else "dry-run", strategy_cfg=config,
                        llm_cfg=llm_config, clock=clock, ops_cfg=ops_cfg, data_health=data_health,

@@ -46,3 +46,49 @@
 | 30 | 真實窗口演練（19:30–08:55，competition 模式） | WARN | 尚未進行；建議 10/26 前至少兩晚實跑（dry-run 模式） |
 | 31 | Organizer unknowns | WARN | NC-1…NC-10、NC-15、C12 未確認（見報告 §18） |
 | 32 | 首個交易日 | WARN | NC-15：10/26 或 10/27；`-Initial` 參數已備 |
+
+---
+
+# Checklist v2 — Round 06（2026-10-05）
+
+> 上方 Round 05 判斷**保留不改**（歷史紀錄）。本節為 Round 06 重新評估。自動評分：`agent/ops/readiness.py` → `reports/round06_readiness.json`。
+
+## 總評：**DRY_RUN_READY**（不變；NC-1 未確認 → 最高 DRY_RUN_READY）
+
+## 逐項（Round 06）
+
+| # | 項目 | R05 | R06 | 依據 |
+|---|---|---|---|---|
+| 1 | Quant Core v1（凍結） | PASS | PASS | hash = freeze；Round 06 決策路徑 0 行修改 |
+| 2 | Competition Engine / Validator | PASS | PASS | 321 tests |
+| 3 | NAV / ledger continuity | PASS | PASS | 24 日彩排每日 T 結算 = T+1 起點（持股 / 現金 / NAV / 股利 / agent_state / entry_date） |
+| 4 | 24-day full dress rehearsal | — | **PASS** | replay 24/24（NAV 逐日 = baseline）；clock-sim（competition 模式）24/24 |
+| 5 | 資料：TWSE / TPEx 行情 | PASS | PASS | 休市感知新鮮度（修正）；斷網時 store 已有 T-1 → CACHED，否則 BLOCK |
+| 6 | 資料：ETF 持股 | WARN | WARN | 27/30 最新；中信 3 檔 STALE_FALLBACK（發行商端回空）；並行 3 workers |
+| 7 | 資料：MOPS / 美股 / 夜盤 | WARN | WARN | OPTIONAL；MOPS 未來日查詢修正 |
+| 8 | 官方結算取得 | BLOCKED | BLOCKED | NC-1；人工 SOP + 雙重輸入 + 確認閘門已就緒 |
+| 9 | 官方結算人工輸入 SOP | — | PASS | `settlement_entry.py` + SOP 文件 + 測試 |
+| 10 | Reconciliation | PASS | PASS | 24 日彩排每日 MATCH |
+| 11 | Preflight | PASS | PASS | + clock skew、settlement_confirmed、ETF 新鮮度 PIT 修正 |
+| 12 | Deadline guard | PASS | PASS | 19:30→08:56 全時鐘測試；08:56 不產 FINAL |
+| 13 | Submission package | PASS | PASS | .partial 原子化；crash 不留壞檔 |
+| 14 | FINAL_CANDIDATE | PASS | PASS | 凍結 + replace-final（人名 + 理由）；他隊 FINAL 不顯示（修正） |
+| 15 | Submission adapter / state machine | — | PASS（介面） | Manual only；submit() 拋出 OfficialSubmissionUnavailable；回執模型 |
+| 16 | Submission mechanism（實際上傳） | BLOCKED | BLOCKED | NC-1 |
+| 17 | Decision fingerprint / candidate compare | — | PASS | 同輸入同指紋；6 類差異分類 |
+| 18 | Archive | PASS | PASS | .partial 原子化、驗證 |
+| 19 | Audit | PASS | PASS | `audit/COMPLETENESS.json` 12/12（rehearsal） |
+| 20 | Soak | — | PASS | 100 次，0 例外、0 損毀、記憶體 +8 MB、handles 穩定 |
+| 21 | Crash / lock recovery | — | PASS | 5 個中斷點 + 刷新中斷；pid 感知鎖回收 |
+| 22 | Backup / restore drill | — | PASS | 乾淨 worktree + 還原 → 下一交易日 READY_TO_SUBMIT、對帳 MATCH |
+| 23 | Network degraded | — | PASS | 實際資料：T-1 已存 → L2；T-1 缺 → BLOCK |
+| 24 | Security scan | — | PASS | 0 findings |
+| 25 | Release verification | — | PASS | `verify_release` + 暫存 worktree smoke |
+| 26 | LLM narrative（real） | BLOCKED | BLOCKED | 無 API key |
+| 27 | Organizer rules | WARN | WARN | NC-1…NC-10、NC-15、C12 未確認；新增疑點：送件窗口「前一日」= 日曆日或交易日 |
+| 28 | 真實窗口 competition 演練 | WARN | WARN | 尚未在真實 19:30–08:55 以真實結算跑 |
+
+## Round 05 → Round 06 delta
+- 新增 PASS：24 日彩排、結算 SOP、提交介面 / 狀態機、指紋 / 比對、soak、crash / lock 恢復、備份還原、斷網、資安掃描、發版驗證。
+- Round 06 修正的真問題：休市造成假 STALE BLOCK、ETF 新鮮度使用未來資料（replay）、MOPS 未來日重試浪費 157 s、他隊 FINAL 被顯示 / 保留。
+- 等級不變：DRY_RUN_READY（阻擋項皆為外部：NC-1、真實 LLM key、首日 NC-15）。
