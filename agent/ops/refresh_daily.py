@@ -511,6 +511,9 @@ def refresh(trade_date: str, *, store: HistoryStore | None = None, fetchers: dic
     d = ops_path(ops_cfg, "ops_logs_dir") / ymd(trade_date)
     write_json(d / "data_health.json", report)
     (d / "data_health.md").write_text(to_markdown(report), encoding="utf-8")
+    with open(d / "data_health_history.jsonl", "a", encoding="utf-8") as f:     # every attempt (reliability stats)
+        f.write(json.dumps({"at": wall.now().isoformat(), "level": report["level"], "sources": report["sources"]},
+                           ensure_ascii=False, default=str) + "\n")
     return report
 
 

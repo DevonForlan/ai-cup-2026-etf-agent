@@ -30,8 +30,14 @@ def collect(extra_etf_dirs: list[Path] | None = None) -> tuple[list[dict], list[
     cfg = load_ops_config()
     logs = ops_path(cfg, "ops_logs_dir")
     agg: dict[str, dict] = {}
-    for p in sorted(logs.glob("*/data_health.json")):
-        j = json.loads(p.read_text(encoding="utf-8"))
+    runs = []
+    for d in sorted(x for x in logs.glob("*") if x.is_dir()):
+        h = d / "data_health_history.jsonl"
+        if h.exists():
+            runs += [json.loads(x) for x in h.read_text(encoding="utf-8").splitlines() if x.strip()]
+        elif (d / "data_health.json").exists():                 # Round 05 runs (no history file)
+            runs.append(json.loads((d / "data_health.json").read_text(encoding="utf-8")))
+    for j in runs:
         for s in j["sources"]:
             if s["status"] == "SKIPPED" or (s.get("detail") or {}).get("mode") == "replay-store":
                 continue

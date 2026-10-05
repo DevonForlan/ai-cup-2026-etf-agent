@@ -23,7 +23,8 @@ from agent.ops.preflight import git_info, prompt_versions  # noqa: E402
 
 ARCH_DOCS = ["research/07_AGENT_ARCHITECTURE_RECOMMENDATION.md", "agent/README.md", "DEVELOPMENT_STATUS.md",
              "docs/COMPETITION_DAILY_RUNBOOK.md", "docs/EMERGENCY_RUNBOOK.md", "docs/AGENT_AUTONOMY_EVIDENCE.md",
-             "docs/STRATEGY_FREEZE_RECORD.md"]
+             "docs/STRATEGY_FREEZE_RECORD.md", "docs/OFFICIAL_SETTLEMENT_ENTRY_SOP.md", "docs/COMPETITION_CODE_FREEZE.md",
+             "docs/FINAL_OPERATOR_CHECKLIST.md", "reports/DATA_AVAILABILITY_MATRIX.md"]
 
 
 def _rel(p: Path) -> str:
@@ -64,6 +65,27 @@ def build_audit(out: Path | None = None, ops_cfg: dict | None = None) -> Path:
                      "dplan_sha256": meta.get("dplan_sha256"), "git_sha": meta.get("git_sha"),
                      "files": len(j["files"])})
     write_json(out / "runs" / "RUNS.json", {"generated_at": now, "archive_root": "archive/", "runs": runs})
+    # settlement ledger (internal / official / confirmation / reconciliation), packages, submission states
+    sdir = ops_path(ops_cfg, "settlement_dir")
+    led = [{"file": f.name, "sha256": sha256_file(f)} for f in sorted(sdir.glob("*.json"))] if sdir.exists() else []
+    write_json(out / "settlement" / "LEDGER.json", {"generated_at": now, "settlement_dir": str(sdir), "files": led})
+    sub = ops_path(ops_cfg, "submissions_dir")
+    days = []
+    for d in (sorted(p for p in sub.iterdir() if p.is_dir()) if sub.exists() else []):
+        hist, st, fz = d / "final_history.jsonl", d / "submission_state.json", d / "FINAL_FREEZE.json"
+        rc = d / "receipts.jsonl"
+        days.append({"day": d.name,
+                     "candidates": len([c for c in (d / "candidates").glob("*") if not c.name.startswith(".")])
+                     if (d / "candidates").exists() else 0,
+                     "final_history_sha256": sha256_file(hist) if hist.exists() else None,
+                     "final_freeze": json.loads(fz.read_text(encoding="utf-8")) if fz.exists() else None,
+                     "submission_state": json.loads(st.read_text(encoding="utf-8"))["state"] if st.exists() else "NOT_READY",
+                     "receipts": len(rc.read_text(encoding="utf-8").splitlines()) if rc.exists() else 0})
+    write_json(out / "submissions" / "SUBMISSIONS.json", {"generated_at": now, "days": days})
+    from agent.submission.receipt import write_schema
+    write_schema(out / "submissions" / "receipt.schema.json")
+    comp = completeness(out, ops_cfg, g, runs, led, days)
+    write_json(out / "COMPLETENESS.json", comp)
     (out / "README.md").write_text(
         "# Audit evidence\n\n"
         f"Generated {now} at git:{g['sha']} by `agent/ops/audit.py`. Regenerate any time; it never copies raw data.\n\n"
@@ -71,11 +93,40 @@ def build_audit(out: Path | None = None, ops_cfg: dict | None = None) -> Path:
         "| architecture/INDEX.md | architecture docs + every agent module with sha256 |\n"
         "| prompts/PROMPTS.json | prompt files, versions, sha256 |\n"
         "| configs/CONFIGS.json | every config/*.yaml sha256 + strategy freeze record |\n"
-        f"| runs/RUNS.json | {len(runs)} archived runs: archive/YYYYMMDD/<run_id>/ARCHIVE_MANIFEST.json sha256 |\n\n"
+        f"| runs/RUNS.json | {len(runs)} archived runs: archive/YYYYMMDD/<run_id>/ARCHIVE_MANIFEST.json sha256 |\n"
+        f"| settlement/LEDGER.json | {len(led)} settlement files (internal / official / confirmation / reconciliation) |\n"
+        f"| submissions/SUBMISSIONS.json | {len(days)} trade dates: candidates, FINAL freeze, submission state, receipts |\n"
+        "| submissions/receipt.schema.json | submission receipt JSON schema |\n"
+        f"| COMPLETENESS.json | audit completeness checklist: {'PASS' if comp['passed'] else 'GAPS ' + str(comp['missing'])} |\n\n"
         "Verification: re-hash a file and compare with the manifest; every archived D-Plan sha256 is in "
         "RUNS.json and in the run's package/manifest.json. Raw market data is referenced by the store manifest hash "
         "in each run's data_health.json / run_metadata.json (data_snapshot_hash), not copied.\n", encoding="utf-8")
     return out
+
+
+def completeness(out: Path, ops_cfg: dict, g: dict, runs: list, led: list, days: list) -> dict:
+    fz = ops_cfg.get("freeze") or {}
+    items = {
+        "architecture": (out / "architecture" / "INDEX.md").exists(),
+        "strategy_freeze": bool(fz) and sha256_file(ROOT / fz["strategy_config"]) == fz["strategy_sha256"]
+        and (ROOT / "docs" / "STRATEGY_FREEZE_RECORD.md").exists(),
+        "prompts": (out / "prompts" / "PROMPTS.json").exists(),
+        "configs": (out / "configs" / "CONFIGS.json").exists(),
+        "git_sha": bool(g.get("sha")),
+        "daily_runs_archived": bool(runs),
+        "settlement_ledger": any(x["file"].endswith("_internal.json") for x in led),
+        "reconciliation": any(x["file"].endswith("_reconciliation.json") for x in led),
+        "dplan_packages": any(d["candidates"] for d in days),
+        "final_freeze_records": any(d["final_freeze"] for d in days),
+        "receipt_schema": (out / "submissions" / "receipt.schema.json").exists(),
+        "archive_manifests_verify": all(_verify_run(ops_cfg, r) for r in runs[-50:]),
+    }
+    return {"items": items, "passed": all(items.values()), "missing": [k for k, v in items.items() if not v]}
+
+
+def _verify_run(ops_cfg: dict, r: dict) -> bool:
+    from agent.ops.archive_run import verify_archive
+    return not verify_archive(ops_path(ops_cfg, "archive_dir") / r["manifest"].rsplit("/", 1)[0])
 
 
 if __name__ == "__main__":

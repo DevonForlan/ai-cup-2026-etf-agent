@@ -1,0 +1,12 @@
+# EXAMPLE ONLY - not loaded. Copy to config/organizer_clarifications.yaml ONLY when the organiser has answered,
+# record the official text in docs/ORGANIZER_CLARIFICATIONS.md, and add tests for the changed behaviour.
+# Never fill in an answer from memory or inference. Unlisted rules stay `unknown` (simulation ASSUMPTION).
+#
+# NC-1:
+#   status: confirmed            # unknown | confirmed | partially_confirmed | superseded
+#   answer: "summary of the official answer"
+#   effective_date: 2026-10-20
+#   source: organizer_email      # organizer_email | official_faq | official_announcement | platform
+#   source_ref: "e-mail subject / date / sender role"
+#   affected: [settlement, submission]
+#   config_changes: {}
