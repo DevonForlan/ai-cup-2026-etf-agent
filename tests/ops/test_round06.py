@@ -462,3 +462,16 @@ def test_continuity_detects_breaks():
     assert "holdings break" in continuity_problems(s, dict(good, holdings={}), None, T2)
     assert "cash break" in continuity_problems(s, dict(good, cash="0"), None, T2)
     assert "agent_state break" in continuity_problems(s, dict(good, agent_state_hash="x"), None, T2)
+
+
+def test_existing_final_of_another_team_is_never_shown_or_kept(fixture_store, ops_cfg):
+    """Round 06 drill finding: a second team id on the same date was shown the first team's FINAL."""
+    a = run(fixture_store, ops_cfg, T1, CLK1, mode="dry-run", initial=True)
+    assert a["status"] == "DRY_RUN_OK"
+    b = run_competition_day(T1, "TEAM_OTHER", "dry-run", store=fixture_store, store_is_fixture=True, ops_cfg=ops_cfg,
+                            clock=Clock("2026-10-25T20:10:00+08:00"), git=CLEAN_GIT, archive_readonly=False,
+                            skip_refresh=True, initial=True)
+    assert b["status"] == "BLOCKED" and "TEAM_TEST" in b["reason"] and "final_file" not in b
+    from agent.ops.package_submission import active_final, history
+    assert active_final(T1, ops_cfg)["team_id"] == "TEAM_TEST"
+    assert history(T1, ops_cfg)[-1]["event"] == "REFUSED_OTHER_TEAM"

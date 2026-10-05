@@ -339,7 +339,10 @@ def run_competition_day(trade_date: str, team_id: str, mode: str = "dry-run", *,
         if not prep["ok"]:
             notes.append("submission prepare: " + "; ".join(prep["problems"]))
     act = active_final(trade_date, ops_cfg)
-    status = "READY_TO_SUBMIT" if mode == "competition" else ("DRY_RUN_OK" if mode == "dry-run" else "HISTORICAL_OK")
+    if act is None or act["team_id"] != team_id or act["trade_date"] != trade_date:
+        return finish("BLOCKED", reason=f"active FINAL does not match team {team_id} / date {trade_date}",
+                      package=str(pkg), archive=str(arch), run_id=run_id)
+    status ="READY_TO_SUBMIT" if mode == "competition" else ("DRY_RUN_OK" if mode == "dry-run" else "HISTORICAL_OK")
     return finish(status, final_file=act["path"], sha256=act["sha256"], final_run_id=act["run_id"],
                   package=str(pkg), archive=str(arch), run_id=run_id)
 

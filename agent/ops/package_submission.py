@@ -189,6 +189,11 @@ def mark_final(pkg: Path, *, team_id: str, trade_date: str, mode: str, ops_cfg: 
         return {"ok": False, "reasons": reasons}
     cur = active_final(trade_date, ops_cfg)
     cur_ok = cur is not None and (day / "FINAL" / cur["file"]).exists()
+    if cur_ok and cur["team_id"] != team_id:              # never "keep" / replace another team's FINAL silently
+        _append_history(day, {"event": "REFUSED_OTHER_TEAM", "at": datetime.now(TPE).isoformat(),
+                              "run_id": meta["run_id"], "team_id": team_id, "existing_team_id": cur["team_id"]})
+        return {"ok": False, "reasons": [f"a FINAL for team {cur['team_id']} already exists for {trade_date}; "
+                                         f"refusing to mark/keep for {team_id} (wrong team id?)"]}
     if cur_ok and not replace:
         _append_history(day, {"event": "REFUSED_FROZEN", "at": datetime.now(TPE).isoformat(), "run_id": meta["run_id"],
                               "sha256": meta["dplan_sha256"], "existing_sha256": cur["sha256"]})
