@@ -297,19 +297,33 @@ def construct(scores: pd.DataFrame, prev_holdings: dict[str, int], prev_cash: De
     for t in sel:
         if t in prev_h and abs(w[t] - cur_w[t]) < band and cur_w[t] <= caps[t]:
             no_trade.add(t)
-    # re-balance the traded names so expected cash stays inside [cash_lo, cash_hi]
-    for _ in range(3):
+    w_fill = dict(w)
+
+    def _fit_cash():
+        # re-balance the traded names so expected cash stays inside [cash_lo, cash_hi]
+        for _ in range(3):
+            eff = {t: (cur_w[t] if t in no_trade else w[t]) for t in sel}
+            cash_est = 1 - sum(eff.values(), Decimal(0))
+            if cash_lo <= cash_est <= cash_hi:
+                return True
+            traded = [t for t in sel if t not in no_trade]
+            if not traded:
+                return False
+            fixed = sum((cur_w[t] for t in no_trade), Decimal(0))
+            target_traded = (1 - cash_mid) - fixed
+            sub = B.water_fill({t: float(w[t]) for t in traded}, target_traded, {t: caps[t] for t in traded})
+            w.update(sub)
         eff = {t: (cur_w[t] if t in no_trade else w[t]) for t in sel}
-        cash_est = 1 - sum(eff.values(), Decimal(0))
-        if cash_lo <= cash_est <= cash_hi:
-            break
-        traded = [t for t in sel if t not in no_trade]
-        if not traded:
-            break
-        fixed = sum((cur_w[t] for t in no_trade), Decimal(0))
-        target_traded = (1 - cash_mid) - fixed
-        sub = B.water_fill({t: float(w[t]) for t in traded}, target_traded, {t: caps[t] for t in traded})
-        w.update(sub)
+        return cash_lo <= 1 - sum(eff.values(), Decimal(0)) <= cash_hi
+
+    if not _fit_cash() and no_trade - locked:
+        # Legality first (Round 05): the no-trade band can make the cash target unreachable, e.g. after a
+        # passive cash drift (cash inflow / crash) dilutes every holding by the same factor -> release the
+        # band and trade every tradable name back to its target.
+        no_trade = set(locked)
+        w = dict(w_fill)
+        _fit_cash()
+        notes.append("不交易區間使現金目標不可行（現金漂移）→ 解除區間，全部可交易持股回到目標權重")
 
     # Active Share (strategy target is stricter than the official 20%)
     as_res = None
@@ -341,7 +355,10 @@ def construct(scores: pd.DataFrame, prev_holdings: dict[str, int], prev_cash: De
     s_shift = D(sb["stress_price_shift"])
     scale = Decimal(1)
     for attempt in range(4):
-        target_w = {t: (w[t] if t in no_trade else w[t] * scale).quantize(Q, rounding="ROUND_FLOOR") for t in sel}
+        # NO_TRADE names keep their shares, so their declared weight is the CURRENT weight (Round 05 fix: the
+        # water-fill target was declared before, which could sum above 100% and fail R_CASH_NEG falsely)
+        target_w = {t: (cur_w[t] if t in no_trade and t in cur_w else w[t] * scale).quantize(Q, rounding="ROUND_FLOOR")
+                    for t in sel}
         plan = plan_decisions(target_w, prev_h, no_trade, nav_prev, closes_prev, lot)
         plan = enforce_decision_limit(plan, 30)
         decisions = [{"ticker": p.ticker, "decision_id": f"tmp{i}", "target_weight": float(p.target_weight)}
