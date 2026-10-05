@@ -15,3 +15,9 @@ out/
 .claude/
 logs/llm/
 logs/llm_eval/
+# round 05 operational outputs (local, immutable; indexed by audit/ manifests)
+logs/ops/
+submissions/
+archive/
+data/settlement/
+data/observations/

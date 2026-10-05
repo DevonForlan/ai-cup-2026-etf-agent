@@ -243,7 +243,8 @@ def run_day(trade_date: str, store: HistoryStore, prev: Settlement, rb: RuleBook
             team_id: str, mode: str = "replay", out_dir: Path | None = None, log_dir: Path | None = None,
             method: str | None = None, store_is_fixture: bool = False, calendar: TradingCalendar | None = None,
             run_time: str = "07:00:00", light: bool = False, use_cache: bool = True,
-            data_faults: set[str] | None = None, llm: dict | None = None) -> DayResult:
+            data_faults: set[str] | None = None, llm: dict | None = None,
+            as_of_override: str | None = None) -> DayResult:
     """light=True: research mode (no per-day feature/score/graph logs; D-Plan + validation still produced).
     data_faults: inputs to drop (fault injection) e.g. {'institutional','revenue','etf','overnight'}.
     llm: None (pure quant, templates) or {"cfg": llm.yaml dict, "provider": optional provider instance,
@@ -257,7 +258,10 @@ def run_day(trade_date: str, store: HistoryStore, prev: Settlement, rb: RuleBook
         log_dir.mkdir(parents=True, exist_ok=True)
     cal = calendar or TradingCalendar(store.dates("daily_prices") + [trade_date])
     prev_date = cal.prev(trade_date)
-    if mode == "live":
+    if as_of_override:                      # operational runs: PIT cut-off = the (simulated) wall clock
+        started = datetime.fromisoformat(as_of_override).replace(microsecond=0)
+        as_of = started.isoformat()
+    elif mode == "live":
         started = datetime.now(TPE).replace(microsecond=0)
         as_of = started.isoformat()
     else:

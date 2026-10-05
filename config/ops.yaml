@@ -1,0 +1,48 @@
+# Operational configuration (Round 05). NOT strategy: changing it never changes investment decisions.
+# Official times come from config/competition.yaml (submission_window); nothing is hard-coded here.
+
+data_sources:            # criticality: CRITICAL blocks the run, IMPORTANT degrades, OPTIONAL only warns
+  twse_prices:        {criticality: CRITICAL,  max_stale_trading_days: 0}
+  tpex_prices:        {criticality: CRITICAL,  max_stale_trading_days: 0}
+  twse_institutional: {criticality: IMPORTANT, max_stale_trading_days: 1}
+  tpex_institutional: {criticality: IMPORTANT, max_stale_trading_days: 1}
+  etf_holdings:       {criticality: IMPORTANT, max_stale_trading_days: 3}
+  corporate_actions:  {criticality: IMPORTANT, max_stale_trading_days: 5}
+  mops_revenue_first_seen: {criticality: OPTIONAL, max_stale_trading_days: 5}
+  mops_material_info: {criticality: OPTIONAL,  max_stale_trading_days: 2}
+  taifex_night:       {criticality: OPTIONAL,  max_stale_trading_days: 1}
+  us_market:          {criticality: OPTIONAL,  max_stale_trading_days: 2}
+
+reconciliation:          # internal (our simulator) vs official settlement (organiser)
+  cash_rounding_tolerance_twd: 5        # |diff| <= this -> MATCH
+  cash_minor_tolerance_twd: 2000        # <= this -> MINOR_DIFFERENCE, above -> BLOCK
+  nav_minor_tolerance_rel: 0.00005      # relative NAV diff above -> BLOCK
+  accrued_dividend_tolerance_twd: 5
+  shares_must_match: true               # any share difference -> BLOCK
+
+preflight:
+  branch: master
+  min_free_disk_gb: 5
+  etf_stale_days_warn: 3                # calendar days since newest real ETF holding date
+  etf_stale_days_block: 10
+  require_official_settlement_in_competition: true
+  max_clock_skew_sec: 120               # vs. an HTTP Date header (best effort, WARN only)
+  python_min: "3.12"
+
+deadline:                # minutes before submission cutoff (competition.yaml submission_window.closes)
+  restrict_refresh_minutes: 30          # skip non-critical data refresh
+  no_llm_minutes: 15                    # template narrative only, no LLM retries
+  package_only_minutes: 10              # only quant-only run + validation + package
+
+paths:
+  settlement_dir: data/settlement
+  submissions_dir: submissions
+  archive_dir: archive
+  ops_logs_dir: logs/ops
+  etf_snapshots_dir: data/raw/active_etf
+  first_seen_ledger: data/observations/mops_revenue_first_seen.parquet
+
+freeze:                  # docs/STRATEGY_FREEZE_RECORD.md; preflight/healthcheck BLOCK on mismatch in competition mode
+  strategy_config: config/strategy_quant_v1.yaml
+  strategy_sha256: "sha256:f34fa02e924011b20c52a4bd42e961169f97e1950e76e04b7e78dc43ac23d2e0"
+  frozen_in_commit: f4dfb66
