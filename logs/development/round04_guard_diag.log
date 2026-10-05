@@ -1,0 +1,4 @@
+precomputed features for 120 dates
+2 strategies × 5 windows → 10 jobs, 10 workers
+10/10 done (114s)
+wrote C:\Users\devon.tseng\Desktop\個人\AI CUP 2026玉山人工智慧公開挑戰賽\reports\leaderboard_r04_guard.csv 10 rows

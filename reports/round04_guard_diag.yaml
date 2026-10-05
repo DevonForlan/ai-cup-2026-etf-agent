@@ -1,0 +1,10 @@
+- strategy_id: Q1d_guard_samecash
+  group: guard_diag
+  desc: "Crash Guard, NORMAL cash = v1's 5-10% (isolates the day-1 cash effect)"
+  overrides:
+    crash_guard: {enabled: true, states: {NORMAL: {cash: [0.05, 0.10], allow_new: true, vol_cap: null}}}
+- strategy_id: Q1f_guard_fast
+  group: guard_diag
+  desc: "Crash Guard, max de-leveraging 20%/day, NORMAL cash 5-10%"
+  overrides:
+    crash_guard: {enabled: true, max_deleveraging_per_day: 0.20, states: {NORMAL: {cash: [0.05, 0.10], allow_new: true, vol_cap: null}}}

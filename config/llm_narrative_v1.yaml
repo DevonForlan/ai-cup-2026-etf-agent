@@ -1,0 +1,40 @@
+# LLM Narrative v1 (Round 04) — text-only LLM layer on top of the frozen Quant Core v1.
+# Use with:  run_daily.py --config config\strategy_quant_v1.yaml --llm-config config\llm_narrative_v1.yaml
+#
+# STATUS: NOT YET ENABLED FOR COMPETITION. No real API key was available in Round 04, so the narrative
+# path was validated only with the deterministic mock provider (plumbing, grounding, fallbacks,
+# invariance). Before use: choose provider+model, put the key in .env, run a 10-20 day replay review
+# (schema / grounding / latency / cost), then commit with the exact model id.
+#
+# Guarantees (tested): portfolio, target_weight, orders, posture, funding_for are identical to the
+# template run; any LLM failure / timeout / budget / review FAIL -> deterministic template text.
+provider: template          # set to google | openai | anthropic after the review above
+model: null                 # exact model id (pin a dated version; it is written to agent_metadata)
+endpoint: null
+temperature: 0.0
+seed: 7
+max_tokens: 1200
+timeout_sec: 30
+total_budget_sec: 120
+retries: 2
+max_calls_per_day: 10       # narrative needs ~2 calls/day (market view + one batched thesis call)
+max_tokens_per_day: 40000
+max_cost_per_day_usd: 1.0
+price_usd_per_1m_tokens: {input: null, output: null}   # fill from the provider's price list to get cost
+log_calls: true             # keep logs/llm/YYYYMMDD/calls.jsonl for replay and the 12/2 review
+blind_mode: false
+narrative:
+  mode: llm
+  reviewer: deterministic
+  max_thesis_items: 35
+events:
+  enabled: false            # event extraction showed no directional value in Round 04 -> off
+  max_documents_per_day: 200
+  lookback_days: 5
+  cache: true
+llm_signal:
+  enabled: false            # bounded adjustment NOT recommended (no measurable benefit)
+  max_percentile_adjustment: 0
+  min_confidence: 0.70
+  decay: linear
+  default_horizon_days: 5

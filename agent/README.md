@@ -166,3 +166,22 @@ Turnover controls (`turnover:` in strategy YAML): `score_ema_alpha`, `entry_rank
 Strategy state (score EMA, entry dates) is carried in `Settlement.agent_state` (our own book, not official).
 Odd-share holdings (stock dividends) are locked as NO_TRADE because derive-orders.v2 would emit a non-lot order (NC-7).
 Feature cache: `data/cache/features/<FEATURE_VERSION>_<table-fingerprint>/` (safe to delete).
+
+## Round 04 additions (LLM layer, Crash Guard)
+
+```bat
+:: LLM narrative with the deterministic mock (no API); real providers need .env + config/llm.yaml model id
+.venv\Scripts\python.exe agentun_daily.py --date 2026-10-02 --config config\strategy_quant_v1.yaml --narrative llm --llm-provider mock
+:: replay previously logged LLM responses (no API calls)
+.venv\Scripts\python.exe agentun_daily.py --date 2026-10-02 --config config\strategy_quant_v1.yaml --narrative llm --llm-provider replay
+:: evaluation
+.venv\Scripts\python.exe agentesearch\llm_eval.py --provider mock --windows W5,W1 --days 10
+.venv\Scripts\python.exe agentesearch\evaluate.py --r04 --batch r04 --workers 10
+.venv\Scripts\python.exe agentesearch\event_study.py --runs "sim_runsound0304\L2_events0__W*__official"
+.venv\Scripts\python.exe agent	ools\llm_runtime_benchmark.py --start 2026-09-15 --days 10 --latency 3
+.venv\Scripts\python.exe agent\dataetchers\material_info.py --dates-from reports\windows.json --lookback 10
+```
+Rules enforced in code: the LLM never produces target_weight / shares / orders / cash / Active Share / NAV /
+fees / posture / funding_for; tickers, sources and fact ids come only from program-provided lists; every
+number must be grounded in the input; failures fall back to templates / no adjustment. Strategy YAML may
+contain an `llm:` block (merged over config/llm.yaml) and `crash_guard: {enabled: true}`.

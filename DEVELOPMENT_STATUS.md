@@ -1,6 +1,7 @@
 # DEVELOPMENT STATUS
 
-> Last update: 2026-10-05 (Round 03). Reports: `reports/ROUND_03_STRATEGY_OPTIMIZATION_REPORT.md` (strategy),
+> Last update: 2026-10-05 (Round 04). Round 04 report: `reports/ROUND_04_LLM_INTEGRATION_REPORT.md`.
+> (Round 03 notes below still apply.) Reports: `reports/ROUND_03_STRATEGY_OPTIMIZATION_REPORT.md` (strategy),
 > `logs/development/ROUND_02_DEVELOPMENT_REPORT.md` (MVP-0). AI-generated — human review required (company policy).
 
 ## Version control
@@ -18,11 +19,12 @@ Git repo since Round 03 (`git log`). `code_version = git:<short_sha>`; uncommitt
 | P8 Risk/Compliance | ✅ | + regime v0 (soft cash only, opt-in) |
 | P9 D-Plan | ✅ | overnight facts cite TAIFEX / US / CBC sources |
 | P11 Walk-forward | ✅ | 5 windows × 24 days, 54 strategies + 36 sensitivity variants + stress; random 1000× MC |
-| P5 LLM | ⏸ | interfaces only (by design) |
+| P5 LLM | ✅ built, ⏸ not enabled | provider-agnostic client (REST adapters untested: no API key), mock/replay/template, grounded event extractor, narrator/thesis/reviewer, bounded fusion; evaluated with MOCK only |
+| Crash Guard | ✅ built, ⏸ not enabled | deterministic state machine; W2 MDD only −0.4~0.9pp, W5 −1.6pp; passive cash-drift fix kept |
 | P10 Memory | ⏸ | strategy state only |
 
 ## Tests
-`.venv\Scripts\python.exe -m pytest` → **171 passed, 0 failed** (~50 s).
+`.venv\Scripts\python.exe -m pytest` → **225 passed, 0 failed** (~70 s).
 
 ## Quant Core v1
 `config/strategy_quant_v1.yaml` (frozen; selected = HN_rev: revenue_yoy 0.7 + revenue_mom 0.3, buy day 1 then hold,
@@ -45,6 +47,13 @@ Single run_day (uncontended, 16-core laptop): data load 0.8 s, cold 1.08 s, warm
 
 ## Unconfirmed rules
 See `config/unconfirmed_rules.yaml` and report §17 (NC-1, NC-2, NC-3, NC-4, NC-5, NC-6, NC-7, NC-8, NC-9, NC-10, NC-15, C12 fees).
+
+## Round 04 decisions
+- Competition config stays `config/strategy_quant_v1.yaml` (Quant-only, template narrative).
+- `config/llm_narrative_v1.yaml` prepared (text only) — enable only after a real-provider replay review.
+- No `strategy_quant_llm_v1.yaml`: event signal showed no measurable benefit / no directional value (mock).
+- Cash ceilings must leave room for passive drift (settled cash ratio > 25% is a warning regardless of cause).
+- `logs/llm/` is gitignored: archive it daily during the competition (replay + 12/2 review evidence).
 
 ## Next steps
 1. Phase 5 LLM behind existing interfaces (text writers first; event extraction as bounded overlay, ablated vs v1).

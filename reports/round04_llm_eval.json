@@ -1,0 +1,110 @@
+{
+ "provider": "mock",
+ "windows": {
+  "W5": {
+   "normal": {
+    "days": 10,
+    "documents": 293,
+    "calls": 19,
+    "schema_failures": 0,
+    "schema_failure_rate": 0.0,
+    "events_raw": 179,
+    "events_kept": 170,
+    "drops": {
+     "dropped_ticker": 0,
+     "dropped_source": 0,
+     "dropped_number": 2,
+     "dropped_fact_ref": 0,
+     "dropped_injection": 0
+    },
+    "hallucination_rate": 0.0111731843575419,
+    "latency_p50": 0.0072,
+    "latency_p95": 0.0367,
+    "tokens_per_day": 19085
+   },
+   "blind": {
+    "days": 10,
+    "documents": 293,
+    "calls": 19,
+    "schema_failures": 0,
+    "schema_failure_rate": 0.0,
+    "events_raw": 179,
+    "events_kept": 169,
+    "drops": {
+     "dropped_ticker": 0,
+     "dropped_source": 0,
+     "dropped_number": 3,
+     "dropped_fact_ref": 0,
+     "dropped_injection": 0
+    },
+    "hallucination_rate": 0.01675977653631285,
+    "latency_p50": 0.0069,
+    "latency_p95": 0.014,
+    "tokens_per_day": 18897.7
+   },
+   "narrative": {
+    "days": 10,
+    "llm_used_days": 10,
+    "validation_pass_rate": 1.0,
+    "calls": 20,
+    "failed": 0,
+    "tokens_per_day": 2705.9,
+    "run_sec_p50": 0.21467200003098696,
+    "run_sec_p95": 0.59566019999329
+   }
+  },
+  "W1": {
+   "normal": {
+    "days": 10,
+    "documents": 593,
+    "calls": 34,
+    "schema_failures": 0,
+    "schema_failure_rate": 0.0,
+    "events_raw": 311,
+    "events_kept": 303,
+    "drops": {
+     "dropped_ticker": 0,
+     "dropped_source": 0,
+     "dropped_number": 4,
+     "dropped_fact_ref": 0,
+     "dropped_injection": 0
+    },
+    "hallucination_rate": 0.012861736334405145,
+    "latency_p50": 0.007,
+    "latency_p95": 0.0108,
+    "tokens_per_day": 34632.8
+   },
+   "blind": {
+    "days": 10,
+    "documents": 593,
+    "calls": 34,
+    "schema_failures": 0,
+    "schema_failure_rate": 0.0,
+    "events_raw": 311,
+    "events_kept": 305,
+    "drops": {
+     "dropped_ticker": 0,
+     "dropped_source": 0,
+     "dropped_number": 2,
+     "dropped_fact_ref": 0,
+     "dropped_injection": 0
+    },
+    "hallucination_rate": 0.006430868167202572,
+    "latency_p50": 0.0064,
+    "latency_p95": 0.0112,
+    "tokens_per_day": 34236.1
+   },
+   "narrative": {
+    "days": 10,
+    "llm_used_days": 10,
+    "validation_pass_rate": 1.0,
+    "calls": 20,
+    "failed": 0,
+    "tokens_per_day": 2698.8,
+    "run_sec_p50": 0.15990999998757616,
+    "run_sec_p95": 0.2475121000315994
+   }
+  }
+ },
+ "note": "mock = deterministic keyword stand-in, not an LLM"
+}

@@ -13,3 +13,5 @@ logs/runs/
 sim_runs/
 out/
 .claude/
+logs/llm/
+logs/llm_eval/

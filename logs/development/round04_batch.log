@@ -1,0 +1,17 @@
+precomputed features for 120 dates
+12 strategies × 5 windows → 60 jobs, 10 workers
+10/60 done (130s)
+ERROR L3_ev2 W4 Expecting value: line 1 column 1 (char 0)
+von.tseng\Desktop\個人\AI CUP 2026玉山人工智慧公開挑戰賽\agent\run_sim.py", line 89, in simulate
+    r = run_day(d, store, prev, rb, cfg, team_id=team_id, mode="replay", out_dir=root / "dplan",
+                log_dir=root / "logs" / d.replace("-", ""), method=method, st
+ERROR L4_ev5 W1 Expecting value: line 1 column 1 (char 0)
+von.tseng\Desktop\個人\AI CUP 2026玉山人工智慧公開挑戰賽\agent\run_sim.py", line 89, in simulate
+    r = run_day(d, store, prev, rb, cfg, team_id=team_id, mode="replay", out_dir=root / "dplan",
+                log_dir=root / "logs" / d.replace("-", ""), method=method, st
+20/60 done (505s)
+30/60 done (564s)
+40/60 done (670s)
+50/60 done (850s)
+60/60 done (1174s)
+wrote C:\Users\devon.tseng\Desktop\個人\AI CUP 2026玉山人工智慧公開挑戰賽\reports\leaderboard_r04.csv 60 rows
