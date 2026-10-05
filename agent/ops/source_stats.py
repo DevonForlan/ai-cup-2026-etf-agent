@@ -41,6 +41,8 @@ def collect(extra_etf_dirs: list[Path] | None = None) -> tuple[list[dict], list[
         for s in j["sources"]:
             if s["status"] == "SKIPPED" or (s.get("detail") or {}).get("mode") == "replay-store":
                 continue
+            if "offline mode" in (s.get("error") or ""):        # simulated network-down drill, not a live attempt
+                continue
             a = agg.setdefault(s["source"], {"source": s["source"], "criticality": s["criticality"], "attempts": 0,
                                              "success": 0, "failure": 0, "stale": 0, "fallback": 0, "_lat": [],
                                              "last_success": None})

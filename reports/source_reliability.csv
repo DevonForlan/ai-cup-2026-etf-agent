@@ -1,0 +1,11 @@
+﻿source,criticality,attempts,success,failure,stale,fallback,median_latency,p95_latency,last_success
+corporate_actions,IMPORTANT,4,4,0,0,0,17.11,17.49,2026-10-05T15:09:20.341682+08:00
+etf_holdings,IMPORTANT,4,4,0,0,4,116.15,122.63,2026-10-05T15:09:03.527972+08:00
+mops_material_info,OPTIONAL,4,3,1,0,0,8.59,156.66,2026-10-05T15:09:31.010728+08:00
+mops_revenue_first_seen,OPTIONAL,4,4,0,0,0,3.4,4.3,2026-10-05T15:09:24.640421+08:00
+taifex_night,OPTIONAL,4,4,0,0,0,4.12,4.31,2026-10-05T15:09:35.316771+08:00
+tpex_institutional,IMPORTANT,4,4,0,0,0,4.44,5.43,2026-10-05T15:07:07.530055+08:00
+tpex_prices,CRITICAL,4,3,0,1,0,0.76,2.27,2026-10-05T15:06:58.582446+08:00
+twse_institutional,IMPORTANT,4,4,0,0,0,3.58,3.93,2026-10-05T15:07:02.100745+08:00
+twse_prices,CRITICAL,4,4,0,0,0,0.14,0.99,2026-10-05T15:06:58.463307+08:00
+us_market,OPTIONAL,4,4,0,0,0,12.07,12.15,2026-10-05T15:09:47.446089+08:00
