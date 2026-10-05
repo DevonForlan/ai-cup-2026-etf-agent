@@ -20,7 +20,7 @@ def ops_cfg(tmp_path):
 
 
 def store_without_date(src_store, dst: Path, date: str, tables=("daily_prices", "institutional")):
-    """Copy of a store with every row of `date` removed from `tables` (simulates missing T-1 data)."""
+    """Copy of a store truncated BEFORE `date` in `tables` (live-like: T-1 not yet in the store)."""
     import shutil
     from agent.data.loaders import HistoryStore
     dst.mkdir(parents=True, exist_ok=True)
@@ -29,7 +29,7 @@ def store_without_date(src_store, dst: Path, date: str, tables=("daily_prices", 
     st = HistoryStore(dst)
     for t in tables:
         df = st.load(t)
-        df[df["date"] != date].to_parquet(st.path(t), index=False)
+        df[df["date"] < date].to_parquet(st.path(t), index=False)
     return HistoryStore(dst)
 
 

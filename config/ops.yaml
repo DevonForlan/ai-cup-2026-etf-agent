@@ -65,3 +65,8 @@ etf_fetch:
 
 locks:
   stale_after_sec: 120           # a lock older than this whose owner pid is gone may be recovered
+
+# Official TWSE market holidays (休市日期) that fall in or just before the competition period. FILL FROM THE
+# OFFICIAL TWSE SCHEDULE ONLY (not guessed). Past closures are inferred from the stored price history; an
+# unlisted future holiday makes T-1 prices look STALE -> BLOCK (safe side; see EMERGENCY_RUNBOOK §A).
+market_holidays: []

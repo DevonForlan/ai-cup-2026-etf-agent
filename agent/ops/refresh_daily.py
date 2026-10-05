@@ -56,13 +56,42 @@ def prev_weekdays(d: str, n: int = 6) -> list[str]:
 
 
 def stale_trading_days(latest: str | None, requested: str) -> int | None:
+    """Weekday distance (legacy; holiday-unaware). Prefer trading_lag()."""
     if not latest:
         return None
     return int(pd.bdate_range(latest, requested).size) - 1
 
 
-# ----------------------------------------------------------------------------- default fetchers
-# Each fetcher(ctx) -> dict(records, latest_available_date, content_as_of, detail). Raise on failure.
+def market_closures(store: HistoryStore | None, ops_cfg: dict | None) -> set[str]:
+    """Known non-trading weekdays: configured official holidays (ops.yaml market_holidays, from the TWSE
+    schedule) + weekdays inside the stored price history that have no prices (past closures)."""
+    out = {str(d) for d in ((ops_cfg or {}).get("market_holidays") or [])}
+    if store is not None:
+        ds = store.dates("daily_prices")
+        if ds:
+            have = set(ds)
+            out |= {d.date().isoformat() for d in pd.bdate_range(ds[0], ds[-1]) if d.date().isoformat() not in have}
+    return out
+
+
+def expected_prev_trading_day(trade_date: str, closures: set[str]) -> str:
+    x = date.fromisoformat(trade_date)
+    for _ in range(30):
+        x -= timedelta(days=1)
+        if x.weekday() < 5 and x.isoformat() not in closures:
+            return x.isoformat()
+    raise RuntimeError("no trading day in the previous 30 days")
+
+
+def trading_lag(latest: str | None, expected: str, closures: set[str]) -> int | None:
+    """Number of expected trading days after `latest` up to `expected` (0 = up to date)."""
+    if not latest or len(latest) != 10:
+        return None
+    if latest >= expected:
+        return 0
+    return sum(1 for d in pd.bdate_range(latest, expected)[1:] if d.date().isoformat() not in closures)
+
+
 def _session():
     from agent.data.http import make_session
     return make_session(load_data_sources()["http"]["relax_x509_strict"])
@@ -434,6 +463,10 @@ def refresh(trade_date: str, *, store: HistoryStore | None = None, fetchers: dic
     wall = wall_clock or Clock()
     ctx = {"trade_date": trade_date, "store": store, "ops_cfg": ops_cfg, "clock": clock, "wall": wall,
            "run_date": run_date or wall.now().strftime("%Y-%m-%d")}
+    closures = market_closures(store, ops_cfg)
+    expected_prev = expected_prev_trading_day(trade_date, closures)
+    ctx["expected_prev"] = expected_prev
+    lg.info(f"expected previous trading day {expected_prev}")
     out: list[SourceStatus] = []
     for name, meta in ops_cfg["data_sources"].items():
         st = SourceStatus(name, meta["criticality"], trade_date)
@@ -455,8 +488,7 @@ def refresh(trade_date: str, *, store: HistoryStore | None = None, fetchers: dic
             st.content_as_of = r.get("content_as_of")
             st.detail = r.get("detail", {})
             st.fetched_at = wall.now().isoformat()
-            lag = stale_trading_days(st.latest_available_date, prev_weekdays(trade_date, 1)[0]) \
-                if st.latest_available_date and len(st.latest_available_date) == 10 else None
+            lag = trading_lag(st.latest_available_date, expected_prev, closures)
             st.stale = lag is not None and lag > int(meta.get("max_stale_trading_days", 0))
             st.status = "STALE" if st.stale else "OK"
         except Exception as e:  # noqa: BLE001
@@ -465,7 +497,7 @@ def refresh(trade_date: str, *, store: HistoryStore | None = None, fetchers: dic
             probe = (ctx.get("probes") or STORE_PROBES).get(name)
             latest = probe(store, trade_date) if probe else None
             if latest:
-                lag = stale_trading_days(latest, prev_weekdays(trade_date, 1)[0]) if len(latest) == 10 else None
+                lag = trading_lag(latest, expected_prev, closures)
                 st.latest_available_date = latest
                 st.fallback = "store"
                 if lag is not None and lag <= int(meta.get("max_stale_trading_days", 0)):

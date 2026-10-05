@@ -298,3 +298,23 @@ def test_refresh_observation_times_use_wall_clock_not_simulated_clock(ops_cfg, f
                 clock=Clock("2026-10-25T20:00:00+08:00"), wall_clock=Clock("2026-10-26T12:00:00+08:00"))
     st = next(s for s in r["sources"] if s["source"] == "twse_prices")
     assert st["fetched_at"].startswith("2026-10-26T12:00") and seen["wall"].startswith("2026-10-26T12:00")
+
+
+def test_staleness_is_holiday_aware():
+    """Round 06 rehearsal finding: 2026-09-25 and 09-28 were market holidays; 09-29's T-1 is 09-24."""
+    from agent.ops.refresh_daily import expected_prev_trading_day, trading_lag
+    closures = {"2026-09-25", "2026-09-28"}
+    assert expected_prev_trading_day("2026-09-29", closures) == "2026-09-24"
+    assert trading_lag("2026-09-24", "2026-09-24", closures) == 0
+    assert trading_lag("2026-09-23", "2026-09-24", closures) == 1
+    assert expected_prev_trading_day("2026-09-29", set()) == "2026-09-28"     # unknown holiday -> conservative
+
+
+def test_refresh_after_holiday_not_stale(ops_cfg, fixture_store):
+    import copy
+    cfg = copy.deepcopy(ops_cfg)
+    cfg["market_holidays"] = ["2026-10-23"]                    # configured official holiday on T-1
+    r = refresh(T1, store=fixture_store, fetchers=_fake(latest="2026-10-22"), ops_cfg=cfg, clock=Clock("2026-10-25T20:00:00+08:00"))
+    assert r["level"] == PASS
+    r2 = refresh(T1, store=fixture_store, fetchers=_fake(latest="2026-10-22"), ops_cfg=ops_cfg, clock=Clock("2026-10-25T20:00:00+08:00"))
+    assert r2["level"] == BLOCK                                # not a known closure -> T-1 prices stale
