@@ -51,9 +51,12 @@ def make_provider(cfg: dict) -> LLMProvider:
     if name == "replay":
         from agent.llm.replay import ReplayProvider
         return ReplayProvider([Path(x) for x in cfg.get("replay_roots", [])] or None)
-    if name == "template":
+    if name == "template" or cfg.get("enabled") is False:     # a disabled provider config means template
         from agent.llm.providers.mock import TemplateProvider
         return TemplateProvider()
+    if name in ("claude_agent_sdk", "claude-agent-sdk"):
+        from agent.llm.providers.claude_agent_sdk import ClaudeAgentSDKProvider
+        return ClaudeAgentSDKProvider(model or None, cfg)
     from agent.llm.providers import http_providers as H
     cls = {"google": H.GeminiProvider, "gemini": H.GeminiProvider, "openai": H.OpenAIProvider,
            "anthropic": H.AnthropicProvider}[name]

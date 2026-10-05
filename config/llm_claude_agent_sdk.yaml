@@ -1,0 +1,44 @@
+# Claude Agent SDK narrative provider (Round 06A spike). DISABLED by default.
+#
+# Authentication: API KEY ONLY. Per Anthropic's Agent SDK documentation, agents built on the Agent SDK must
+# use API-key authentication (Claude Console key, or a supported cloud provider); claude.ai / Claude Code
+# subscription login must not be used. The provider enforces this: it runs the CLI with --bare (OAuth and
+# keychain are never read) and an empty per-run CLAUDE_CONFIG_DIR, and refuses to start without
+# ANTHROPIC_API_KEY (from the environment or the gitignored .env). No credential is stored in this file.
+#
+# Status: NOT QUALIFIED (no API key -> no real call yet). The competition default stays Template narrative.
+# Narrative only: no event signal, no LLM score adjustment, no Crash Guard. Decisions are never touched.
+enabled: false
+provider: claude_agent_sdk
+model: null                     # exact model id to pin once qualified; null = CLI default (recorded per call)
+prompt_guard: claude_agent_narrative_v1      # agent/llm/prompts/<name>.txt prepended to every task system prompt
+temperature: 0.0
+seed: 7
+max_tokens: 1200
+timeout_sec: 60                 # per call, includes CLI start-up
+total_budget_sec: 150           # worst case bounded: a hung SDK cannot eat the deadline
+retries: 0                      # CLI start-up is slow (5-12 s); a failure goes straight to template
+max_calls_per_day: 10
+max_tokens_per_day: 60000
+max_cost_per_day_usd: 1.0       # also passed to the SDK as max_budget_usd per call (hard stop)
+max_turns: 3                    # structured-output retries need a few turns; no tools are available
+log_calls: true
+narrative:
+  mode: llm
+  reviewer: deterministic
+  max_thesis_items: 35
+events:
+  enabled: false
+llm_signal:
+  enabled: false
+claude_agent_sdk:
+  cli_path: auto                # auto: native claude.exe next to the npm shim (the SDK refuses .cmd shims)
+  bare: true                    # --bare: auth strictly ANTHROPIC_API_KEY / apiKeyHelper; no hooks, CLAUDE.md, plugins
+  tools_enabled: false          # --tools "" + explicit deny list + permission_mode dontAsk + deny-all PreToolUse hook
+  setting_sources: []           # never load ~/.claude or project .claude settings
+  working_dir: runtime/claude_agent_sdk     # per-run sandbox: facts.json, schema.json, prompt_meta.json only
+  keep_sandbox: false           # delete the per-run sandbox (incl. its CLAUDE_CONFIG_DIR) after the call
+  fallback: template
+price_usd_per_1m_tokens:        # set from the official price list when a model is pinned; else cost = SDK-reported
+  input: null
+  output: null

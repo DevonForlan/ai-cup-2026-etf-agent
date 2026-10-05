@@ -94,7 +94,9 @@ def assess(tests: dict | None = None) -> dict:
     pj = _json(pf) or {}
     add("latest real preflight not BLOCK", pj.get("level") in ("PASS", "WARN"),
         f"{pf.parent.name if pf else '-'}: {pj.get('level')}", "COMPETITION_READY")
-    real_llm = any((ROOT / ".env").exists() for _ in [0])
+    from agent.llm.env import get_key
+    keys = {k: bool(get_key(k)) for k in ("GEMINI_API_KEY", "GOOGLE_API_KEY", "OPENAI_API_KEY", "ANTHROPIC_API_KEY")}
+    real_llm = any(keys.values())
     order = ["DEV_READY", "DRY_RUN_READY", "COMPETITION_READY"]
     level = "NOT_READY"
     for lv in order:
@@ -105,7 +107,11 @@ def assess(tests: dict | None = None) -> dict:
     blockers = [i for i in items if not i["ok"]]
     res = {"level": level, "items": items, "blockers": [f"{i['item']}: {i['detail']}" for i in blockers],
            "nc1_status": nc1, "cap_reason": "NC-1 unresolved -> max DRY_RUN_READY" if nc1 != "confirmed" else None,
-           "real_llm": "PRESENT(.env)" if real_llm else "BLOCKED_NO_API_KEY"}
+           "real_llm": "KEY_PRESENT" if real_llm else "BLOCKED_NO_API_KEY",
+           # Round 06A: a real LLM narrative is an OPTIONAL capability (template narrative is the competition
+           # default); it is never a COMPETITION_READY requirement and never changes the level.
+           "real_llm_role": "OPTIONAL_CAPABILITY",
+           "llm_keys_present": {k: ("PRESENT" if v else "ABSENT") for k, v in keys.items()}}
     write_json(ROOT / "reports" / "round06_readiness.json", res)
     return res
 
