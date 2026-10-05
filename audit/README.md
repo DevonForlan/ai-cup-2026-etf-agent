@@ -1,6 +1,6 @@
 # Audit evidence
 
-Generated 2026-10-05T12:16:52.146451+08:00 at git:7c1d6a1 by `agent/ops/audit.py`. Regenerate any time; it never copies raw data.
+Generated 2026-10-05T12:46:21.092735+08:00 at git:7e7a3b0 by `agent/ops/audit.py`. Regenerate any time; it never copies raw data.
 
 | folder | content |
 |---|---|

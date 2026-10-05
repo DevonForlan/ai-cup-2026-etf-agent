@@ -1,6 +1,6 @@
 # Architecture index
 
-generated 2026-10-05T12:16:52.146451+08:00, git:7c1d6a1
+generated 2026-10-05T12:46:21.092735+08:00, git:7e7a3b0
 
 ## Documents
 
@@ -17,7 +17,7 @@ generated 2026-10-05T12:16:52.146451+08:00, git:7c1d6a1
 | module | sha256 |
 |---|---|
 | agent/__init__.py | 01ba4719c80b6fe9 |
-| agent/competition_day.py | 55fb697cdba2af2e |
+| agent/competition_day.py | 72061d5f8ac9a42c |
 | agent/config.py | 78ec9eea760473bc |
 | agent/data/__init__.py | 01ba4719c80b6fe9 |
 | agent/data/fetchers/__init__.py | e3b0c44298fc1c14 |
@@ -81,7 +81,7 @@ generated 2026-10-05T12:16:52.146451+08:00, git:7c1d6a1
 | agent/ops/common.py | 311ac31b2dd793e7 |
 | agent/ops/deadline.py | 467e37af2cf7847b |
 | agent/ops/healthcheck.py | e91c33266e401b32 |
-| agent/ops/llm_review.py | c5e856f2795e23b9 |
+| agent/ops/llm_review.py | ceadd8cdeb707cde |
 | agent/ops/package_submission.py | e732f62219df4675 |
 | agent/ops/preflight.py | fd10cb2306d5c3cd |
 | agent/ops/reconcile.py | 315a64cc4131a98c |

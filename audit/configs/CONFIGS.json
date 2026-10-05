@@ -1,5 +1,5 @@
 {
- "generated_at": "2026-10-05T12:16:52.146451+08:00",
+ "generated_at": "2026-10-05T12:46:21.092735+08:00",
  "freeze": {
   "strategy_config": "config/strategy_quant_v1.yaml",
   "strategy_sha256": "sha256:f34fa02e924011b20c52a4bd42e961169f97e1950e76e04b7e78dc43ac23d2e0",
