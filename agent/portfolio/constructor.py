@@ -107,12 +107,92 @@ def _try_hold(prev_h, prev_cash, nav_prev, closes_prev, rb, cfg, scores, etf_hol
                            dict(prev_h), prev_cash, est_nav, est_w, as_res, [rep], ["非再平衡日：維持組合"])
 
 
+def _finalize(target_w, no_trade, prev_h, prev_cash, nav_prev, closes_prev, rb, cfg, etf_holdings, etf_meta,
+              regime, stance, why, cash_rng, info, notes):
+    """Plan -> orders -> official checks (+ Active Share + stress) -> TargetPortfolio | Fallback."""
+    lot = rb.rules.lot_size
+    plan = plan_decisions(target_w, prev_h, no_trade, nav_prev, closes_prev, lot)
+    plan = enforce_decision_limit(plan, 30)
+    decisions = [{"ticker": p.ticker, "decision_id": f"tmp{i}", "target_weight": float(p.target_weight)}
+                 for i, p in enumerate(plan) if p.action != "NO_TRADE"]
+    orders = derive_orders(decisions, prev_h, nav_prev, closes_prev, lot)
+    if len(orders) > 30:
+        return FallbackToPreviousPortfolio(f"委託筆數 {len(orders)} > 30")
+    est_h, est_cash, est_nav, est_w = estimate(orders, prev_h, D(prev_cash), closes_prev, rb)
+    post = C.check_portfolio(est_h, closes_prev, est_cash, rb, "委託後(預估)", "post_trade_estimate")
+    C.check_orders([{"ticker": o.ticker, "side": o.side, "shares": o.shares} for o in orders], prev_h, rb, post)
+    as_res = None
+    if etf_holdings:
+        as_res = compute_active_share(est_w, etf_holdings, rb.active_etfs, rb.assumptions.active_share_mode,
+                                      (etf_meta or {}).get("date"), (etf_meta or {}).get("synthetic", False))
+        C.check_active_share(as_res, rb, None, post)
+    stress = Report("stress")
+    s_shift = D(cfg["strategy_buffers"]["stress_price_shift"])
+    for name, bs in (("buy+5%/sell-5%", s_shift), ("buy-5%/sell+5%", -s_shift)):
+        _, c2, n2, _ = estimate(orders, prev_h, D(prev_cash), closes_prev, rb, bs, bs)
+        cw = c2 / n2 if n2 > 0 else Decimal(0)
+        stress.add("STRESS_CASH", Status.PASS if (c2 >= 0 and cw < rb.rules.cash_max_weight) else Status.FAIL,
+                   f"{name}: 現金 {c2:,.0f}（{float(cw):.3%}）", cw, [0, rb.rules.cash_max_weight], "策略壓力測試（非官方）")
+    reports = [post, stress]
+    fails = [c for r in reports for c in r.failures]
+    if fails:
+        return FallbackToPreviousPortfolio("合規檢查失敗：" + "; ".join(f"{c.rule_id} {c.message}" for c in fails[:5]),
+                                           reports, notes)
+    return TargetPortfolio(target_w, est_cash / est_nav, plan, orders, regime, stance, why, cash_rng, info,
+                           est_h, est_cash, est_nav, est_w, as_res, reports, notes)
+
+
+def _guard_scale(prev_h, prev_cash, nav_prev, closes_prev, rb, cfg, guard, etf_holdings, etf_meta,
+                 regime, stance, why, cash_rng):
+    """Crash Guard de/re-leveraging by proportional scaling of EXISTING holdings (no name changes),
+    limited to max_(de|re)leveraging_per_day of NAV. Returns None when no scaling is needed."""
+    lot = rb.rules.lot_size
+    cur_w = {t: Decimal(s) * D(closes_prev[t]) / nav_prev for t, s in prev_h.items()}
+    inv = sum(cur_w.values(), Decimal(0))
+    if inv <= 0:
+        return None
+    lo, hi = D(str(guard["cash"][0])), D(str(guard["cash"][1]))
+    mid = (lo + hi) / 2
+    cash_now = 1 - inv
+    hv = set(guard.get("high_vol") or ())
+    vcap = D(str(guard["vol_cap"])) if guard.get("vol_cap") else None
+    need_volcap = bool(vcap) and any(cur_w[t] > vcap + D("0.002") for t in hv if t in cur_w)
+    need_delever = cash_now < lo - D("0.005")
+    need_relever = guard["state"] == "NORMAL" and cash_now > hi + D("0.02")
+    if not (need_delever or need_volcap or need_relever):
+        return None
+    if need_delever or need_volcap:
+        k = Decimal(1)
+        if need_delever:
+            k = max((1 - mid) / inv, 1 - D(str(guard["max_delever"])) / inv)
+        k = min(k, Decimal(1))
+        what = f"降曝險 ×{float(k):.3f}"
+    else:
+        k = min((1 - mid) / inv, 1 + D(str(guard["max_relever"])) / inv)
+        what = f"回補曝險 ×{float(k):.3f}"
+    caps = _caps(prev_h, rb, cfg)
+    locked = {t for t, sh in prev_h.items() if sh % lot != 0}
+    w = {}
+    for t, cw in cur_w.items():
+        x = cw if t in locked else cw * k
+        if vcap is not None and t in hv:
+            x = min(x, vcap)
+        w[t] = min(x, caps[t]).quantize(Q, rounding="ROUND_FLOOR")
+    no_trade = set(locked) | {t for t in w if abs(w[t] - cur_w[t]) < D("0.002")}
+    notes = [f"Crash Guard {guard['state']}：{what}（現金 {float(cash_now):.1%} → 目標 {float(lo):.0%}–{float(hi):.0%}，"
+             f"單日上限 {guard['max_delever']:.0%} NAV）"]
+    info = {"kept": list(prev_h), "new": [], "dropped": [], "rank_of": {}, "guard_scale": True}
+    return _finalize(w, no_trade, prev_h, prev_cash, nav_prev, closes_prev, rb, cfg, etf_holdings, etf_meta,
+                     regime, stance, why, cash_rng, info, notes)
+
+
 def construct(scores: pd.DataFrame, prev_holdings: dict[str, int], prev_cash: Decimal, nav_prev: Decimal,
               closes_prev: dict, rb: RuleBook, cfg: dict, market: dict,
               etf_holdings: dict | None = None, etf_meta: dict | None = None,
               method: str | None = None, holding_days: dict[str, int] | None = None,
-              is_rebalance_day: bool = True, regime_override: tuple | None = None
-              ) -> TargetPortfolio | FallbackToPreviousPortfolio:
+              is_rebalance_day: bool = True, regime_override: tuple | None = None,
+              guard: dict | None = None) -> TargetPortfolio | FallbackToPreviousPortfolio:
+    """guard: Crash Guard state dict (agent.risk.crash_guard.step) + 'high_vol' ticker set, or None."""
     sb = cfg["strategy_buffers"]
     tparams = B.turnover_params(cfg)
     method = method or cfg["baseline"]["method"]
@@ -125,6 +205,23 @@ def construct(scores: pd.DataFrame, prev_holdings: dict[str, int], prev_cash: De
         return FallbackToPreviousPortfolio(f"前日持股缺收盤價 {missing_px}")
 
     regime, stance, cash_rng, why = regime_override or B.regime_from_market(market, cfg)
+    if guard:
+        cash_rng = (float(guard["cash"][0]), float(guard["cash"][1]))
+        why = f"Crash Guard {guard['state']}（壓力點數 {guard['points']}）；{why}"
+        if guard["state"] in ("RISK_OFF", "CRISIS"):
+            regime, stance = "risk_off", "defensive"
+        elif guard["state"] == "CAUTION":
+            stance = "defensive" if stance == "aggressive" else stance
+        if prev_h:
+            scaled = _guard_scale(prev_h, D(prev_cash), nav_prev, closes_prev, rb, cfg, guard, etf_holdings,
+                                  etf_meta, regime, stance, why, cash_rng)
+            if scaled is not None:
+                return scaled
+        if not guard["allow_new"] and prev_h:
+            import copy
+            cfg = copy.deepcopy(cfg)
+            cfg.setdefault("turnover", {})["max_new_names_per_day"] = 0
+            notes.append(f"Crash Guard {guard['state']}：暫停新增持股")
     if not is_rebalance_day and prev_h:
         held = _try_hold(prev_h, D(prev_cash), nav_prev, closes_prev, rb, cfg, scores, etf_holdings, etf_meta,
                          regime, stance, why, cash_rng)
@@ -133,6 +230,8 @@ def construct(scores: pd.DataFrame, prev_holdings: dict[str, int], prev_cash: De
         notes.append("非再平衡日但維持現有組合未通過檢查 → 改為完整再平衡")
     cash_lo = max(D(cash_rng[0]), D(sb["cash_target_min"]) if regime != "risk_on" else D(cash_rng[0]))
     cash_hi = min(D(cash_rng[1]), D("0.20"))
+    if guard:
+        cash_lo, cash_hi = D(str(guard["cash"][0])), min(D(str(guard["cash"][1])), D("0.22"))
     cash_mid = (cash_lo + cash_hi) / 2
 
     exclude: set[str] = set()

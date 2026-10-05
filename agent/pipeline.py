@@ -158,6 +158,11 @@ class DayResult:
     fallback: bool = False
     notes: list[str] = field(default_factory=list)
     agent_state: dict = field(default_factory=dict)
+    events: list = field(default_factory=list)
+    llm_summary: dict = field(default_factory=dict)
+    event_stats: dict = field(default_factory=dict)
+    guard: dict | None = None
+    narrative_used_llm: bool = False
     timings: dict = field(default_factory=dict)
     etf_meta: dict = field(default_factory=dict)
     active_share: object = None
@@ -233,9 +238,12 @@ def run_day(trade_date: str, store: HistoryStore, prev: Settlement, rb: RuleBook
             team_id: str, mode: str = "replay", out_dir: Path | None = None, log_dir: Path | None = None,
             method: str | None = None, store_is_fixture: bool = False, calendar: TradingCalendar | None = None,
             run_time: str = "07:00:00", light: bool = False, use_cache: bool = True,
-            data_faults: set[str] | None = None) -> DayResult:
+            data_faults: set[str] | None = None, llm: dict | None = None) -> DayResult:
     """light=True: research mode (no per-day feature/score/graph logs; D-Plan + validation still produced).
-    data_faults: inputs to drop (fault injection) e.g. {'institutional','revenue','etf','overnight'}."""
+    data_faults: inputs to drop (fault injection) e.g. {'institutional','revenue','etf','overnight'}.
+    llm: None (pure quant, templates) or {"cfg": llm.yaml dict, "provider": optional provider instance,
+         "log_root": optional Path}. LLM output can only touch TEXT, plus (if llm_signal.enabled) a bounded
+         score adjustment applied by deterministic code; any LLM failure falls back to templates/no-adjustment."""
     t0 = time.perf_counter()
     tm: dict[str, float] = {}
     out_dir = out_dir or ROOT / "out"
@@ -274,11 +282,44 @@ def run_day(trade_date: str, store: HistoryStore, prev: Settlement, rb: RuleBook
     di = state.get("day_index", -1) + 1
     held = {t for t, s in prev.holdings.items() if s > 0}
     sc = score(fs.features, cfg["score_weights"], method or cfg["baseline"]["method"])
+    # ---- Phase 5: LLM client (per day budget), event extraction, bounded fusion
+    client = None
+    events, ev_stats, audit = [], {}, None
+    if llm:
+        from agent.llm.client import LLMClient
+        from agent.llm.logging import LLMCallLogger
+        lcfg = llm["cfg"]
+        client = LLMClient(lcfg, provider=llm.get("provider"),
+                           logger=LLMCallLogger(llm.get("log_root"), trade_date, bool(lcfg.get("log_calls", True))))
+        if lcfg.get("events", {}).get("enabled") and client.enabled and "events" not in faults:
+            from agent.research.event_extractor import EventExtractor, revenue_facts, visible_documents
+            te = time.perf_counter()
+            docs = visible_documents(PITView(store, as_of), trade_date, set(rb.universe),
+                                     int(lcfg["events"].get("lookback_days", 5)),
+                                     int(lcfg["events"].get("max_documents_per_day", 200)))
+            ex = EventExtractor(client, rb.universe, ROOT / "data" / "cache" / "events")
+            events = ex.extract(docs, revenue_facts(fs.features, sorted({d.ticker for d in docs})))
+            ev_stats = dict(ex.stats.__dict__, hallucinations=ex.stats.hallucinations)
+            tm["events"] = time.perf_counter() - te
+        sig = lcfg.get("llm_signal", {})
+        if sig.get("enabled") and events:
+            from agent.portfolio.signal_fusion import fuse
+            from agent.research.event_extractor import event_scores
+            es = event_scores(events, trade_date, float(sig.get("min_confidence", 0.7)), sig.get("decay", "linear"))
+            sc, audit = fuse(sc, es, float(sig.get("max_percentile_adjustment", 5)))
     sc, new_ema = apply_turnover_scoring(sc, state.get("score_ema", {}), held, tp)
     holding_days = {t: di - int(state.get("entry_index", {}).get(t, di - 10**6)) for t in held}
     last_rb = state.get("last_rebalance_index")
     is_rb = (last_rb is None) or (di - int(last_rb) >= int(tp["rebalance_every"])) or not held
     regime_tuple = market_regime(fs, ovn, cfg) if cfg.get("regime", {}).get("use_v0", False) else None
+    guard = None
+    if (cfg.get("crash_guard") or {}).get("enabled"):
+        from agent.risk import crash_guard as CG
+        guard = CG.step(state.get("guard"), fs.market, CG.portfolio_drawdown(prev.nav_history, prev.initial_nav), cfg)
+        vol = fs.features["volatility_20d"].dropna()
+        guard["high_vol"] = sorted(vol[vol >= vol.quantile(guard["high_vol_quantile"])].index) if len(vol) else []
+        if guard["state"] != (state.get("guard") or {}).get("state", "NORMAL"):
+            is_rb = True                      # state change -> act today (scaling is capped per day)
     tm["ranking"] = time.perf_counter() - t1
     if not light:
         save_features(fs, log_dir / "features")
@@ -291,20 +332,31 @@ def run_day(trade_date: str, store: HistoryStore, prev: Settlement, rb: RuleBook
     else:
         result = construct(sc, prev.holdings, prev.cash, nav_prev, closes_prev, rb, cfg, fs.market,
                            etf_h or None, etf_meta, method, holding_days, is_rb,
-                           regime_tuple[:4] if regime_tuple else None)
+                           regime_tuple[:4] if regime_tuple else None, guard)
     tm["portfolio"] = time.perf_counter() - t2
     sources = build_sources(prev_date or trade_date, mode, store_is_fixture, rev_asof, has_rev)
     sources = add_overnight_sources(sources, trade_date, fs.market, store_is_fixture)
 
+    narrator = writer = None
+    if client is not None and llm["cfg"].get("narrative", {}).get("mode") == "llm" and client.enabled:
+        from agent.research.market_narrator import LLMMarketNarrator
+        from agent.research.thesis_writer import LLMThesisWriter
+        narrator = LLMMarketNarrator(client)
+        writer = LLMThesisWriter(client, int(llm["cfg"]["narrative"].get("max_thesis_items", 35)))
+
     def make(result_obj):
         ta = time.perf_counter()
         g, info = build_graph(trade_date, fs, sc, result_obj, prev.holdings, prev.cash, nav_prev, closes_prev,
-                              rb, cfg, sources)
+                              rb, cfg, sources, narrator, writer, events, audit)
         elapsed = max(1, int(time.perf_counter() - t0))
         completed = (started + timedelta(seconds=elapsed)) if mode != "live" else datetime.now(TPE).replace(microsecond=0)
-        md = {"model_provider": cfg["runtime"]["model_provider"], "model_version": cfg["runtime"]["model_version"],
+        used = client is not None and client.enabled and (narrator is not None or bool(events))
+        md = {"model_provider": _provider_enum(client.provider_name) if used else cfg["runtime"]["model_provider"],
+              "model_version": (client.model_version or "unknown")[:60] if used else cfg["runtime"]["model_version"],
               "run_started_at": started.isoformat(), "run_completed_at": completed.isoformat(),
-              "input_tokens": 0, "output_tokens": 0, "tool_use_count": 0, "code_version": code_version()}
+              "input_tokens": int(client.logger.summary()["input_tokens"]) if used else 0,
+              "output_tokens": int(client.logger.summary()["output_tokens"]) if used else 0,
+              "tool_use_count": int(client.logger.summary()["calls"]) if used else 0, "code_version": code_version()}
         doc, idmap = export_dplan(g, team_id, md)
         path = write_dplan(doc, out_dir)
         tb = time.perf_counter()
@@ -333,7 +385,8 @@ def run_day(trade_date: str, store: HistoryStore, prev: Settlement, rb: RuleBook
     traded = bool(doc and doc.get("orders"))
     state.update({"day_index": di, "score_ema": new_ema,
                   "last_rebalance_index": di if (traded or last_rb is None) else last_rb,
-                  "regime": None if regime_tuple is None else {"regime": regime_tuple[0], "score": regime_tuple[4]}})
+                  "regime": None if regime_tuple is None else {"regime": regime_tuple[0], "score": regime_tuple[4]},
+                  "guard": None if guard is None else {k: guard[k] for k in ("state", "raw_state", "points", "calm_days")}})
     tm["total"] = time.perf_counter() - t0
     reports = getattr(result, "reports", []) or []
     if not light:
@@ -344,7 +397,14 @@ def run_day(trade_date: str, store: HistoryStore, prev: Settlement, rb: RuleBook
             ensure_ascii=False, indent=1, default=str), encoding="utf-8")
     return DayResult(trade_date, prev_date, path, doc, rep, result, fs, sc, closes_prev,
                      bool(getattr(result, "is_fallback", False)), notes + list(getattr(result, "notes", [])),
-                     state, tm, etf_meta, getattr(result, "active_share", None))
+                     state, tm, etf_meta, getattr(result, "active_share", None), events,
+                     client.logger.summary() if client is not None else {}, ev_stats, guard,
+                     bool(narrator is not None and getattr(narrator, "used_llm", False)))
+
+
+def _provider_enum(name: str) -> str:
+    """D-Plan agent_metadata.model_provider enum (schema): map our provider names."""
+    return {"google": "google", "gemini": "google", "openai": "openai", "anthropic": "anthropic"}.get(name, "other")
 
 
 def _inject_faults(fs, faults: set[str]):
