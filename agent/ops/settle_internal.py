@@ -26,10 +26,10 @@ from agent.sim.settle import settle  # noqa: E402
 
 def final_candidate(trade_date: str, ops_cfg: dict) -> tuple[dict | None, dict, Path | None]:
     day = ops_path(ops_cfg, "submissions_dir") / ymd(trade_date)
-    hist = day / "final_history.jsonl"
-    if not hist.exists():
+    from agent.ops.package_submission import active_final
+    rec = active_final(trade_date, ops_cfg)
+    if rec is None:
         return None, {}, None
-    rec = json.loads(hist.read_text(encoding="utf-8").strip().splitlines()[-1])
     pkg = day / "candidates" / rec["run_id"]
     doc = json.loads((pkg / rec["file"]).read_text(encoding="utf-8"))
     st = pkg / "agent_state.json"

@@ -86,24 +86,19 @@ class ManualFileSettlementProvider(SettlementProvider):
             return normalize_official(json.loads(p.read_text(encoding="utf-8")))
         c = self.csv_path or settlement_dir(self.cfg) / f"{ymd(date)}_official.csv"
         if c.exists():
-            d = {"date": date, "holdings": {}, "cash": None, "nav": None, "accrued_dividends": 0,
-                 "source": f"manual csv {c.name}"}
-            with open(c, encoding="utf-8-sig") as f:
-                for row in csv.reader(f):
-                    if not row or row[0].startswith("#") or row[0] == "ticker":
-                        continue
-                    k, v = row[0].strip(), row[1].strip().replace(",", "")
-                    if k == "__CASH__":
-                        d["cash"] = v
-                    elif k == "__NAV__":
-                        d["nav"] = v
-                    elif k == "__ACCRUED__":
-                        d["accrued_dividends"] = v
-                    else:
-                        d["holdings"][k] = int(Decimal(v))
-            if d["cash"] is None:
+            from agent.ops.settlement_entry import parse_file
+            raw, probs = parse_file(c)
+            if probs:
+                raise ValueError(f"{c}: " + "; ".join(probs))
+            if raw.get("cash") in (None, ""):
                 raise ValueError(f"{c}: missing __CASH__ row")
-            return normalize_official(d)
+            if raw.get("date") and raw["date"] != date:
+                raise ValueError(f"{c}: __DATE__ {raw['date']} != {date}")
+            return normalize_official({"date": date, "holdings": {t: int(Decimal(v.replace(",", ""))) for t, v in raw["rows"]},
+                                       "cash": raw["cash"].replace(",", ""),
+                                       "nav": raw["nav"].replace(",", "") if raw.get("nav") else None,
+                                       "accrued_dividends": str(raw.get("accrued") or 0).replace(",", ""),
+                                       "warnings": raw.get("warnings") or [], "source": f"manual csv {c.name}"})
         return None
 
 

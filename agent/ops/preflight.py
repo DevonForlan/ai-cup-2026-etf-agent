@@ -139,6 +139,8 @@ def run_preflight(trade_date: str, *, mode: str = "dry-run", strategy_cfg: str =
             bad = s["status"] in ("FAILED", "STALE")
             if s["status"] == "SKIPPED":
                 lvl = WARN if s["criticality"] == "CRITICAL" else PASS
+            elif s["status"] == "CACHED":
+                lvl = WARN                       # source unreachable, required rows already in the store
             elif not bad:
                 lvl = PASS
             else:

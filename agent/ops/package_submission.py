@@ -1,20 +1,23 @@
-"""Submission package + FINAL_CANDIDATE marking. NO upload: the submission mechanism is unconfirmed (NC-1).
+"""Submission package + FINAL_CANDIDATE marking / freeze / replacement. NO upload (NC-1).
 
 Layout (per trade date):
-  submissions/YYYYMMDD/candidates/<run_id>/   full package of one run (never overwritten)
+  submissions/YYYYMMDD/candidates/<run_id>/   full package of one run (built in .partial, then renamed; immutable)
   submissions/YYYYMMDD/FINAL/D-Plan_<team>_<date>.json   the ONLY file meant for manual upload
-  submissions/YYYYMMDD/FINAL_CANDIDATE.txt      big banner: file, sha256, validation, team, date, git sha
-  submissions/YYYYMMDD/final_history.jsonl      every FINAL marking (append-only)
+  submissions/YYYYMMDD/FINAL_CANDIDATE.txt      big banner: file, sha256, validation, team, date, git sha, cutoff
+  submissions/YYYYMMDD/FINAL_FREEZE.json        freeze record of the current FINAL (sha, fingerprint, inputs, operator)
+  submissions/YYYYMMDD/final_history.jsonl      every MARKED / REPLACED / REFUSED event (append-only, never deleted)
 
 A candidate is marked FINAL only if: validation PASS, team_id == expected, trade_date == expected,
-filename == D-Plan_<team>_<date>.json, and the copied file's sha256 equals the validated file's sha256.
+filename == D-Plan_<team>_<date>.json, every file matches manifest.json, and the copy's sha256 equals the
+validated file's sha256. Once a FINAL exists it is FROZEN: a later run never replaces it silently; only
+mark_final(..., replace=True, reason=..., operator=...) (CLI: agent/ops/final.py replace-final) can.
 """
 from __future__ import annotations
 
 import csv
 import json
+import os
 import shutil
-import sys
 from datetime import datetime
 from pathlib import Path
 
@@ -34,11 +37,15 @@ def _validation_md(rep: dict) -> str:
 
 def build_package(day_result, *, team_id: str, trade_date: str, run_id: str, mode: str,
                   data_health: dict | None, reconciliation: dict | None, preflight: dict | None,
-                  run_metadata: dict, ops_cfg: dict | None = None, extra_json: dict | None = None) -> Path:
+                  run_metadata: dict, ops_cfg: dict | None = None, extra_json: dict | None = None,
+                  crash_hook=None) -> Path:
     ops_cfg = ops_cfg or load_ops_config()
-    root = ops_path(ops_cfg, "submissions_dir") / ymd(trade_date) / "candidates" / run_id
+    final_root = ops_path(ops_cfg, "submissions_dir") / ymd(trade_date) / "candidates" / run_id
+    if final_root.exists():
+        raise FileExistsError(f"candidate {final_root} exists; packages are immutable (use a new run_id)")
+    root = final_root.with_name(f".{run_id}.partial")       # crash-safe: only a complete package is renamed
     if root.exists():
-        raise FileExistsError(f"candidate {root} exists; packages are immutable (use a new run_id)")
+        shutil.rmtree(root)
     root.mkdir(parents=True)
     doc = day_result.doc
     fname = f"D-Plan_{team_id}_{trade_date}.json"
@@ -66,12 +73,14 @@ def build_package(day_result, *, team_id: str, trade_date: str, run_id: str, mod
         "dplan_sources": doc["sources"],
         "raw_manifest_path": str(raw_manifest.relative_to(ROOT)) if raw_manifest.exists() else None,
         "raw_manifest_sha256": sha256_file(raw_manifest) if raw_manifest.exists() else None,
-        "store_manifest_hash": (data_health or {}).get("store_manifest_hash")})
+        "store_manifest_hash": run_metadata.get("data_snapshot_hash")})
     write_json(root / "data_health.json", data_health or {"note": "refresh not run"})
     write_json(root / "reconciliation.json", reconciliation or {"status": "UNAVAILABLE"})
     write_json(root / "preflight.json", preflight or {})
     for name, obj in (extra_json or {}).items():
         write_json(root / name, obj)
+    if crash_hook:
+        crash_hook("package_mid")
     meta = dict(run_metadata, dplan_sha256=sha256_file(root / fname), mode=mode, run_id=run_id)
     write_json(root / "run_metadata.json", meta)
     (root / "README.txt").write_text(
@@ -85,12 +94,16 @@ def build_package(day_result, *, team_id: str, trade_date: str, run_id: str, mod
                                         "files": [{"filename": p.name, "sha256": sha256_file(p), "size": p.stat().st_size,
                                                    "created_at": datetime.fromtimestamp(p.stat().st_mtime, TPE).isoformat()}
                                                   for p in files]})
-    return root
+    os.replace(root, final_root)
+    return final_root
 
 
 def verify_package(pkg: Path) -> list[str]:
     """Re-hash every file against manifest.json. Returns problems (empty = intact)."""
-    m = json.loads((pkg / "manifest.json").read_text(encoding="utf-8"))
+    mp = pkg / "manifest.json"
+    if not mp.exists():
+        return ["manifest.json missing (incomplete package)"]
+    m = json.loads(mp.read_text(encoding="utf-8"))
     probs = []
     for f in m["files"]:
         p = pkg / f["filename"]
@@ -101,11 +114,61 @@ def verify_package(pkg: Path) -> list[str]:
     return probs
 
 
-def mark_final(pkg: Path, *, team_id: str, trade_date: str, mode: str, ops_cfg: dict | None = None) -> dict:
-    """Promote a candidate to FINAL_CANDIDATE after strict checks. Returns {ok, reasons, ...}."""
+def history(trade_date: str, ops_cfg: dict | None = None) -> list[dict]:
+    p = ops_path(ops_cfg or load_ops_config(), "submissions_dir") / ymd(trade_date) / "final_history.jsonl"
+    return [json.loads(x) for x in p.read_text(encoding="utf-8").splitlines() if x.strip()] if p.exists() else []
+
+
+def active_final(trade_date: str, ops_cfg: dict | None = None) -> dict | None:
+    act = [h for h in history(trade_date, ops_cfg) if h.get("event", "MARKED") in ("MARKED", "REPLACED")]
+    return act[-1] if act else None
+
+
+def _append_history(day: Path, rec: dict) -> None:
+    day.mkdir(parents=True, exist_ok=True)
+    with open(day / "final_history.jsonl", "a", encoding="utf-8") as f:
+        f.write(json.dumps(rec, ensure_ascii=False) + "\n")
+
+
+def banner(rec: dict, mode: str, cutoff: str | None = None) -> str:
+    comp = mode == "competition"
+    big = f"#####  {rec['trade_date']}  #####  {rec['team_id']}  #####"
+    lines = [BANNER, BANNER]
+    if not comp:
+        lines += ["***  DRY-RUN — NOT A COMPETITION SUBMISSION — DO NOT UPLOAD  ***"]
+    lines += [big, f"FINAL_CANDIDATE   status {'READY' if comp else 'NOT FOR UPLOAD'}   mode {mode.upper()}",
+              BANNER,
+              f"{'UPLOAD THIS FILE' if comp else 'DRY-RUN FILE    '} : {rec['path']}",
+              f"TRADE DATE       : {rec['trade_date']}",
+              f"TEAM ID          : {rec['team_id']}",
+              f"FILE NAME        : {rec['file']}",
+              f"SHA256           : {rec['sha256']}",
+              f"VALIDATION       : PASS",
+              f"DECISION FP      : {rec.get('decision_fingerprint')}",
+              f"GENERATED AT     : {rec['generated_at']}",
+              f"GIT SHA          : {rec['git_sha']}",
+              f"RUN ID           : {rec['run_id']}",
+              f"MODE             : {mode.upper()}",
+              f"CUT-OFF          : {cutoff or '-'}  (submission window closes; do not upload after)",
+              f"FROZEN BY        : {rec.get('operator')}  at {rec.get('marked_at')}",
+              BANNER,
+              "Before uploading: confirm the DATE and TEAM above, and that the upload window is open.",
+              "After uploading: record the receipt: python -m agent.submission.receipt --date ... --sha256 ...",
+              "A generated file is NOT a submission: state stays READY_TO_SUBMIT until a receipt matches."]
+    return "\n".join(lines) + "\n"
+
+
+def mark_final(pkg: Path, *, team_id: str, trade_date: str, mode: str, ops_cfg: dict | None = None,
+               operator: str = "agent", replace: bool = False, reason: str | None = None,
+               cutoff: str | None = None) -> dict:
+    """Promote a candidate to FINAL after strict checks. Returns {ok, reasons, ...}.
+    If a FINAL already exists: refused with kept=True unless replace=True with an operator and a reason."""
     ops_cfg = ops_cfg or load_ops_config()
     reasons = []
     fname = f"D-Plan_{team_id}_{trade_date}.json"
+    day = ops_path(ops_cfg, "submissions_dir") / ymd(trade_date)
+    if not (pkg / "run_metadata.json").exists():
+        return {"ok": False, "reasons": ["incomplete package (no run_metadata.json)"]}
     meta = json.loads((pkg / "run_metadata.json").read_text(encoding="utf-8"))
     rep = json.loads((pkg / "validation_report.json").read_text(encoding="utf-8"))
     dp = pkg / fname
@@ -122,36 +185,45 @@ def mark_final(pkg: Path, *, team_id: str, trade_date: str, mode: str, ops_cfg: 
     if not rep.get("ok"):
         reasons.append("validation FAIL")
     reasons += verify_package(pkg)
-    day = ops_path(ops_cfg, "submissions_dir") / ymd(trade_date)
     if reasons:
         return {"ok": False, "reasons": reasons}
+    cur = active_final(trade_date, ops_cfg)
+    cur_ok = cur is not None and (day / "FINAL" / cur["file"]).exists()
+    if cur_ok and not replace:
+        _append_history(day, {"event": "REFUSED_FROZEN", "at": datetime.now(TPE).isoformat(), "run_id": meta["run_id"],
+                              "sha256": meta["dplan_sha256"], "existing_sha256": cur["sha256"]})
+        return {"ok": False, "kept": True, "existing": cur,
+                "reasons": [f"FINAL already frozen ({cur['run_id']}); use replace-final to change it"]}
+    if replace and cur_ok and (not (reason or "").strip() or not (operator or "").strip() or operator == "agent"):
+        return {"ok": False, "reasons": ["replace-final requires a human operator name and a reason"]}
     final_dir = day / "FINAL"
     final_dir.mkdir(parents=True, exist_ok=True)
-    for old in final_dir.glob("*.json"):
-        old.unlink()                                   # FINAL holds exactly one file; history keeps the trail
     dst = final_dir / fname
-    shutil.copy2(dp, dst)
-    sha = sha256_file(dst)
+    tmp = final_dir / f".{fname}.tmp"
+    shutil.copy2(dp, tmp)
+    sha = sha256_file(tmp)
     if sha != meta["dplan_sha256"]:
-        dst.unlink()
+        tmp.unlink()
         return {"ok": False, "reasons": ["copy hash mismatch"]}
-    rec = {"marked_at": datetime.now(TPE).isoformat(), "trade_date": trade_date, "team_id": team_id, "file": fname,
+    os.replace(tmp, dst)                                   # atomic: FINAL is never half-written
+    for old in final_dir.glob("*.json"):
+        if old.name != fname:
+            old.unlink()                                   # FINAL holds exactly one file; history keeps the trail
+    now = datetime.now(TPE).isoformat()
+    rec = {"event": "REPLACED" if (replace and cur_ok) else "MARKED", "marked_at": now, "trade_date": trade_date,
+           "team_id": team_id, "file": fname,
            "path": str(dst.relative_to(ROOT)) if dst.is_relative_to(ROOT) else str(dst), "sha256": sha,
            "validation": "PASS", "run_id": meta["run_id"], "git_sha": meta.get("git_sha"),
-           "generated_at": meta.get("generated_at"), "mode": mode}
-    warn = ("*** DRY-RUN — NOT A COMPETITION SUBMISSION — DO NOT UPLOAD ***\n" if mode != "competition" else "")
-    (day / "FINAL_CANDIDATE.txt").write_text(
-        f"{BANNER}\n{warn}FINAL_CANDIDATE   trade date {trade_date}   team {team_id}\n{BANNER}\n"
-        f"{'UPLOAD THIS FILE' if mode == 'competition' else 'DRY-RUN FILE    '} : {rec['path']}\n"
-        f"FILE NAME        : {fname}\n"
-        f"SHA256           : {sha}\n"
-        f"VALIDATION       : PASS\n"
-        f"GENERATED AT     : {rec['generated_at']}\n"
-        f"GIT SHA          : {rec['git_sha']}\n"
-        f"RUN ID           : {rec['run_id']}\n"
-        f"MODE             : {mode.upper()}\n{BANNER}\n"
-        "Before uploading: confirm the date and team id above, and that the upload window is open.\n"
-        "After uploading: save the platform receipt into this folder (receipt_*.png/pdf/txt).\n", encoding="utf-8")
-    with open(day / "final_history.jsonl", "a", encoding="utf-8") as f:
-        f.write(json.dumps(rec, ensure_ascii=False) + "\n")
+           "generated_at": meta.get("generated_at"), "mode": mode, "operator": operator,
+           "decision_fingerprint": meta.get("decision_fingerprint")}
+    if rec["event"] == "REPLACED":
+        rec.update(old_sha256=cur["sha256"], old_run_id=cur["run_id"], reason=reason)
+    write_json(day / "FINAL_FREEZE.json", {
+        "trade_date": trade_date, "team_id": team_id, "file": fname, "sha256": sha, "git_sha": meta.get("git_sha"),
+        "decision_fingerprint": meta.get("decision_fingerprint"), "data_snapshot_hash": meta.get("data_snapshot_hash"),
+        "settlement_hash": meta.get("settlement_hash"), "config_hashes": meta.get("config_hashes"),
+        "generated_at": meta.get("generated_at"), "frozen_at": now, "operator": operator, "run_id": meta["run_id"],
+        "mode": mode, "replaces": rec.get("old_sha256")})
+    (day / "FINAL_CANDIDATE.txt").write_text(banner(rec, mode, cutoff), encoding="utf-8")
+    _append_history(day, rec)
     return {"ok": True, **rec}

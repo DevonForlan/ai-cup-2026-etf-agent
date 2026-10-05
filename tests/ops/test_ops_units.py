@@ -2,6 +2,7 @@
 deadline guard, package / manifest / FINAL_CANDIDATE / archive, first-seen ledger."""
 import dataclasses
 import json
+from pathlib import Path
 from decimal import Decimal
 
 import pytest
@@ -111,8 +112,13 @@ def test_refresh_optional_failure_is_warn_critical_is_block(ops_cfg, fixture_sto
             "stale", "error", "duration"} <= set(ok["sources"][0])
     w = refresh(T1, store=fixture_store, fetchers=_fake(fail={"us_market", "taifex_night"}), ops_cfg=ops_cfg, clock=clk)
     assert w["level"] == WARN
-    b = refresh(T1, store=fixture_store, fetchers=_fake(fail={"twse_prices"}), ops_cfg=ops_cfg, clock=clk)
-    assert b["level"] == BLOCK
+    c = refresh(T1, store=fixture_store, fetchers=_fake(fail={"twse_prices"}), ops_cfg=ops_cfg, clock=clk)
+    assert c["level"] == WARN                # fetch failed but T-1 prices already in the store -> CACHED
+    assert next(x for x in c["sources"] if x["source"] == "twse_prices")["status"] == "CACHED"
+    from tests.ops.conftest import store_without_date
+    st2 = store_without_date(fixture_store, Path(ops_cfg["paths"]["settlement_dir"]).parent / "st2", "2026-10-23")
+    b = refresh(T1, store=st2, fetchers=_fake(fail={"twse_prices"}), ops_cfg=ops_cfg, clock=clk)
+    assert b["level"] == BLOCK               # T-1 missing: never use an outdated critical price
     stale = refresh(T1, store=fixture_store, fetchers=_fake(latest="2026-10-21"), ops_cfg=ops_cfg, clock=clk)
     assert stale["level"] == BLOCK          # T-1 prices missing (stale) is critical
     assert (tmp := ops_cfg["paths"]["ops_logs_dir"]) and json.loads(
@@ -226,20 +232,26 @@ def test_package_contents_and_manifest(day1, ops_cfg):
 
 def test_final_candidate_single_and_conspicuous(day1, ops_cfg):
     a = mark_final(_pkg(day1, ops_cfg, "r1"), team_id="TEAM_TEST", trade_date=T1, mode="competition", ops_cfg=ops_cfg)
-    b = mark_final(_pkg(day1, ops_cfg, "r2"), team_id="TEAM_TEST", trade_date=T1, mode="competition", ops_cfg=ops_cfg)
-    assert a["ok"] and b["ok"]
-    from pathlib import Path
+    kept = mark_final(_pkg(day1, ops_cfg, "r2"), team_id="TEAM_TEST", trade_date=T1, mode="competition", ops_cfg=ops_cfg)
+    assert not kept["ok"] and kept["kept"]                     # frozen: never replaced silently
+    p2 = Path(ops_cfg["paths"]["submissions_dir"]) / "20261026" / "candidates" / "r2"
+    assert not mark_final(p2, team_id="TEAM_TEST", trade_date=T1, mode="competition", ops_cfg=ops_cfg,
+                          replace=True, reason="")["ok"]                # replacement needs operator + reason
+    b = mark_final(p2, team_id="TEAM_TEST", trade_date=T1, mode="competition", ops_cfg=ops_cfg, replace=True,
+                   reason="test replacement", operator="operator A")
+    assert a["ok"] and b["ok"] and b["event"] == "REPLACED" and b["old_sha256"] == a["sha256"]
     day = Path(ops_cfg["paths"]["submissions_dir"]) / "20261026"
     assert [x.name for x in (day / "FINAL").glob("*.json")] == [f"D-Plan_TEAM_TEST_{T1}.json"]
     txt = (day / "FINAL_CANDIDATE.txt").read_text(encoding="utf-8")
     assert b["sha256"] in txt and "TEAM_TEST" in txt and T1 in txt and "VALIDATION       : PASS" in txt
     assert "UPLOAD THIS FILE" in txt and "DRY-RUN" not in txt
     assert "RUN ID           : r2" in txt
-    assert len((day / "final_history.jsonl").read_text(encoding="utf-8").splitlines()) == 2
+    events = [json.loads(x)["event"] for x in (day / "final_history.jsonl").read_text(encoding="utf-8").splitlines()]
+    assert events == ["MARKED", "REFUSED_FROZEN", "REPLACED"]          # nothing deleted
+    assert json.loads((day / "FINAL_FREEZE.json").read_text(encoding="utf-8"))["operator"] == "operator A"
 
 
 def test_final_refused_for_wrong_team_date_hash_or_invalid(day1, ops_cfg):
-    from pathlib import Path
     day = Path(ops_cfg["paths"]["submissions_dir"]) / "20261026"
     p = _pkg(day1, ops_cfg, "w1")
     assert not mark_final(p, team_id="TEAM_OTHER", trade_date=T1, mode="competition", ops_cfg=ops_cfg)["ok"]

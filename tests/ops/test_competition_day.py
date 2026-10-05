@@ -12,8 +12,8 @@ from agent.competition_day import operator_summary, run_competition_day
 from agent.llm.providers.mock import MockProvider
 from agent.ops.common import Clock
 from agent.ops.settle_internal import settle_day
-from agent.ops.settlement import load_internal, save_internal, save_official
-from tests.ops.conftest import CLEAN_GIT
+from agent.ops.settlement import load_internal, save_internal
+from tests.ops.conftest import CLEAN_GIT, enter_official, store_without_date
 from tests.ops.test_ops_units import _fake
 
 T1, T2 = "2026-10-26", "2026-10-27"
@@ -33,6 +33,12 @@ def day1_settled(store, ops_cfg, rb):
     st = settle_day(T1, store=store, ops_cfg=ops_cfg, initial_cash=rb.rules.initial_cash)
     assert st.agent_state, "agent_state must come from the FINAL package"
     return s, st
+
+
+def save_official(off, ops_cfg):
+    r = enter_official(off, ops_cfg, Path(ops_cfg["paths"]["settlement_dir"]).parent / "entry")
+    assert r["status"] == "DOUBLE_ENTRY_MATCH", r["problems"]
+    return r
 
 
 def official_from(st, **over):
@@ -153,10 +159,18 @@ def test_optional_source_failure_never_blocks_quant_dplan(fixture_store, ops_cfg
     assert s["status"] == "DRY_RUN_OK" and s["validation"] == "PASS"
 
 
-def test_critical_source_failure_blocks(fixture_store, ops_cfg):
-    s = run(fixture_store, ops_cfg, T1, CLK1, initial=True, skip_refresh=False,
+def test_critical_source_failure_blocks_when_store_lacks_t1(fixture_store, ops_cfg, tmp_path):
+    st = store_without_date(fixture_store, tmp_path / "st", "2026-10-23")
+    s = run(st, ops_cfg, T1, CLK1, initial=True, skip_refresh=False,
             refresh_fetchers=_fake(latest="2026-10-23", fail={"twse_prices"}))
     assert s["status"] == "BLOCKED" and "twse_prices" in s["reason"]
+
+
+def test_critical_source_failure_with_t1_in_store_is_degraded_not_blocked(fixture_store, ops_cfg):
+    """Network drill: T-1 prices already fetched, source unreachable now -> CACHED -> DEGRADED run (L2)."""
+    s = run(fixture_store, ops_cfg, T1, CLK1, mode="dry-run", initial=True, skip_refresh=False,
+            refresh_fetchers=_fake(latest="2026-10-23", fail={"twse_prices", "tpex_prices"}))
+    assert s["status"] == "DRY_RUN_OK" and s["data_health"] == "WARN" and s["degradation_level"] == 2
 
 
 def test_human_accept_official_after_block_then_run_proceeds(fixture_store, ops_cfg, rb):

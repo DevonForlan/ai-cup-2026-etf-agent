@@ -64,11 +64,11 @@ def healthcheck(trade_date: str, *, mode: str = "dry-run", ops_cfg: dict | None 
         comps["strategy"] = Check("strategy", PASS if h == fz["strategy_sha256"] else BLOCK,
                                   f"{fz['strategy_config']} {'== freeze ' + fz['frozen_in_commit'] if h == fz['strategy_sha256'] else 'CHANGED since freeze'}")
     # D-Plan / FINAL_CANDIDATE
-    hist = sub / "final_history.jsonl"
-    if not hist.exists():
+    from agent.ops.package_submission import active_final
+    last = active_final(trade_date, ops_cfg)
+    if last is None:
         comps["dplan"] = Check("dplan", BLOCK, "no FINAL_CANDIDATE for this trade date")
     else:
-        last = json.loads(hist.read_text(encoding="utf-8").strip().splitlines()[-1])
         f = ROOT / last["path"] if not Path(last["path"]).is_absolute() else Path(last["path"])
         ok = f.exists() and sha256_file(f) == last["sha256"]
         if not ok:
@@ -98,6 +98,20 @@ def healthcheck(trade_date: str, *, mode: str = "dry-run", ops_cfg: dict | None 
     g = git or git_info()
     comps["git"] = Check("git", PASS if not g["dirty_paths"] else (BLOCK if comp else WARN),
                          f"git:{g['sha']} {g['branch']}" + (f" dirty {g['dirty_paths'][:5]}" if g["dirty_paths"] else ""))
+    # interrupted runs / locks (Round 06)
+    from agent.data.locks import find_locks
+    from agent.ops.archive_run import partial_dirs
+    parts = partial_dirs(ops_cfg)
+    locks = find_locks(ROOT / "data" / "raw") if (ROOT / "data" / "raw").exists() else []
+    comps["outputs"] = Check("outputs", WARN if parts or locks else PASS,
+                             f"{len(parts)} interrupted .partial folders, {len(locks)} lock files"
+                             + (f": {[p.name for p in parts[:3]]}" if parts else ""))
+    # submission state: a generated file is not a submission
+    from agent.submission.base import get_state
+    sub_state = get_state(trade_date, ops_cfg)["state"]
+    comps["submission"] = Check("submission", {"SUBMISSION_CONFIRMED": PASS, "READY_TO_SUBMIT": PASS,
+                                               "SUBMITTED_UNVERIFIED": WARN, "NOT_READY": WARN if not comp else BLOCK,
+                                               "REJECTED": BLOCK, "UNKNOWN": BLOCK}[sub_state], sub_state)
     lvl = worst(c.level for c in comps.values())
     res = {"trade_date": trade_date, "mode": mode, "checked_at": clock.now().isoformat(), "status": LABEL[lvl],
            "components": {k: {"status": LABEL[c.level], "detail": c.detail} for k, c in comps.items()}}

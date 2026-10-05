@@ -26,6 +26,7 @@ preflight:
   etf_stale_days_warn: 3                # calendar days since newest real ETF holding date
   etf_stale_days_block: 10
   require_official_settlement_in_competition: true
+  block_clock_skew_sec: 600             # competition: BLOCK above this (deadline logic unreliable)
   max_clock_skew_sec: 120               # vs. an HTTP Date header (best effort, WARN only)
   python_min: "3.12"
 
@@ -41,8 +42,26 @@ paths:
   ops_logs_dir: logs/ops
   etf_snapshots_dir: data/raw/active_etf
   first_seen_ledger: data/observations/mops_revenue_first_seen.parquet
+  ops_reports_dir: reports/ops_daily
 
 freeze:                  # docs/STRATEGY_FREEZE_RECORD.md; preflight/healthcheck BLOCK on mismatch in competition mode
   strategy_config: config/strategy_quant_v1.yaml
   strategy_sha256: "sha256:f34fa02e924011b20c52a4bd42e961169f97e1950e76e04b7e78dc43ac23d2e0"
   frozen_in_commit: f4dfb66
+
+sla:                     # internal operational health thresholds (seconds), not official SLAs
+  quant_sec: 10
+  validation_sec: 10
+  package_sec: 10
+  archive_sec: 10
+  data_refresh_sec: 300
+
+settlement_entry:
+  nav_tolerance_rel: 0.0005      # official NAV vs sum(shares x close) + cash
+
+etf_fetch:
+  max_workers: 1                 # see reports/round06_etf_parallel.json before raising (<= 5)
+  previous_dates: 3              # retry policy: previous published dates before the stored fallback
+
+locks:
+  stale_after_sec: 120           # a lock older than this whose owner pid is gone may be recovered

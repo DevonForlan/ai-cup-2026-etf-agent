@@ -42,6 +42,7 @@ class SourceStatus:
     error: str | None = None
     duration: float = 0.0
     detail: dict = field(default_factory=dict)
+    fallback: str | None = None      # "store" when the result comes from a store probe after a failed fetch
 
 
 def prev_weekdays(d: str, n: int = 6) -> list[str]:
@@ -108,19 +109,70 @@ def _fetch_insti(market: str):
     return f
 
 
+def _etf_ok(r) -> bool:
+    return r is not None and r.status in ("ok", "stale") and bool(r.rows)
+
+
+def etf_fetch_with_policy(session, etf: str, fetch_one, run_date: str, prev_dates: int = 3):
+    """Round 06 retry policy: latest -> retry latest once -> up to `prev_dates` previous published dates
+    (issuers with history) -> None (caller keeps the STORED prior snapshot = STALE_FALLBACK).
+    Never fabricates today's data. Returns (Result | None, status, attempts)."""
+    attempts = []
+    for label in ("latest", "retry_latest"):
+        r = fetch_one(session, etf, None, save=True)
+        attempts.append({"try": label, "status": r.status, "reason": r.reason})
+        if _etf_ok(r):
+            return r, ("OK" if label == "latest" else "RETRY_OK"), attempts
+    for d in prev_weekdays(run_date, prev_dates):
+        r = fetch_one(session, etf, d, save=True)
+        attempts.append({"try": f"date {d}", "status": r.status, "reason": r.reason})
+        if _etf_ok(r):
+            return r, "PREVIOUS_DATE", attempts
+        if r.status == "no_history":                       # issuer shows latest only
+            break
+    return None, "STALE_FALLBACK", attempts
+
+
 def _fetch_etf(ctx):
-    """Latest holdings for all 30 official active ETFs + append-only daily snapshot (never overwrites)."""
+    """Holdings for all 30 official active ETFs + append-only daily snapshot (never overwrites).
+    Per-ETF retry / previous-date / stored-snapshot fallback; optional small parallelism (config
+    etf_fetch.max_workers, default 1 = sequential; issuers' rate limits are respected per request)."""
+    import threading
+    from concurrent.futures import ThreadPoolExecutor
     from agent.data.fetchers import etf_holdings as E
     from agent.config import load_active_etfs
-    s = E._session()
+    ecfg = ctx["ops_cfg"].get("etf_fetch") or {}
+    workers = max(1, min(int(ctx.get("etf_max_workers") or ecfg.get("max_workers", 1)), 5))
+    fetch_one = ctx.get("etf_fetch_one") or E.fetch_one
+    make_session = ctx.get("etf_session") or E._session
+    local = threading.local()
+
+    def one(etf):
+        if not hasattr(local, "s"):
+            local.s = make_session()                         # one HTTP session per worker thread
+        return etf, etf_fetch_with_policy(local.s, etf, fetch_one, ctx["run_date"], int(ecfg.get("previous_dates", 3)))
+
+    etfs = [x["etf"] for x in load_active_etfs()]
+    if workers == 1:
+        results = [one(e) for e in etfs]
+    else:
+        with ThreadPoolExecutor(max_workers=workers) as ex:
+            results = list(ex.map(one, etfs))
     snap_dir = ops_path(ctx["ops_cfg"], "etf_snapshots_dir") / ymd(ctx["run_date"])
     snap_dir.mkdir(parents=True, exist_ok=True)
     stamp = ctx["wall"].now().strftime("%H%M%S")
-    manifest, rows_all, latest, failed = [], [], [], []
-    for e in [x["etf"] for x in load_active_etfs()]:
-        r = E.fetch_one(s, e, None, save=True)
-        if r.status not in ("ok", "stale") or not r.rows:
-            failed.append({"etf": e, "status": r.status, "reason": r.reason})
+    stored = ctx["store"].load("etf_holdings")
+    stored_latest = stored.groupby("etf")["date"].max().to_dict() if len(stored) else {}
+    manifest, rows_all, latest, failed, by_status = [], [], [], [], {}
+    for e, (r, status, attempts) in results:
+        by_status[status] = by_status.get(status, 0) + 1
+        if r is None:
+            prior = stored_latest.get(e)
+            failed.append({"etf": e, "status": status, "prior_holdings_date": prior, "attempts": attempts})
+            manifest.append({"etf": e, "status": status, "file": None, "holdings_date": prior,
+                             "note": "stored prior snapshot kept; NOT today's data"})
+            if prior:
+                latest.append(prior)
             continue
         rows_all += r.rows
         latest.append(r.asof)
@@ -129,16 +181,27 @@ def _fetch_etf(ctx):
         if p.exists():
             raise RuntimeError(f"snapshot exists, refusing to overwrite {p}")
         p.write_bytes(body)
-        manifest.append({"etf": e, "file": p.name, "sha256": sha256_bytes(body), "holdings_date": r.asof,
-                         "rows": len(r.rows), "source_url": r.rows[0].get("source_url"),
-                         "published_at": r.rows[0].get("published_at"), "fetched_at": r.rows[0].get("fetched_at")})
+        manifest.append({"etf": e, "status": status, "file": p.name, "sha256": sha256_bytes(body),
+                         "holdings_date": r.asof, "rows": len(r.rows), "source_url": r.rows[0].get("source_url"),
+                         "published_at": r.rows[0].get("published_at"), "fetched_at": r.rows[0].get("fetched_at"),
+                         "attempts": len(attempts)})
     mf = snap_dir / f"manifest_{stamp}.json"
-    write_json(mf, {"snapshot_time": ctx["wall"].now().isoformat(), "files": manifest, "failed": failed})
-    n = E.store_rows(rows_all) if rows_all else 0
-    if not manifest:
-        raise RuntimeError(f"no ETF holdings fetched ({len(failed)} failed)")
+    if mf.exists():
+        raise RuntimeError(f"snapshot manifest exists, refusing to overwrite {mf}")
+    write_json(mf, {"snapshot_time": ctx["wall"].now().isoformat(), "workers": workers, "by_status": by_status,
+                    "files": manifest, "failed": failed})
+    rows_all = [x for x in rows_all if not x.get("synthetic")]
+    n = ctx["store"].upsert("etf_holdings", rows_all) if rows_all else 0
+    fresh = sum(v for k, v in by_status.items() if k != "STALE_FALLBACK")
+    if not fresh:
+        raise RuntimeError(f"no ETF holdings fetched ({len(failed)} on stored fallback)")
+    try:
+        mrel = str(mf.relative_to(ROOT))
+    except ValueError:
+        mrel = str(mf)
     return {"records": n, "latest_available_date": min(latest), "content_as_of": max(latest),
-            "detail": {"etfs_ok": len(manifest), "etfs_failed": failed, "snapshot_manifest": str(mf.relative_to(ROOT))}}
+            "detail": {"etfs_fresh": fresh, "by_status": by_status, "etfs_fallback": failed,
+                       "workers": workers, "snapshot_manifest": mrel}}
 
 
 def _fetch_corporate_actions(ctx):
@@ -255,6 +318,65 @@ DEFAULT_FETCHERS: dict[str, Callable] = {
     "mops_revenue_first_seen": _fetch_revenue_first_seen, "mops_material_info": _fetch_material,
     "taifex_night": _fetch_taifex, "us_market": _fetch_us,
 }
+# ----------------------------------------------------------------------------- store probes
+# When a fetch fails (network down, site error) the run may still be fine if the store ALREADY holds the
+# required rows (fetched earlier). A probe returns the newest usable date in the store (<= the date a
+# decision for trade_date may use) -> status CACHED. It never invents or forward-fills data: a missing T-1
+# critical price stays FAILED/STALE -> BLOCK.
+def _probe_prices(market: str):
+    def f(store, trade_date):
+        uni = {t for t, v in load_universe().items() if v["market"] == ("TWSE" if market == "twse" else "TPEx")}
+        p = store.load("daily_prices")
+        p = p[(p["date"] < trade_date) & p["ticker"].isin(uni)]
+        if not len(p):
+            return None
+        cnt = p.groupby("date")["ticker"].nunique()
+        ok = cnt[cnt >= 0.9 * len(uni)]
+        return max(ok.index) if len(ok) else None
+    return f
+
+
+def _probe_insti(market: str):
+    def f(store, trade_date):
+        uni = {t for t, v in load_universe().items() if v["market"] == ("TWSE" if market == "twse" else "TPEx")}
+        p = store.load("institutional")
+        p = p[(p["date"] < trade_date) & p["ticker"].isin(uni)]
+        return max(p["date"]) if len(p) else None
+    return f
+
+
+def _probe_etf(store, trade_date):
+    e = store.load("etf_holdings")
+    e = e[e["date"] < trade_date]
+    return min(e.groupby("etf")["date"].max()) if len(e) else None
+
+
+def _probe_overnight(symbols):
+    def f(store, trade_date):
+        m = store.load("market_overnight")
+        m = m[(m["date"] <= trade_date) & m["symbol"].isin(symbols)]
+        if not len(m) or set(m["symbol"]) < set(symbols):
+            return None
+        return min(m.groupby("symbol")["date"].max())
+    return f
+
+
+STORE_PROBES: dict[str, Callable] = {
+    "twse_prices": _probe_prices("twse"), "tpex_prices": _probe_prices("tpex"),
+    "twse_institutional": _probe_insti("twse"), "tpex_institutional": _probe_insti("tpex"),
+    "etf_holdings": _probe_etf, "taifex_night": _probe_overnight(["TXF_NIGHT"]),
+    "us_market": _probe_overnight(["SPX", "SOX", "TSM", "USDTWD"]),
+}
+
+
+def offline_fetchers(reason: str = "network unavailable (offline mode)") -> dict[str, Callable]:
+    """Every source 'fails' without touching the network -> each result comes only from a store probe.
+    Used for replay rehearsals and the network-down drill."""
+    def fail(ctx):
+        raise ConnectionError(reason)
+    return {k: fail for k in DEFAULT_FETCHERS}
+
+
 HEAVY = {"etf_holdings", "corporate_actions", "mops_material_info", "mops_revenue_first_seen"}
 
 
@@ -301,6 +423,16 @@ def refresh(trade_date: str, *, store: HistoryStore | None = None, fetchers: dic
         except Exception as e:  # noqa: BLE001
             st.status = "FAILED"
             st.error = f"{type(e).__name__}: {e}"[:400]
+            probe = (ctx.get("probes") or STORE_PROBES).get(name)
+            latest = probe(store, trade_date) if probe else None
+            if latest:
+                lag = stale_trading_days(latest, prev_weekdays(trade_date, 1)[0]) if len(latest) == 10 else None
+                st.latest_available_date = latest
+                st.fallback = "store"
+                if lag is not None and lag <= int(meta.get("max_stale_trading_days", 0)):
+                    st.status = "CACHED"                # required rows already in the store
+                else:
+                    st.status, st.stale = "STALE", True
         st.duration = round(time.perf_counter() - t0, 2)
         lg.info(f"{name} {st.status} records={st.records} latest={st.latest_available_date} {st.error or ''}")
         out.append(st)
@@ -319,6 +451,8 @@ def summarize(trade_date: str, sts: list[SourceStatus], store: HistoryStore) -> 
                 lvl = "BLOCK"
             elif lvl != "BLOCK":
                 lvl = "WARN"
+        elif s.status == "CACHED" and lvl == "PASS":
+            lvl = "WARN"                     # fetch failed but store already holds the rows -> DEGRADED run
     hashes = {p.name: sha256_file(p) for p in sorted(store.root.glob("*.parquet"))}
     return {"trade_date": trade_date, "level": lvl, "sources": [asdict(s) for s in sts],
             "store_manifest_hash": __import__("agent.ops.common", fromlist=["sha256_json"]).sha256_json(hashes),

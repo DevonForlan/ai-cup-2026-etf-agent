@@ -1,0 +1,11 @@
+# Official settlement copied from the organiser's back office. One row per holding.
+# shares = integer number of shares (not lots). Special rows at the end; __WARNINGS__ = rule ids
+# separated by ';' (empty if none). Enter twice (A and B files) and use --verify-file.
+ticker,shares
+2330,17000
+2317,50000
+__DATE__,2026-10-27
+__CASH__,123456789.00
+__NAV__,1000000000.00
+__ACCRUED__,0
+__WARNINGS__,

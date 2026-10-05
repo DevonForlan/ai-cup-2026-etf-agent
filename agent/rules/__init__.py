@@ -1,0 +1,1 @@
+"""Rule adapters (organizer clarifications)."""
