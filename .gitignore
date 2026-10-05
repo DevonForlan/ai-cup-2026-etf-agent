@@ -17,10 +17,10 @@ logs/llm/
 logs/llm_eval/
 # round 05 operational outputs (local, immutable; indexed by audit/ manifests)
 logs/ops/
-submissions/
-archive/
+/submissions/
+/archive/
 data/settlement/
 data/observations/
 reports/ops_daily/
-rehearsal/
-backups/
+/rehearsal/
+/backups/

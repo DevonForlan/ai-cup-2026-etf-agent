@@ -1,0 +1,58 @@
+{
+ "generated_at": "2026-10-05T15:10:50.608149+08:00",
+ "days": [
+  {
+   "day": "20261001",
+   "candidates": 4,
+   "final_history_sha256": "sha256:91fbb01ee814b077b8e7c701049f39db0db8981fec8cb66a816f320ca598f17b",
+   "final_freeze": null,
+   "submission_state": "NOT_READY",
+   "receipts": 0
+  },
+  {
+   "day": "20261002",
+   "candidates": 1,
+   "final_history_sha256": "sha256:a4e69f33067d4de833149dbee445fabee283e42695786a42ff8c5e1ebf9adbf8",
+   "final_freeze": null,
+   "submission_state": "NOT_READY",
+   "receipts": 0
+  },
+  {
+   "day": "20261005",
+   "candidates": 2,
+   "final_history_sha256": "sha256:fd082bb1c62673d3832d059b4b74b7eefd6c1e149ace7762ab4110f6bf129fc1",
+   "final_freeze": null,
+   "submission_state": "NOT_READY",
+   "receipts": 0
+  },
+  {
+   "day": "20261006",
+   "candidates": 1,
+   "final_history_sha256": "sha256:e0ca14d13269d329f6b7cc656d26b19fd227decb775b0a0ca9e1a3a1f533c1c9",
+   "final_freeze": {
+    "trade_date": "2026-10-06",
+    "team_id": "TEAM_TEST",
+    "file": "D-Plan_TEAM_TEST_2026-10-06.json",
+    "sha256": "sha256:18b1e65ba1c490a8ec8a60190218b95c89d5166d5ed1a2d2190835fed41f65d0",
+    "git_sha": "git:1b1aed1",
+    "decision_fingerprint": "sha256:9244aacbf78c107c1b7967859615eb5d919210f9e510004d40f645fec2ce0bd8",
+    "data_snapshot_hash": "sha256:c123069733bbecbbf4ca1e4274b865c5601be3c7d7ba864cc98782ba7fc3dcf0",
+    "settlement_hash": "sha256:7ba9780a639e97ef6c3979b14b8b48544b4196cedcfbc0ea92635419250860f1",
+    "config_hashes": {
+     "strategy": "sha256:f34fa02e924011b20c52a4bd42e961169f97e1950e76e04b7e78dc43ac23d2e0",
+     "competition": "sha256:9e7bf459d419b68e6e5f86319166be9c8710cb7584a7e02a71bf5b74ab119ba0",
+     "unconfirmed_rules": "sha256:f430f315b346390d6ca82872dbe91ce55ad9160b9a0cbdae2926b26cfea60f4b",
+     "ops": "sha256:11f1317bff3aca3f9a34c4a603b7ce2c24d00cb1be9672151a38ccfed3739391"
+    },
+    "generated_at": "2026-10-05T19:35:00+08:00",
+    "frozen_at": "2026-10-05T15:09:52.167248+08:00",
+    "operator": "agent",
+    "run_id": "20261005_193500_git1b1aed1",
+    "mode": "dry-run",
+    "replaces": null
+   },
+   "submission_state": "NOT_READY",
+   "receipts": 0
+  }
+ ]
+}
