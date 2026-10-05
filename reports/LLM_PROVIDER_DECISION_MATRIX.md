@@ -25,3 +25,14 @@
 附註（非主推薦）：
 - **SDK_OPTIONAL**：Claude Agent SDK provider 保留為可選能力，取得 Anthropic API key 並通過 `docs` / 報告列出的資格測試前不啟用；即使通過也只建議作為選項，不作預設。
 - 若未來想用真實 LLM 敘事，優先順序：**Gemini API（比賽 credit）≈ Anthropic API（直接呼叫）> Claude Agent SDK**——敘事只需單次文字生成，Agent SDK 的 agent loop / 工具在此是需要額外鎖住的風險面，且多出啟動延遲。
+
+## Round 06B 補充：Claude Code CLI（本人登入，`claude -p`）
+| 項目 | Claude Code CLI runtime |
+|---|---|
+| 需要 API key | 否（使用本人 claude.ai 登入；本機為 Team 組織帳號） |
+| 官方支援程度 | 個人 / scripted 使用：SUPPORTED；比賽使用：UNCLEAR；替他人提供：NOT_SUPPORTED |
+| 實測 | 20/20 schema、grounding 100%、0 工具違規、0 session 洩漏、3 / 15 日 replay 決策 100% 不變、Replay 完全重現 |
+| 延遲 | p50 約 12–21 s / 次、thesis 最長 68 s（每日約 40–90 s） |
+| 狀態 | 已實作、`--llm-provider claude-cli` 選用；預設 Template |
+| 推薦 | **CLAUDE_CLI_EXPERIMENTAL_ONLY**（需公司授權 + 比賽使用 UNCLEAR） |
+詳見 `reports/ROUND_06B_CLAUDE_CLI_RUNTIME_REPORT.md`。
