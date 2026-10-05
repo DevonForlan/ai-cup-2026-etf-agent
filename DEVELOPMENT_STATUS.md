@@ -1,6 +1,7 @@
 # DEVELOPMENT STATUS
 
-> Last update: 2026-10-05 (Round 05). Round 05 report: `reports/ROUND_05_OPERATIONAL_READINESS_REPORT.md`, checklist `reports/COMPETITION_READINESS_CHECKLIST.md` — readiness **DRY_RUN_READY**.
+> Last update: 2026-10-05 (Round 06). Round 06 report: `reports/ROUND_06_COMPETITION_REHEARSAL_REPORT.md`, release candidate `reports/ROUND_06_RELEASE_CANDIDATE.md`, checklist `reports/COMPETITION_READINESS_CHECKLIST.md` — readiness **DRY_RUN_READY** (NC-1 unresolved).
+> Round 05 report: `reports/ROUND_05_OPERATIONAL_READINESS_REPORT.md`.
 > Round 04 report: `reports/ROUND_04_LLM_INTEGRATION_REPORT.md`.
 > (Round 03 notes below still apply.) Reports: `reports/ROUND_03_STRATEGY_OPTIMIZATION_REPORT.md` (strategy),
 > `logs/development/ROUND_02_DEVELOPMENT_REPORT.md` (MVP-0). AI-generated — human review required (company policy).
@@ -69,3 +70,12 @@ See `config/unconfirmed_rules.yaml` and report §17 (NC-1, NC-2, NC-3, NC-4, NC-
 - Fixes: legal rebalance after passive cash drift (`d6a45ca`, W1–W5 unchanged); observation timestamps use the wall clock (`df6d042`).
 - REAL_LLM_STATUS = BLOCKED_NO_API_KEY → competition uses Template narrative.
 - Outputs (gitignored): `logs/ops/`, `submissions/`, `archive/`, `data/settlement/`, `data/observations/`, `data/raw/active_etf/`.
+
+## Round 06 (competition rehearsal)
+- 24-day full dress rehearsal (`agent/ops/rehearsal.py`): replay 24/24 (NAV = baseline every day) and clock-sim (competition mode, all gates) 24/24; ledger continuity checked daily.
+- Manual official settlement: `agent/ops/settlement_entry.py` (validation, double entry, confirmation gate) + `docs/OFFICIAL_SETTLEMENT_ENTRY_SOP.md`.
+- Submission framework `agent/submission/` (manual provider, receipts, state machine; nothing uploads).
+- `agent/rules/organizer_clarifications.py` (no answer on file -> every NC rule ASSUMPTION).
+- Decision fingerprint, candidate compare, FINAL freeze + replace-final, crash-safe packages/archives, pid-aware stale-lock recovery, holiday-aware staleness, ETF retry/STALE_FALLBACK + 3 workers, store-probe CACHED mode.
+- Soak 100 iterations, failure injection round 2 17/17, restore drill, security scan, readiness score, verify_release.
+- Real LLM still BLOCKED_NO_API_KEY. CTBC ETFs 00983A/00995A/00406A return empty (stored fallback).

@@ -1,0 +1,57 @@
+{
+ "sha": "HEAD",
+ "checks": [
+  {
+   "check": "commit exists",
+   "ok": true,
+   "detail": "e93e953232646d293a420d3804c11c186829c46d"
+  },
+  {
+   "check": "strategy config == freeze record",
+   "ok": true,
+   "detail": "sha256:f34fa02e924011b20c52a4bd42e961169f97e1950e76e04b7e78dc43ac23d2e0"
+  },
+  {
+   "check": "official input unchanged: config/competition.yaml",
+   "ok": true,
+   "detail": "sha256:9e7bf459d419b68e"
+  },
+  {
+   "check": "official input unchanged: D-Plan.schema_v4.2.json",
+   "ok": true,
+   "detail": "sha256:8787f041c3acc3e9"
+  },
+  {
+   "check": "official input unchanged: config/universe_150.csv",
+   "ok": true,
+   "detail": "sha256:5ceda5c92d3606cc"
+  },
+  {
+   "check": "smoke tests at sha (temp worktree)",
+   "ok": true,
+   "detail": "56 passed in 54.49s"
+  }
+ ],
+ "config_hashes": {
+  "config/competition.yaml": "sha256:9e7bf459d419b68e6e5f86319166be9c8710cb7584a7e02a71bf5b74ab119ba0",
+  "config/data_sources.yaml": "sha256:8371fc2077a11d56ff70bbe74102736e6812eff1162705df81b1b8a3d667a607",
+  "config/llm.yaml": "sha256:48b8db0eeb7dce274ac7acaecc5371ae99c8f275aa2aed4341875528eb69b2d9",
+  "config/llm_narrative_v1.yaml": "sha256:77eda0cba1b7824c43dbd7d5feb50ab9356ae9f0e22a6e7ef8839daf32f0fcd3",
+  "config/ops.yaml": "sha256:857e04b9519d7fea0fe9391abccd84e7c8ab1bc2cf0953aa8573a3a6d61b993e",
+  "config/strategy.yaml": "sha256:49c949fa16553534999c21eedf6ce53c85f180c44be95f3a92a46dc152d554a6",
+  "config/strategy_quant_v1.yaml": "sha256:f34fa02e924011b20c52a4bd42e961169f97e1950e76e04b7e78dc43ac23d2e0",
+  "config/unconfirmed_rules.yaml": "sha256:f430f315b346390d6ca82872dbe91ce55ad9160b9a0cbdae2926b26cfea60f4b"
+ },
+ "prompt_hashes": {
+  "agent/llm/prompts/event_extractor_v1.txt": "sha256:ed7a8419e8373adf4c9f718cc1ea3616968a639c5a2a917555837622f393f6de",
+  "agent/llm/prompts/market_narrator_v1.txt": "sha256:7426916e454f4b7399247fcb46e24b5784d70158f86598f3f71e6d205a4480cd",
+  "agent/llm/prompts/reviewer_v1.txt": "sha256:89fd70c5dfb75ee2be49d611547a7def21a068423a972bc80f9a5f4fe9f81ef1",
+  "agent/llm/prompts/thesis_writer_v1.txt": "sha256:57fb84d20123dfa993a5e76a5bb1f6ff530f2a1e01e6bcb20bd770453b1fdd65"
+ },
+ "working_tree_dirty_paths": [
+  "M agent/ops/backup.py",
+  " M agent/ops/restore_drill.py",
+  "?? agent/ops/verify_release.py"
+ ],
+ "passed": true
+}

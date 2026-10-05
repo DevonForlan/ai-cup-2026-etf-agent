@@ -1,0 +1,35 @@
+{
+ "iterations": 100,
+ "store": "fixture",
+ "root": "C:\\Users\\DEVON~1.TSE\\AppData\\Local\\Temp\\soak_c0q4s55l",
+ "simulated_crashes": 14,
+ "unexpected_exceptions": 0,
+ "iterations_with_problems": 0,
+ "corrupted_outputs": 0,
+ "illegal_overwrite": 0,
+ "fingerprint_drift": 0,
+ "stale_locks_left": 0,
+ "partial_dirs_left": 6,
+ "partial_dirs_expected_max": 14,
+ "rss_mb": {
+  "start": 155.0,
+  "median": 159.1,
+  "max": 164.4,
+  "end": 161.5,
+  "warm_growth_mb": 8.1,
+  "flag": "PASS"
+ },
+ "handles": {
+  "start": 253,
+  "max": 274,
+  "end": 244
+ },
+ "runtime_sec": {
+  "p50": 1.485,
+  "p95": 6.27,
+  "first10_median": 1.1520000000000001,
+  "last10_median": 2.8285
+ },
+ "archive_count_end": 86,
+ "passed": true
+}

@@ -1,0 +1,68 @@
+{
+ "clock_sim": {
+  "rehearsal_id": "clock-sim_20260828_20261005_132800",
+  "root": "rehearsal/clock-sim_20260828_20261005_132800",
+  "mode": "clock-sim",
+  "team_id": "TEAM_REHEARSAL",
+  "days": 24,
+  "planned_days": 24,
+  "first": "2026-08-28",
+  "last": "2026-10-02",
+  "final_nav": "1014240575.839861741934859718",
+  "criteria": {
+   "operational_pass": "24/24",
+   "invalid_dplan": 0,
+   "unexpected_fallback": 0,
+   "accidental_overwrite": 0,
+   "wrong_date_package": 0,
+   "wrong_team_package": 0,
+   "archive_collision": 0,
+   "settlement_continuity_break": 0,
+   "missing_final_candidate": 0,
+   "hash_mismatch": 0,
+   "unhandled_exception": 0,
+   "partial_leftovers": 0
+  },
+  "fail_days": [],
+  "passed": true,
+  "runtime_p50": 5.5,
+  "runtime_p95": 6.17,
+  "total_sec": 142.6,
+  "overrides": {},
+  "baseline_run": null
+ },
+ "replay": {
+  "rehearsal_id": "replay_20260828_20261005_132158",
+  "root": "rehearsal/replay_20260828_20261005_132158",
+  "mode": "replay",
+  "team_id": "TEAM_REHEARSAL",
+  "days": 24,
+  "planned_days": 24,
+  "first": "2026-08-28",
+  "last": "2026-10-02",
+  "final_nav": "1014240575.839861741934859718",
+  "criteria": {
+   "operational_pass": "24/24",
+   "invalid_dplan": 0,
+   "unexpected_fallback": 0,
+   "accidental_overwrite": 0,
+   "wrong_date_package": 0,
+   "wrong_team_package": 0,
+   "archive_collision": 0,
+   "settlement_continuity_break": 0,
+   "missing_final_candidate": 0,
+   "hash_mismatch": 0,
+   "unhandled_exception": 0,
+   "partial_leftovers": 0
+  },
+  "fail_days": [],
+  "passed": true,
+  "runtime_p50": 5.41,
+  "runtime_p95": 6.03,
+  "total_sec": 139.3,
+  "overrides": {
+   "preflight.etf_stale_days_block": "99999 (historical ETF history unavailable; still reported as WARN)"
+  },
+  "baseline_run": "sim_runs/round06_baseline_quant_v1"
+ }
+}

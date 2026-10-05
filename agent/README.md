@@ -198,3 +198,16 @@ scripts\refresh_daily.ps1 | scripts\preflight.ps1 | scripts\archive_daily.ps1
 ```
 The agent never uploads: it produces `submissions\YYYYMMDD\FINAL_CANDIDATE.txt` + `FINAL\D-Plan_<team>_<date>.json`
 for a human to upload (submission mechanism NC-1 unconfirmed). See `docs\COMPETITION_DAILY_RUNBOOK.md`.
+
+## Round 06 additions (rehearsal, reliability)
+
+```
+python agent\ops\rehearsal.py --start-date 2026-08-28 --days 24 --mode replay|clock-sim
+python agent\ops\settlement_entry.py --date D --file A.csv --verify-file B.csv --operator NAME --source SRC [--confirm]
+python agent\ops\final.py show|prepare|replace-final --date D ...
+python -m agent.submission.receipt --date D --team-id T --sha256 S --receipt-id R --official-status accepted --confirmed-by NAME
+python agent\ops\compare_candidates.py <pkgA> <pkgB>
+python agent\ops\soak.py --iterations 100 | security_scan.py | readiness.py [--run-tests] | verify_release.py --sha S [--smoke]
+python agent\ops\backup.py backup|restore|verify ;  restore_drill.py --state <rehearsal dir> --next-date D
+python agent\competition_day.py ... --offline      (no network: store probes only)
+```

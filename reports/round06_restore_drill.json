@@ -1,0 +1,81 @@
+{
+ "state_root": "C:\\Users\\devon.tseng\\Desktop\\個人\\AI CUP 2026玉山人工智慧公開挑戰賽\\rehearsal\\clock-sim_20260828_20261005_132800",
+ "next_date": "2026-10-05",
+ "tmp": "C:\\Users\\DEVON~1.TSE\\AppData\\Local\\Temp\\restore_xkkzwhjl",
+ "backup": {
+  "zip": "competition_state_20261005_140543.zip",
+  "size_kb": 2303.5
+ },
+ "worktree": {
+  "sha": "e93e953",
+  "ok": true,
+  "err": "92% (322/350)\nUpdating files:  93% (326/350)\nUpdating files:  94% (329/350)\nUpdating files:  95% (333/350)\nUpdating files:  96% (336/350)\nUpdating files:  97% (340/350)\nUpdating files:  98% (343/350)\nUpdating files:  99% (347/350)\nUpdating files: 100% (350/350)\nUpdating files: 100% (350/350), done.\n"
+ },
+ "restore": {
+  "restored_files": 1069,
+  "target": "C:\\Users\\DEVON~1.TSE\\AppData\\Local\\Temp\\restore_xkkzwhjl\\state",
+  "git": {
+   "sha": "e93e953",
+   "branch": "master",
+   "dirty_paths": [
+    "gent/ops/backup.py",
+    "agent/ops/restore_drill.py"
+   ]
+  },
+  "created_at": "2026-10-05T14:05:44.132820+08:00"
+ },
+ "run": {
+  "status": "READY_TO_SUBMIT",
+  "reason": null,
+  "start": {
+   "date": "2026-10-02",
+   "holdings": {
+    "1815": 295050,
+    "2059": 3000,
+    "2337": 308000,
+    "2344": 281000,
+    "2360": 19000,
+    "2368": 31000,
+    "2383": 5000,
+    "2395": 48000,
+    "2408": 96000,
+    "3081": 11000,
+    "3260": 126000,
+    "3324": 37000,
+    "3443": 6000,
+    "3653": 6000,
+    "3661": 13000,
+    "3680": 66000,
+    "4772": 148000,
+    "5274": 2000,
+    "5289": 21000,
+    "6274": 27000,
+    "6515": 5000,
+    "7734": 11000,
+    "7750": 13000,
+    "8299": 18000
+   },
+   "cash": "83504525.83986174193485971776",
+   "nav": "1014240575.839861741934859718",
+   "accrued_dividends": "2832651.01463000",
+   "settlement_hash": "sha256:0a5d78881a8ea7126aef4c94ae4f7b0e64c562a7e16a1c9093d68dc3834b64b1",
+   "agent_state_hash": "sha256:a030bc6eec5ce65d6eb3bb3f1d8783ace95969c9ad229f7a786d73ca09ddf0c2",
+   "warning_count": 0
+  },
+  "reconciliation": "MATCH",
+  "sha256": "sha256:fc5e233c4220e1f70d59ec6df31885af0b22a3126fb8bd5368d0060eda705846",
+  "agent_root": "C:\\Users\\devon.tseng\\AppData\\Local\\Temp\\restore_xkkzwhjl\\wt",
+  "preflight_warns": [
+   "git_branch",
+   "etf_holdings_freshness",
+   "previous_portfolio_legal"
+  ]
+ },
+ "continuity": {
+  "ledger": "20261002_internal.json",
+  "match": true
+ },
+ "ran_from_worktree": true,
+ "passed": true,
+ "worktree_removed": true
+}
