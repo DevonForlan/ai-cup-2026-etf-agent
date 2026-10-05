@@ -51,6 +51,7 @@ freeze:                  # docs/STRATEGY_FREEZE_RECORD.md; preflight/healthcheck
 
 sla:                     # internal operational health thresholds (seconds), not official SLAs
   quant_sec: 10
+  narrative_dplan_sec: 300       # D-Plan build incl. LLM narrative (template ~1 s; Claude CLI ~40-130 s)
   validation_sec: 10
   package_sec: 10
   archive_sec: 10

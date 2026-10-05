@@ -99,7 +99,8 @@ def t1_visibility_check(store: HistoryStore, prev_date: str, now: datetime) -> C
 
 def sla_check(durations: dict, ops_cfg: dict) -> list[dict]:
     sla = ops_cfg.get("sla") or {}
-    m = {"quant_sec": durations.get("run_day.total", 0) - durations.get("run_day.validation", 0),
+    m = {"quant_sec": sum(durations.get(f"run_day.{k}", 0) for k in ("data_features", "ranking", "portfolio")),
+         "narrative_dplan_sec": durations.get("run_day.dplan", 0),          # includes LLM narrative time
          "validation_sec": durations.get("run_day.validation", 0), "package_sec": durations.get("package", 0),
          "archive_sec": durations.get("archive", 0), "data_refresh_sec": durations.get("data_refresh", 0)}
     return [{"metric": k, "value": round(v, 2), "limit": sla[k], "breach": v > sla[k]} for k, v in m.items() if k in sla]
@@ -233,6 +234,11 @@ def run_competition_day(trade_date: str, team_id: str, mode: str = "dry-run", *,
     extra_checks.append(clock_skew_check(clock.now(), reference_time, ops_cfg, mode == "competition"))
     if mode != "historical" and prev_date:
         extra_checks.append(t1_visibility_check(store, prev_date, clock.now()))
+    if llm_provider is not None and hasattr(llm_provider, "healthcheck") and dls.allow_llm:
+        hc = llm_provider.healthcheck()              # never BLOCK: an unavailable LLM only means template narrative
+        extra_checks.append(Check("llm_runtime", PASS if hc.get("status") == "READY" else WARN,
+                                  f"{getattr(llm_provider, 'name', '?')}: {hc.get('status')} "
+                                  f"v{hc.get('claude_code_version')} auth={hc.get('authMethod')}"))
     if mode != "historical":
         opens = DL.opening_for(trade_date)
         if clock.now() < opens:          # C6 rejects any D-Plan stamped before the window opens
@@ -417,6 +423,9 @@ def main(argv=None) -> int:
     ap.add_argument("--mode", choices=["dry-run", "historical", "competition"], default="dry-run")
     ap.add_argument("--config", default="config/strategy_quant_v1.yaml")
     ap.add_argument("--llm-config", default=None)
+    ap.add_argument("--llm-provider", choices=["template", "claude-cli"], default="template",
+                    help="narrative provider; claude-cli = the user's own logged-in Claude Code CLI (Round 06B PoC, "
+                         "not production-approved). Decisions are never affected; any failure -> template.")
     ap.add_argument("--clock", default=None, help="simulated wall clock ISO +08:00 (dry-run / tests)")
     ap.add_argument("--skip-refresh", action="store_true")
     ap.add_argument("--offline", action="store_true", help="no network: every source from store probes only")
@@ -430,7 +439,13 @@ def main(argv=None) -> int:
     if a.offline:
         from agent.ops.refresh_daily import offline_fetchers
         fetchers = offline_fetchers()
-    s = run_competition_day(a.date, a.team_id, a.mode, config=a.config, llm_config=a.llm_config,
+    provider = None
+    if a.llm_provider == "claude-cli":
+        from agent.llm.client import load_llm_config
+        from agent.llm.providers.claude_cli import ClaudeCodeCLIProvider
+        a.llm_config = a.llm_config or "config/llm_claude_cli.yaml"
+        provider = ClaudeCodeCLIProvider(None, dict(load_llm_config(a.llm_config), enabled=True))
+    s = run_competition_day(a.date, a.team_id, a.mode, config=a.config, llm_config=a.llm_config, llm_provider=provider,
                             clock=Clock(a.clock) if a.clock else None, skip_refresh=a.skip_refresh,
                             initial=a.initial, replay_run=a.replay_run, refresh_fetchers=fetchers)
     txt = operator_summary(s)
