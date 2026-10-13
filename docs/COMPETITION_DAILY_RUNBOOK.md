@@ -144,3 +144,8 @@ NAV 相對差 >0.005% BLOCK；警告清單不同 → BLOCK。**BLOCK 時系統�
 **首日**：2026-10-26 休市；第一個交易日 **2026-10-27**，窗口 **2026-10-26 19:30 ～ 10-27 08:55**，加 `--initial`（DataPack `as_of_date` 為 null、全現金）。
 **Active Share（官方）**：雙方前 15 大聯集、占 NAV、含現金，逐一比較所有官方主動 ETF，**< 15% 違規**、連續 2 日可取消資格；內部安全目標 30% 只是策略緩衝。
 **每日合規摘要**：operator summary 的 `COMPLIANCE` 區塊（Universe / 檔數 / 2330 / 個股 / 現金 / Active Share 官方與內部 / 策略一致性 / D-Plan / 人工介入 / Claude / Overall）。
+
+## 9. Round 08 賽前紙上交易（2026-10-13）
+17:00 評估（前一晚 prediction × 今日真實均價 → paper 結算 / NAV / 報告）→ 19:30 預測（缺口回補 → paper chain → dry-run → 摘要）。
+Paper ledger：`data\paper_ledger\`（與正式 `data\settlement\` 分開）。兩個工作皆不喚醒、當天補跑、不跨日、已 PASS 不重跑。
+正式比賽（10-27 起）仍依本手冊第 7、8 節；第一天加 `--initial`，不使用 paper ledger。詳見 `docs\ROUND08_FINAL_VALIDATION.md`。

@@ -42,7 +42,7 @@ STATUSES = ("PASS", "BLOCKED", "FAILED", "SKIPPED")
 NETWORK_TARGETS = [("DNS", "www.twse.com.tw"), ("HTTPS", "https://www.google.com/"),
                    ("ESUN", "https://esun-ai-challenge.tw/"),
                    ("TWSE", "https://www.twse.com.tw/zh/"), ("TPEX", "https://www.tpex.org.tw/")]
-LOG_KEYS = ["SCHEDULED_TIME", "ACTUAL_START_TIME", "RUN_DELAY_MINUTES", "TRADE_DATE", "NETWORK", "NETWORK_RETRIES",
+LOG_KEYS = ["LABEL", "PAPER_CHAIN", "SCHEDULED_TIME", "ACTUAL_START_TIME", "RUN_DELAY_MINUTES", "TRADE_DATE", "NETWORK", "NETWORK_RETRIES",
             "CLAUDE_VERSION", "CLAUDE_STATUS", "DATA_REFRESH", "ETF_FRESHNESS", "QUANT", "ACTIVE_SHARE", "GROUNDING",
             "DPLAN_VERSION", "DPLAN_VALIDATION", "FINAL_CANDIDATE", "OVERALL_STATUS", "BLOCKED_REASON",
             "ERROR_MESSAGE", "END_TIME"]
@@ -78,6 +78,33 @@ def plan(now: datetime, hol: set[str], open_hm: tuple[int, int] = (19, 30)) -> d
         out.update(action="SKIP", reason="MISSED_PREVIOUS_DAY")
     elif not is_trading_day(trade, hol):
         out.update(action="SKIP", reason="NO_SUBMISSION_WINDOW_TONIGHT", trade_date=None)
+    return out
+
+
+def prev_trading_day(d: date, hol: set[str]) -> date:
+    x = d - timedelta(days=1)
+    while not is_trading_day(x, hol):
+        x -= timedelta(days=1)
+    return x
+
+
+def next_trading_day(d: date, hol: set[str]) -> date:
+    x = d + timedelta(days=1)
+    while not is_trading_day(x, hol):
+        x += timedelta(days=1)
+    return x
+
+
+def missing_trading_days(trade_date: str, stored: set[str], hol: set[str], lookback_days: int = 15) -> list[str]:
+    """Trading days in the last `lookback_days` calendar days before T that are not in the price store
+    (e.g. the laptop was off for several days: the daily refresh only fetches T-1)."""
+    t = date.fromisoformat(trade_date)
+    out, d = [], t - timedelta(days=lookback_days)
+    first = min(stored) if stored else None
+    while d < t:
+        if is_trading_day(d, hol) and d.isoformat() not in stored and (first is None or d.isoformat() > first):
+            out.append(d.isoformat())
+        d += timedelta(days=1)
     return out
 
 
@@ -193,7 +220,8 @@ def finish(rec: dict, log: RunLog) -> dict:
     rec["log_file"] = str(log.path)
     assert rec["status"] in STATUSES
     for k in LOG_KEYS:
-        v = {"SCHEDULED_TIME": rec.get("scheduled_time"), "ACTUAL_START_TIME": rec.get("actual_start_time"),
+        v = {"LABEL": "PRECOMPETITION_PAPER_RUN", "PAPER_CHAIN": rec.get("paper_chain"),
+             "SCHEDULED_TIME": rec.get("scheduled_time"), "ACTUAL_START_TIME": rec.get("actual_start_time"),
              "RUN_DELAY_MINUTES": rec.get("run_delay_minutes"), "TRADE_DATE": rec.get("trade_date"),
              "NETWORK": rec.get("network"), "NETWORK_RETRIES": rec.get("network_retries"),
              "CLAUDE_VERSION": rec.get("claude_version"), "CLAUDE_STATUS": rec.get("claude"),
@@ -239,10 +267,15 @@ def run(now: datetime | None = None, setup_test: bool = False, net_retries: int 
     if setup_test:                       # scheduler / logging / network / Claude context only — never a real PASS
         rec.update(status="SKIPPED", blocked_reason="SETUP_TEST_MODE (no dry-run executed)")
         return finish(rec, log)
+    rec["label"] = "PRECOMPETITION_PAPER_RUN"
+    rec["data_backfill"] = backfill_gaps(p["trade_date"], log)
+    start = paper_start(p["trade_date"], log)
+    rec["paper_chain"] = start["source"]
     from agent.config import load_strategy
     team = load_strategy("config/strategy_quant_v1.yaml")["team_id"]
     cmd = [sys.executable, str(ROOT / "agent" / "competition_day.py"), "--date", p["trade_date"], "--team-id", team,
-           "--mode", "dry-run", "--competition-profile", "prod", "--initial"]
+           "--mode", "dry-run", "--competition-profile", "prod"]
+    cmd += ["--replay-run", start["ledger"]] if start["source"].startswith("CHAIN") else ["--initial"]
     log.w("COMMAND", " ".join(cmd[1:]))
     rc, err = None, None
     try:
@@ -275,7 +308,49 @@ def run(now: datetime | None = None, setup_test: bool = False, net_retries: int 
             rec["dplan_version"] = json.loads(fp.read_text(encoding="utf-8")).get("schema_version")
         except (OSError, ValueError):
             pass
+    if rec.get("status") == "PASS":
+        try:
+            from agent.ops.prediction_summary import build
+            rec["prediction_summary"] = str(build(p["trade_date"], run_summary=summary))
+        except Exception as e:  # noqa: BLE001
+            rec["prediction_summary"] = f"ERROR {type(e).__name__}: {str(e)[:200]}"
     return finish(rec, log)
+
+
+def backfill_gaps(trade_date: str, log: RunLog) -> list[str]:
+    """Fetch missing trading days (prices / institutional / corporate actions) from the same public sources."""
+    try:
+        from agent.data.loaders import HistoryStore
+        from agent.ops.refresh_daily import refresh
+        hol = holidays()
+        gaps = missing_trading_days(trade_date, set(HistoryStore().dates("daily_prices")), hol)
+        for g in gaps:
+            refresh(next_trading_day(date.fromisoformat(g), hol).isoformat(),
+                    only={"twse_prices", "tpex_prices", "twse_institutional", "tpex_institutional", "corporate_actions"})
+        log.w("DATA_BACKFILL", ",".join(gaps) or "none")
+        return gaps
+    except Exception as e:  # noqa: BLE001
+        log.w("DATA_BACKFILL", f"ERROR {type(e).__name__}: {str(e)[:200]}")
+        return [f"ERROR {type(e).__name__}"]
+
+
+def paper_start(trade_date: str, log: RunLog) -> dict:
+    """Paper chain: start from the paper ledger settlement of the previous trading day; if missing but a
+    prediction for that day exists, evaluate it first (17:00 task may not have run yet); otherwise reset
+    the paper portfolio to initial cash (recorded)."""
+    from agent.ops import daily_evaluation as DE
+    paths = DE.Paths()
+    prev = prev_trading_day(date.fromisoformat(trade_date), holidays()).isoformat()
+    if not paths.settlement(prev).exists():
+        from agent.ops.package_submission import active_final
+        if active_final(prev) is not None:
+            r = DE.run(ev_date=prev, paths=paths)
+            log.w("INLINE_EVALUATION", f"{prev} {r['status']} {r.get('blocked_reason') or ''}")
+    if paths.settlement(prev).exists():
+        log.w("PAPER_CHAIN", f"CHAIN from paper ledger {prev}")
+        return {"source": f"CHAIN:{prev}", "ledger": str(paths.ledger)}
+    log.w("PAPER_CHAIN", f"RESET_INITIAL (no paper settlement for {prev})")
+    return {"source": f"RESET_INITIAL:no_paper_settlement_{prev}", "ledger": None}
 
 
 # ----------------------------------------------------------------------------- check (for the operator)

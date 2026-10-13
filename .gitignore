@@ -27,3 +27,5 @@ reports/ops_daily/
 runtime/
 logs/scheduled/
 logs/wake_test/
+logs/evaluation/
+data/paper_ledger/

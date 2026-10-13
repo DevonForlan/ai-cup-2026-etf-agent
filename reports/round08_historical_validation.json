@@ -1,0 +1,60 @@
+{
+ "days": [
+  "2026-10-07",
+  "2026-10-08",
+  "2026-10-12"
+ ],
+ "checks": {
+  "2026-10-07": {
+   "status": "PASS",
+   "date_aligned": true,
+   "start_source": "INITIAL_CASH",
+   "orders_aligned": true,
+   "settlement_reproducible": true,
+   "nav_reconciliation": "PASS",
+   "attribution": "PASS",
+   "report": true,
+   "nav": "993391065.84",
+   "daily_return": -0.006608934164422979,
+   "orders": 24,
+   "holdings": 24
+  },
+  "2026-10-08": {
+   "status": "PASS",
+   "date_aligned": true,
+   "start_source": "PAPER_LEDGER",
+   "orders_aligned": true,
+   "settlement_reproducible": true,
+   "nav_reconciliation": "PASS",
+   "attribution": "PASS",
+   "report": true,
+   "nav": "988733665.84",
+   "daily_return": -0.004688385229318016,
+   "orders": 0,
+   "holdings": 24
+  },
+  "2026-10-12": {
+   "status": "PASS",
+   "date_aligned": true,
+   "start_source": "PAPER_LEDGER",
+   "orders_aligned": true,
+   "settlement_reproducible": true,
+   "nav_reconciliation": "PASS",
+   "attribution": "PASS",
+   "report": true,
+   "nav": "996269165.84",
+   "daily_return": 0.007621364843111479,
+   "orders": 0,
+   "holdings": 24
+  }
+ },
+ "sim_final_nav": "996269165.8355770206321550529",
+ "paper_final_nav": "996269165.84",
+ "sim_daily_navs": [
+  "993391065.8355770206321550529",
+  "988733665.8355770206321550529",
+  "996269165.8355770206321550529"
+ ],
+ "nav_equal_to_run_sim": true,
+ "ALL_PASS": true
+}

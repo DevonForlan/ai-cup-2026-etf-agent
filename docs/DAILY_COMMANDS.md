@@ -71,3 +71,10 @@ DataPack 取代步驟 7 的人工 CSV 雙重輸入（CSV 方式保留作備援�
 - 查看結果：`.\automation\check_last_scheduled_run.ps1`（Recommended Action = NONE 或 MANUAL_RERUN_RECOMMENDED）
 - 手動重跑：`Start-ScheduledTask -TaskName "AI_CUP_Precompetition_DryRun_1930"`
 - Log：`logs\scheduled\`（每次一個 `precompetition_dryrun_*.log`、`latest_status.json`、`history.jsonl`）
+
+## 賽前每日紙上交易（Round 08）
+- 17:00 `AI_CUP_Precompetition_Evaluation_1700`：評估前一晚的 prediction → `reports\daily_evaluations\<日期>_evaluation.md`
+- 19:30 `AI_CUP_Precompetition_DryRun_1930`：新 prediction → `reports\daily_predictions\<交易日>_prediction.md`
+- 查看：`.\automation\check_last_evaluation.ps1`、`.\automation\check_last_scheduled_run.ps1`
+- 手動：`Start-ScheduledTask -TaskName "AI_CUP_Precompetition_Evaluation_1700"`
+- 全部標示 PRECOMPETITION_PAPER_RUN（不是正式成績、不上傳）。細節：`docs\ROUND08_FINAL_VALIDATION.md`
