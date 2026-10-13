@@ -1,4 +1,4 @@
-"""Evidence Graph -> D-Plan v4.2 JSON. Only nodes reachable from market_view / decisions /
+"""Evidence Graph -> D-Plan v4.x JSON (schema_version from config; v4.3 since 2026-10-12). Only nodes reachable from market_view / decisions /
 no_trade_decisions / orders are exported; IDs are renumbered S1.., O1.., I1.., D1.. in first-use order."""
 from __future__ import annotations
 
@@ -17,6 +17,12 @@ def _clean_values(v: dict) -> dict:
             continue
         out[k] = int(x) if isinstance(x, bool) else x
     return out or {"value_missing": 0}
+
+
+def rb_schema_version() -> str:
+    """D-Plan schema_version from config/competition.yaml (official v4.3 since 2026-10-12)."""
+    from agent.config import load_yaml
+    return str(load_yaml("config/competition.yaml")["dplan"]["schema_version"])
 
 
 def export_dplan(g: EvidenceGraph, team_id: str, metadata: dict) -> tuple[dict, dict]:
@@ -131,7 +137,7 @@ def export_dplan(g: EvidenceGraph, team_id: str, metadata: dict) -> tuple[dict, 
         if i.get("counter_evidence"):
             i["counter_evidence"] = sub(i["counter_evidence"])
     doc = {
-        "schema_version": "4.2",
+        "schema_version": rb_schema_version(),
         "doc_type": "D-Plan",
         "team_id": team_id,
         "trade_date": g.trade_date,

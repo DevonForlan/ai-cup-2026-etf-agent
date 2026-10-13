@@ -134,11 +134,11 @@ def auth_status() -> dict:
 
 
 def version_check(version: str | None, supported: list[str] | None) -> str:
-    """Version pin: PASS | WARNING_VERSION_DRIFT (never a block) | CLI_NOT_FOUND."""
+    """Version pin: VERSION_VALIDATED | WARNING_VERSION_DRIFT (never a block) | CLI_NOT_FOUND."""
     if not version:
         return "CLI_NOT_FOUND"
     if not supported or version in [str(v) for v in supported]:
-        return "PASS"
+        return "VERSION_VALIDATED"
     return "WARNING_VERSION_DRIFT"
 
 

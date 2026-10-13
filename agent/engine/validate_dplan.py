@@ -18,14 +18,14 @@ import jsonschema
 
 from agent.config import D
 from agent.engine import compliance as C
-from agent.engine.active_share import compute_active_share
+from agent.engine.active_share import compute_official_active_share
 from agent.engine.fees import buy_cost, sell_cost
 from agent.engine.models import Report, Status
 from agent.engine.orders import derive_order
 from agent.engine.rules import RuleBook, load_rulebook
 
-SRC_SCHEMA = "D-Plan.schema_v4.2.json"
-SRC_GUIDE = "D-Plan_撰寫指南_v4.2.md"
+SRC_SCHEMA = "D-Plan.schema_v4.3.json"     # official 2026-10-12 (research/official_updates); v4.2 kept in repo root
+SRC_GUIDE = "D-Plan_撰寫指南_v4.3.md"
 UNKNOWN_CODES = ["C3", "C4", "C5", "C7", "C8", "C10"]
 DISPOSITION_NOTE = "（拒收/警告處置未確認 NC-3）"
 
@@ -154,7 +154,7 @@ def validate_schema(doc: dict, rb: RuleBook, rep: Report) -> None:
         rep.add("SCHEMA", Status.FAIL, f"{'/'.join(map(str, e.path)) or '<root>'}: {e.message[:200]}",
                 None, None, SRC_SCHEMA)
     if not errs:
-        rep.add("SCHEMA", Status.PASS, "JSON Schema v4.2 驗證通過", None, None, SRC_SCHEMA)
+        rep.add("SCHEMA", Status.PASS, f"JSON Schema {Path(rb.rules.schema_path).stem.split('_')[-1]} 驗證通過", None, None, SRC_SCHEMA)
 
 
 def validate_dplan(doc: dict, ctx: ValidationContext | None, rb: RuleBook | None = None) -> Report:
@@ -334,9 +334,11 @@ def validate_dplan(doc: dict, ctx: ValidationContext | None, rb: RuleBook | None
 
     # ---- Active Share (post-trade estimate)
     if ctx.etf_holdings:
-        res = compute_active_share(est.weights, ctx.etf_holdings, rb.active_etfs, rb.assumptions.active_share_mode,
-                                   ctx.etf_data_date, ctx.etf_synthetic)
-        C.check_active_share(res, rb, ctx.active_share_target, rep)
+        asc = (rb.rules.raw.get("official_rules") or {}).get("active_share") or {}
+        res = compute_official_active_share(est.weights, ctx.etf_holdings, rb.active_etfs,
+                                            int(asc.get("top_n", 15)), est.cash_ratio, None,
+                                            bool(asc.get("include_cash", True)), ctx.etf_data_date, ctx.etf_synthetic)
+        C.check_active_share(res, rb, ctx.active_share_target, rep)     # official gate + internal target (WARN)
     else:
         rep.add("R_ACTIVE_SHARE", Status.UNKNOWN, "未提供主動 ETF 持股，無法計算", None, rb.rules.active_share_min,
                 C.SRC["R_ACTIVE_SHARE"])

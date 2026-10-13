@@ -22,7 +22,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 from agent.config import ROOT  # noqa: E402
 from agent.ops.common import load_ops_config, write_json  # noqa: E402
 
-OFFICIAL = ["config/competition.yaml", "D-Plan.schema_v4.2.json", "config/universe_150.csv"]
+OFFICIAL = ["config/competition.yaml", "D-Plan.schema_v4.2.json", "research/official_updates/D-Plan.schema_v4.3.json",
+            "config/universe_150.csv"]
 SMOKE = ["tests/engine", "tests/ops/test_ops_units.py", "tests/test_end_to_end.py"]
 
 

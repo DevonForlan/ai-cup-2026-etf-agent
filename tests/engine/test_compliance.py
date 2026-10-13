@@ -31,7 +31,7 @@ def test_official_rules_values(rb):
     r = rb.rules
     assert (r.tsmc_max_weight, r.other_max_weight, r.cash_max_weight) == (Decimal("0.25"), Decimal("0.10"), Decimal("0.25"))
     assert (r.holdings_min, r.holdings_max, r.lot_size) == (20, 30, 1000)
-    assert r.active_share_min == Decimal("0.20")
+    assert r.active_share_min == Decimal("0.15")          # 辦法_1005更新 §六(十三) (was 0.20)
 
 
 def test_19_and_31_stocks_fail(rb):

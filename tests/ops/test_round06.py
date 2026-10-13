@@ -182,9 +182,17 @@ def test_organizer_clarifications_default_unknown_and_gate(tmp_path):
         OC.load(unk)
 
 
-def test_repo_has_no_confirmed_clarification():
+def test_repo_clarifications_are_sourced_and_nc1_not_fully_confirmed():
+    """2026-10-13: entries exist only from the organiser e-mail of 2026-10-07 / official site documents.
+    Every non-unknown entry cites its source; NC-1 (submission path) and NC-3 remain not fully confirmed."""
     from agent.rules import organizer_clarifications as OC
-    assert all(e["status"] == "unknown" for e in OC.load().values())   # nothing confirmed without an official answer
+    e = OC.load()
+    for rid, v in e.items():
+        if v["status"] != "unknown":
+            assert v.get("source") in OC.SOURCES and v.get("source_ref") and v.get("answer"), rid
+    assert e["NC-1"]["status"] != "confirmed" and e["NC-3"]["status"] != "confirmed"
+    assert e["NC-10"]["status"] == "confirmed" and e["NC-15"]["status"] == "confirmed"
+    assert {k for k, v in e.items() if v["status"] == "unknown"} >= {"NC-4", "NC-5", "NC-6", "NC-7", "NC-8"}
 
 
 # ============================================================================ fingerprint / idempotency / compare

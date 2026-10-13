@@ -25,3 +25,5 @@ reports/ops_daily/
 /rehearsal/
 /backups/
 runtime/
+logs/scheduled/
+logs/wake_test/

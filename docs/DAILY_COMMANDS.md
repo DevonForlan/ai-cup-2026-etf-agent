@@ -49,6 +49,25 @@ powershell -ExecutionPolicy Bypass -File scripts\archive_daily.ps1 -Date 2026-10
 細節：`docs\OFFICIAL_SETTLEMENT_ENTRY_SOP.md`（官方結算格式 NC-1 仍未確認，先用人工輸入）。
 
 ---
-- 第一個比賽日加 `-Initial`（從初始現金開始）。2026-10-26 為 TWSE 休市日（官方行事曆）；主辦方的第一個交易日仍待確認（NC-15）。
+- 第一個比賽日加 `-Initial`（從初始現金開始）。2026-10-26 休市；主辦方已確認第一個交易日為 2026-10-27（NC-15 RESOLVED，官網公告 09-29 + Email 10-07）。
 - 不想用 Claude：拿掉 `-CompetitionProfile prod` 即為純 Template（決策完全相同）。
 - 換 FINAL（需理由與姓名）：`.venv\Scripts\python.exe agent\ops\final.py replace-final --date 2026-10-27 --team-id TEAM_XXX --run-id <run_id> --reason "原因" --operator "姓名"`。
+
+---
+## 2026-10-13 更新（官方 DataPack 與首日）
+**步驟 2 之前（每天 19:00 後）— 匯入官方資料包**：登入後台「文件繳交」→「下載資料包」，存到任意位置後：
+```powershell
+.venv\Scripts\python.exe -m agent.ops.datapack --file "$env:USERPROFILE\Downloads\<下載的資料包>.json" --team-id TEAM_XXX --trade-date 2026-10-28 --operator "姓名"
+```
+看到 `DATAPACK 2026-10-28: IMPORTED as_of 2026-10-27` 才繼續；`BLOCK: missing contains prev_settlement` → 稍後重新下載。
+DataPack 取代步驟 7 的人工 CSV 雙重輸入（CSV 方式保留作備援）。
+**首日**：交易日 **2026-10-27**（10-26 休市），在 **2026-10-26 19:30 後** 執行步驟 3 並加 `-Initial`。
+**重繳**：同日可重繳（上限 25 次），以 08:55 前最後一次**成功**提交為準。
+
+---
+## 賽前每日自動 dry-run（Task Scheduler，2026-10-13 起）
+- 工作：`AI_CUP_Precompetition_DryRun_1930`，每天 19:30；不喚醒電腦（WakeToRun=False）；錯過時當天登入 / 喚醒後自動補跑（StartWhenAvailable）；跨過午夜不補前一天；當天已 PASS 不重跑。
+- 只做 PRECOMPETITION dry-run（`--competition-profile prod --initial`），不上傳、不提交。
+- 查看結果：`.\automation\check_last_scheduled_run.ps1`（Recommended Action = NONE 或 MANUAL_RERUN_RECOMMENDED）
+- 手動重跑：`Start-ScheduledTask -TaskName "AI_CUP_Precompetition_DryRun_1930"`
+- Log：`logs\scheduled\`（每次一個 `precompetition_dryrun_*.log`、`latest_status.json`、`history.jsonl`）

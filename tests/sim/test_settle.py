@@ -140,12 +140,13 @@ def test_buying_above_cap_warns_immediately(relaxed_rb):
 
 def test_active_share_two_days_dq(relaxed_rb):
     s = Settlement.initial("2026-10-23", 1_000_000)
-    s = settle(s, [], mk("2026-10-26", {}, {}), relaxed_rb, active_share_min=Dd("0.15"))
+    # official threshold 15% (辦法_1005更新 §六(十三)): < 15% is a breach, exactly 15% is not
+    s = settle(s, [], mk("2026-10-26", {}, {}), relaxed_rb, active_share_min=Dd("0.1499"))
     assert not s.dq and s.active_share_breach_days == 1
-    s = settle(s, [], mk("2026-10-27", {}, {}), relaxed_rb, active_share_min=Dd("0.25"))
+    s = settle(s, [], mk("2026-10-27", {}, {}), relaxed_rb, active_share_min=Dd("0.15"))
     assert s.active_share_breach_days == 0
     s = settle(s, [], mk("2026-10-28", {}, {}), relaxed_rb, active_share_min=Dd("0.10"))
-    s = settle(s, [], mk("2026-10-29", {}, {}), relaxed_rb, active_share_min=Dd("0.19"))
+    s = settle(s, [], mk("2026-10-29", {}, {}), relaxed_rb, active_share_min=Dd("0.1499"))
     assert s.dq and "ACTIVE_SHARE_2D" in s.dq_reasons
 
 

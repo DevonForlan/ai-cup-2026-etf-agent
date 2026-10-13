@@ -67,6 +67,7 @@ class ActiveShareResult:
     missing_benchmarks: list[str] = field(default_factory=list)
     benchmarks_data_date: str | None = None
     benchmarks_synthetic: bool = False
+    cash_term: str | None = None          # official mode only: INCLUDED / NEED_CONFIRMATION / EXCLUDED_BY_CONFIG
 
 
 def compute_active_share(portfolio_w: dict, etf_holdings: dict[str, dict],
@@ -93,3 +94,51 @@ def compute_active_share(portfolio_w: dict, etf_holdings: dict[str, dict],
                 best = (x, etf)
     return ActiveShareResult(mode.value, best[0] if best else None, best[1] if best else None,
                              min_by_mode, per_etf, missing, data_date, synthetic)
+
+
+# ----------------------------------------------------------------------------- official rule (confirmed)
+# Sources: 比賽辦法_1005更新 §六(十三) (top-15 vs each active ETF's top-15, < 15% = violation, 2 consecutive
+# trading days -> DQ) + organiser e-mail 2026-10-07 (W_i = weight of total NAV, cash included, union of both
+# top-15 sets, compare against every official active ETF). The legacy functions above are kept unchanged:
+# Quant Core v1's internal 30% guard still uses them (decision path frozen).
+OFFICIAL_MODE = "OFFICIAL_TOP15_NAV"
+CASH_KEY = "CASH"
+
+
+def official_active_share(port_nav_w: dict, bench_nav_w: dict, top_n: int = 15,
+                          port_cash: Decimal | None = None, bench_cash: Decimal | None = None,
+                          include_cash: bool = True) -> tuple[Decimal, str]:
+    """1/2 x sum |Wp - Wb| over the union of both top-N stock sets, weights as fraction of NAV.
+    Cash term: added only when BOTH cash weights are known. A benchmark cash weight is not disclosed by the
+    issuers -> the term is left out (status NEED_CONFIRMATION). Leaving out a non-negative term gives the
+    LOWER value, i.e. the conservative side of the 15% gate; it is never filled with a guessed 0."""
+    p = _top_n({k: D(v) for k, v in port_nav_w.items() if k != CASH_KEY and D(v) > 0}, top_n)
+    b = _top_n({k: D(v) for k, v in bench_nav_w.items() if k != CASH_KEY and D(v) > 0}, top_n)
+    value = active_share(p, b)
+    if not include_cash:
+        return value, "EXCLUDED_BY_CONFIG"
+    if port_cash is None or bench_cash is None:
+        return value, "NEED_CONFIRMATION"
+    return value + abs(D(port_cash) - D(bench_cash)) / 2, "INCLUDED"
+
+
+def compute_official_active_share(portfolio_nav_w: dict, etf_holdings: dict[str, dict], official_etfs: list[str],
+                                  top_n: int = 15, port_cash: Decimal | None = None,
+                                  bench_cash: dict[str, Decimal] | None = None, include_cash: bool = True,
+                                  data_date: str | None = None, synthetic: bool = False) -> ActiveShareResult:
+    """Every official active ETF is compared one by one; the minimum is the gate value."""
+    per_etf: dict[str, dict[str, Decimal]] = {}
+    missing, cash_status = [], set()
+    for etf in official_etfs:
+        h = etf_holdings.get(etf)
+        if not h:
+            missing.append(etf)
+            continue
+        v, cs = official_active_share(portfolio_nav_w, h, top_n, port_cash, (bench_cash or {}).get(etf),
+                                      include_cash)
+        per_etf[etf] = {OFFICIAL_MODE: v}
+        cash_status.add(cs)
+    best = min(((v[OFFICIAL_MODE], e) for e, v in per_etf.items()), default=None)
+    return ActiveShareResult(OFFICIAL_MODE, best[0] if best else None, best[1] if best else None,
+                             {OFFICIAL_MODE: best[0] if best else None}, per_etf, missing, data_date, synthetic,
+                             ",".join(sorted(cash_status)) or None)

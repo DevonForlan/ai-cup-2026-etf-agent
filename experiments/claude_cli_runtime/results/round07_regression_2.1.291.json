@@ -1,0 +1,136 @@
+{
+ "run_at": "2026-10-07T09:25:15+08:00",
+ "healthcheck": {
+  "primary": "claude-cli",
+  "status": "READY",
+  "fallback": "template",
+  "binary": "found",
+  "binary_kind": "native",
+  "version": "2.1.291",
+  "version_check": "WARNING_VERSION_DRIFT",
+  "supported_versions": [
+   "2.1.289"
+  ],
+  "loggedIn": true,
+  "authMethod": "claude.ai",
+  "subscriptionType": "team",
+  "apiProvider": "firstParty",
+  "profile": "NARRATIVE_LOCKED",
+  "detail": "READY",
+  "line": "LLM: PRIMARY=claude-cli STATUS=READY FALLBACK=template"
+ },
+ "smoke": {
+  "task": "mops_research",
+  "docs": 8,
+  "latency_sec": 32.1,
+  "stats": {
+   "docs": 8,
+   "returned": 5,
+   "accepted": 5,
+   "rejected": [],
+   "called": true
+  },
+  "accepted": 5,
+  "items": [
+   {
+    "event_type": "revenue",
+    "summary": "貿聯-KY公告115年9月份自結合併營業收入淨額為美金294,199仟元，較去年同期自結數增加33.92%；115年累計合併營收為美金2,267,416仟元，較去年累計自結數增加37.62%。",
+    "positive_evidence": [
+     "9月份自結合併營收較去年同期增加33.92%",
+     "115年累計合併營收較去年累計增加37.62%"
+    ],
+    "negative_evidence": [],
+    "uncertainty": "自結數字尚未經會計師查核，可能有調整；公告未說明成長來源、產品組合及獲利率，營收成長不一定代表獲利同步成長。",
+    "affected_tickers": [
+     "3665"
+    ],
+    "fact_refs": [
+     "MOPS-003"
+    ]
+   },
+   {
+    "event_type": "capex",
+    "summary": "日月光投控代子公司矽品精密工業公告兩項廠務工程契約：與柏揚系統科技總金額NTD 516,038,000（115年6月15日至117年9月30日），與中源機電顧問總金額NTD 2,322,107,450（115年10月2日至117年9月30日），目的均為供生產及營運用，皆非關係人交易。",
+    "positive_evidence": [
+     "取得目的為供生產及營運用，顯示子公司持續投入廠務建置",
+     "兩項契約的交易相對人皆與公司無關係，非關係人交易"
+    ],
+    "negative_evidence": [
+     "兩項契約合計金額不小，將形成資本支出負擔"
+    ],
+    "uncertainty": "公告未說明工程對應之產能規模、產品類別或預期效益；工程期間至117年9月30日，完工時程與後續產能利用率均屬未知。",
+    "affected_tickers": [
+     "3711"
+    ],
+    "fact_refs": [
+     "MOPS-006",
+     "MOPS-007"
+    ]
+   },
+   {
+    "event_type": "other",
+    "summary": "聯電公告第七次海外無擔保轉換公司債完成訂價：募集總額美金18億元（A券、B券各美金9億元），按面額100%發行，票面利率皆為年利率0%，發行日期為115年10月13日；到期贖回收益率A券為-0.25%、B券為-1.35%。",
+    "positive_evidence": [
+     "票面利率為年利率0%，屬低資金成本籌資",
+     "到期贖回收益率為負值（A券-0.25%、B券-1.35%）"
+    ],
+    "negative_evidence": [
+     "轉換公司債若轉換為股票，可能對既有股東產生稀釋"
+    ],
+    "uncertainty": "公告內容於節錄處中斷，未見轉換價格、轉換條件及資金用途；稀釋程度與資金運用效益無法由現有文字判斷。",
+    "affected_tickers": [
+     "2303"
+    ],
+    "fact_refs": [
+     "MOPS-008"
+    ]
+   },
+   {
+    "event_type": "other",
+    "summary": "國泰金代子公司國泰人壽公告認購私募基金Coatue Growth VI Offshore Feeder Fund LP，認購總金額不超過20,000,000美元，依基金撥款通知逐次給付，核決層級為資深副總經理。",
+    "positive_evidence": [
+     "屬參與認購新設基金之投資配置，付款依撥款通知逐次給付"
+    ],
+    "negative_evidence": [
+     "私募基金為合夥組織，無單位價格，流動性與評價透明度相對有限"
+    ],
+    "uncertainty": "公告未說明基金投資標的與預期報酬；相對於子公司整體投資規模之影響程度無法由公告判斷，公告文字亦於節錄處中斷。",
+    "affected_tickers": [
+     "2882"
+    ],
+    "fact_refs": [
+     "MOPS-005"
+    ]
+   },
+   {
+    "event_type": "management",
+    "summary": "中信金代子公司The Tokyo Star Bank, Limited公告一名外部董事於115/10/03逝世，新任者為「無」；公告註明非屬三分之一以上董事發生變動。",
+    "positive_evidence": [
+     "公告註明非屬三分之一以上董事發生變動"
+    ],
+    "negative_evidence": [
+     "子公司董事會出現外部董事缺額"
+    ],
+    "uncertainty": "公告未說明是否及何時補選；此為子公司層級事件，對母公司營運之影響無法由公告判斷。",
+    "affected_tickers": [
+     "2891"
+    ],
+    "fact_refs": [
+     "MOPS-001"
+    ]
+   }
+  ],
+  "llm": {
+   "calls": 1,
+   "ok": 1,
+   "failed": 0,
+   "skipped_budget": 0,
+   "retries": 0,
+   "input_tokens": 4,
+   "output_tokens": 3254,
+   "cost_usd": 0,
+   "latency_mean": 32.0042,
+   "latency_p95": 32.0042
+  }
+ }
+}

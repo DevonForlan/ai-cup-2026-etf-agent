@@ -75,6 +75,24 @@ def record_receipt(r: Receipt, cfg: dict | None = None) -> dict:
     return ManualSubmissionProvider(cfg).verify_receipt(asdict(r))
 
 
+def effective_submission(receipts: list[dict], trade_date: str, max_daily: int = 25) -> dict:
+    """Organiser e-mail 2026-10-07 (NC-10): on every trading day the LAST SUCCESSFUL submission before the
+    08:55 cutoff is the one that counts. A later upload that was rejected / is still pending / is unknown
+    does NOT replace an earlier accepted one ("last upload" != "last successful submission").
+    Also counts uploads against the platform limit (辦法 §二(八): 25 per team per day)."""
+    from agent.ops.deadline import cutoff_for
+    cut = cutoff_for(trade_date)
+    on_time = [r for r in receipts if r.get("trade_date") == trade_date
+               and datetime.fromisoformat(r["submitted_at"]) <= cut]
+    ok = sorted((r for r in on_time if r.get("official_status") == "accepted"),
+                key=lambda r: datetime.fromisoformat(r["submitted_at"]))
+    last_upload = max(on_time, key=lambda r: datetime.fromisoformat(r["submitted_at"]), default=None)
+    return {"effective": ok[-1] if ok else None, "last_upload": last_upload,
+            "last_upload_is_effective": bool(ok) and last_upload is ok[-1],
+            "uploads": len(on_time), "max_daily": max_daily, "limit_reached": len(on_time) >= max_daily,
+            "late_ignored": len([r for r in receipts if r.get("trade_date") == trade_date]) - len(on_time)}
+
+
 def write_schema(path: Path) -> Path:
     return write_json(path, RECEIPT_SCHEMA)
 

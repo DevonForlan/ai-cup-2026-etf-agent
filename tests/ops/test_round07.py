@@ -33,7 +33,7 @@ def test_prod_profile_is_claude_primary_template_fallback_and_global_default_unc
 def test_sectioned_cli_config_flattens_and_locks_tools():
     c = load_llm_config("config/llm_claude_cli.yaml")
     assert c["provider"] == "claude_cli" and c["fallback_provider"] == "template"
-    assert c["supported_versions"] == ["2.1.289"] and c["accepted_auth_methods"] == ["claude.ai"]
+    assert c["supported_versions"] == ["2.1.289", "2.1.291", "2.1.296"] and c["accepted_auth_methods"] == ["claude.ai"]
     assert c["claude_cli"]["profile"] == "NARRATIVE_LOCKED" and c["retries"] == 0
     assert c["events"]["enabled"] is False and c["llm_signal"]["enabled"] is False
     assert c["research"]["enabled"] is True and c["narrative"]["mode"] == "llm"
@@ -71,9 +71,12 @@ def test_cli_profile_flag_resolution(monkeypatch):
 
 
 # ---------------------------------------------------------------- version pin / auth / status line
-@pytest.mark.parametrize("v,exp", [("2.1.289", "PASS"), ("2.1.300", "WARNING_VERSION_DRIFT"), (None, "CLI_NOT_FOUND")])
+@pytest.mark.parametrize("v,exp", [("2.1.289", "VERSION_VALIDATED"), ("2.1.291", "VERSION_VALIDATED"),
+                                   ("2.1.296", "VERSION_VALIDATED"), ("2.1.292", "WARNING_VERSION_DRIFT"), ("2.1.297", "WARNING_VERSION_DRIFT"),
+                                   (None, "CLI_NOT_FOUND")])
 def test_version_pin(v, exp):
-    assert C.version_check(v, ["2.1.289"]) == exp
+    supported = load_llm_config("config/llm_claude_cli.yaml")["supported_versions"]
+    assert C.version_check(v, supported) == exp
 
 
 def test_auth_status_reads_only_whitelisted_fields(monkeypatch):
@@ -99,7 +102,7 @@ class _FakeCLI:
 
 
 def test_llm_status_line_ready_degraded_and_deadline():
-    ready = _FakeCLI({"cli_found": True, "claude_code_version": "2.1.289", "version_check": "PASS", "loggedIn": True,
+    ready = _FakeCLI({"cli_found": True, "claude_code_version": "2.1.289", "version_check": "VERSION_VALIDATED", "loggedIn": True,
                       "authMethod": "claude.ai", "llm_status": "READY", "status": "READY", "fallback": "template"})
     st = llm_runtime_status(ready)
     assert st["line"] == "LLM: PRIMARY=claude-cli STATUS=READY FALLBACK=template"

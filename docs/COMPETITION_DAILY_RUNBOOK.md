@@ -131,3 +131,16 @@ NAV 相對差 >0.005% BLOCK；警告清單不同 → BLOCK。**BLOCK 時系統�
 
 **Claude 失敗 → Template**：未登入 / 額度 / 逾時 / JSON / 版本 / CLI 不存在，全部自動改 Template，D-Plan 決策不變（見 EMERGENCY_RUNBOOK Round 07 表）。
 接近截止：≤30 分只呼叫一次市場敘事；≤15 分不呼叫 Claude；≤10 分只打包。
+
+**Claude Code 版本（2026-10-13）**：已驗證 2.1.289、2.1.291（`reports/CLAUDE_CLI_VERSION_VALIDATION_2.1.291.md`）、**2.1.296**（`reports/CLAUDE_CLI_VERSION_VALIDATION_2.1.296.md`）。其他版本 preflight 顯示 `WARNING_VERSION_DRIFT`（不阻擋），需重跑 `round07_regression.py` 後才列入。
+
+## 8. 2026-10-13 官方規則同步（主辦方 Email 2026-10-07 + 官網 10-05 / 10-12）
+**正式時序（每個交易日 T）**
+1. **T-1 16:00 後**：各投信陸續更新主動 ETF 最新持股 → 一鍵流程的 refresh 抓取（30 檔逐一比較 Active Share）。
+2. **T-1 19:00 後**：官方當日淨值 / 結算 → 登入後台「文件繳交」→「下載資料包」（DataPack，人工）→ `python -m agent.ops.datapack ...` 匯入。
+   `missing` 含 `prev_settlement` 時 `account` 為 null → 稍後重新下載，不可當成空手。
+3. **T-1 19:30**：送件窗口開啟 → Agent 執行（Quant → Active Share → Claude 敘事 → grounding → D-Plan v4.3 → 驗證 → FINAL_CANDIDATE）。
+4. 人工上傳（不自動提交）；每日上限 25 次；**08:55 前最後一次成功提交生效**（被拒收的上傳不取代先前成功的提交）。
+**首日**：2026-10-26 休市；第一個交易日 **2026-10-27**，窗口 **2026-10-26 19:30 ～ 10-27 08:55**，加 `--initial`（DataPack `as_of_date` 為 null、全現金）。
+**Active Share（官方）**：雙方前 15 大聯集、占 NAV、含現金，逐一比較所有官方主動 ETF，**< 15% 違規**、連續 2 日可取消資格；內部安全目標 30% 只是策略緩衝。
+**每日合規摘要**：operator summary 的 `COMPLIANCE` 區塊（Universe / 檔數 / 2330 / 個股 / 現金 / Active Share 官方與內部 / 策略一致性 / D-Plan / 人工介入 / Claude / Overall）。

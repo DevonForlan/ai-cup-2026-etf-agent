@@ -56,3 +56,7 @@ competition_period_trading_days:
   - '2026-11-25'
   - '2026-11-26'
   - '2026-11-27'
+
+# Organizer confirmation (official announcement 2026-09-29 + e-mail 2026-10-07): NC-15 RESOLVED
+organizer_first_trade_date: "2026-10-27"
+organizer_first_submission_window: ["2026-10-26T19:30:00+08:00", "2026-10-27T08:55:00+08:00"]

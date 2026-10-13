@@ -1,0 +1,77 @@
+# Organizer clarifications — created 2026-10-13 from (a) the organiser e-mail reply of 2026-10-07 provided by the
+# user and (b) official documents on https://esun-ai-challenge.tw (rules 1005更新, D-Plan v4.3, DataPack v4.3 of
+# 2026-10-12). Precedence: latest official site document > official D-Plan/DataPack spec > organiser e-mail > older
+# official docs > our research. Details: reports/OFFICIAL_RULE_SYNC_2026-10-07.md.
+# Only NC entries listed here change; everything else stays `unknown` (agent/rules/organizer_clarifications.py).
+
+NC-1:
+  status: partially_confirmed
+  answer: >-
+    SETTLEMENT: official DataPack (資料包) per DataPack 規格書 v4.3 — operator logs in to the participant back office,
+    「文件繳交」→「下載資料包」 (manual; the agent never logs in). Holds as_of_date settlement: cash, nav_tradable,
+    holdings (shares, receivable_shares), compliance incidents. Imported with agent/ops/datapack.py.
+    SUBMISSION: manual upload on the platform (max 25 per team per day, 辦法 §二(八)); exact upload page / receipt
+    format still to be verified on the platform after login -> NEED_CONFIRMATION.
+    E-mail 2026-10-07 said NC-1 was pending the new D-Plan; the later official v4.3 documents (2026-10-12) answer the
+    settlement part.
+  effective_date: 2026-10-12
+  source: official_announcement
+  source_ref: "esun-ai-challenge.tw announcement 2026-10-12 新增 DataPack 規格書; DataPack_規格書_v4.3.md; D-Plan_撰寫指南_v4.3.md §⑥"
+  affected: [settlement]
+
+NC-2:
+  status: partially_confirmed
+  answer: >-
+    Active Share: W_i = weight of total NAV; cash included; summation over the union of both portfolios' top-15
+    holdings (was top-10); compared one by one with every official active ETF using the latest available
+    holdings (issuers update ~16:00); violation only when < 15% (was 20%); 2 consecutive trading days < 15% ->
+    organiser may disqualify; organiser checks at random times. OPEN SUB-ITEM: the benchmark ETF cash weight is not
+    disclosed -> NEED_CONFIRMATION (cash term added only when both sides are known; never filled with 0).
+  effective_date: 2026-10-05
+  source: organizer_email
+  source_ref: "organiser e-mail 2026-10-07; 比賽辦法_1005更新 §六(十三); site announcement 2026-10-05 放寬Active Share認定"
+  affected: [active_share, validator]
+
+NC-3:
+  status: partially_confirmed
+  answer: >-
+    D-Plan v4.3 schema: reference integrity (C1), decision coverage, round lots -> 未通過即整份退回. DataPack v4.3
+    void_reasons (whole day voided): insufficient_funds, oversell, no_price, compliance_fail (holdings count /
+    universe / cash / 當日加碼個股權重), dplan_reference_chain, dplan_decision_coverage, dplan_round_lot;
+    incidents have status warn (notices, no DQ) or fail (violations). Disposition of posture (C12), funding_for
+    (C14) and timestamp checks is NOT stated -> still NEED_CONFIRMATION. E-mail 2026-10-07: organiser adjusting
+    the new D-Plan, will reply later.
+  effective_date: 2026-10-12
+  source: official_announcement
+  source_ref: "D-Plan.schema_v4.3.json; DataPack_規格書_v4.3.md §2.3; organiser e-mail 2026-10-07"
+  affected: [validator]
+
+NC-9:
+  status: partially_confirmed
+  answer: >-
+    Organiser: 「強烈建議完整保留修改紀錄、版本、原因與執行 log 等以供備查」. No prohibition stated; governance in
+    docs/CODE_CHANGE_GOVERNANCE.md (technical fixes only, never performance-driven).
+  effective_date: 2026-10-07
+  source: organizer_email
+  source_ref: "organiser e-mail 2026-10-07"
+  affected: [governance]
+
+NC-10:
+  status: confirmed
+  answer: >-
+    On every trading day the last SUCCESSFUL submission before 08:55 is effective (not merely the last upload;
+    a rejected upload does not replace an earlier accepted one). Max 25 submissions per team per day.
+  effective_date: 2026-10-07
+  source: organizer_email
+  source_ref: "organiser e-mail 2026-10-07; 比賽辦法_1005更新 §二(八)"
+  affected: [submission]
+
+NC-15:
+  status: confirmed
+  answer: >-
+    2026-10-26 光復節補假, market closed. First trading day 2026-10-27; its D-Plan may be uploaded from
+    2026-10-26 19:30 to 2026-10-27 08:55. 24 trading days.
+  effective_date: 2026-09-29
+  source: official_announcement
+  source_ref: "site announcement 2026-09-29 提醒：首次繳交…; organiser e-mail 2026-10-07; TWSE 2026 holiday schedule"
+  affected: [calendar, submission]

@@ -95,7 +95,7 @@ operator summary 會顯示 `LLM: PRIMARY=claude-cli STATUS=READY|DEGRADED FALLBA
 | Timeout | `TIMEOUT`（單次 120 s / 全日 300 s 預算） | 子程序終止（含整個程序樹）→ Template | 照常上傳 | 否 |
 | Invalid JSON / schema 錯 | `INVALID_JSON` / `SCHEMA_FAIL` | Template | 照常上傳 | 否 |
 | Grounding / 矛盾失敗 | 未知 fact ID、新 ticker、無來源數字、交易指令、與決策矛盾 | 該段文字丟棄 → Template | 照常上傳（gate 不放寬） | 否 |
-| 版本漂移 | preflight `WARNING_VERSION_DRIFT`（非 2.1.289） | 仍可使用；若呼叫失敗 → Template | 當天照常；收盤後跑 `experiments\claude_cli_runtime\round07_regression.py` 一次確認後再更新 `supported_versions` | 否 |
+| 版本漂移 | preflight `WARNING_VERSION_DRIFT`（非已驗證版本 2.1.289 / 2.1.291 / 2.1.296） | 仍可使用；若呼叫失敗 → Template | 當天照常；收盤後跑 `experiments\claude_cli_runtime\round07_regression.py` 一次確認後再更新 `supported_versions` | 否 |
 | 找不到 CLI | `STATUS=DEGRADED (CLI_NOT_FOUND)` | Template | 照常上傳；收盤後重裝官方 Claude Code | 否 |
 | 接近截止 | deadline RESTRICTED（≤30 min） | 只呼叫 1 次市場敘事；thesis / 研究 → Template | 無 | 否 |
 | 更接近截止 | NO_LLM（≤15）/ PACKAGE_ONLY（≤10） | 不呼叫 Claude；PACKAGE_ONLY 只做量化 + 驗證 + 打包 | 立即上傳 FINAL | 否 |
@@ -103,3 +103,14 @@ operator summary 會顯示 `LLM: PRIMARY=claude-cli STATUS=READY|DEGRADED FALLBA
 | ETF 持股過期（含中信 00983A / 00995A / 00406A） | `etf_holdings` STALE_FALLBACK + age | 沿用最近一次持股（記錄 age），Active Share 安全緩衝不降低 | 照常上傳；收盤後重跑 refresh | 否（除非全部 ETF 都無資料 → 依 §A） |
 | 提交平台無法使用 | 上傳失敗 | 無（程式不會自動上傳） | 依主辦方指示（NC-1 提交方式未確認）；保留 FINAL 與截圖，聯絡主辦方 | 人工處理 |
 | 官方結算無法取得 | 次日 preflight：無官方結算 | 競賽模式 BLOCK（不猜持股）；dry-run 可用內部結算 | 依 §C；用 `settlement_entry.py` 人工輸入（NC-1 未確認） | 是（競賽模式） |
+
+## 2026-10-13 新增情境（官方規則同步）
+| 情境 | 現象 | 系統自動處理 | 操作者動作 | 是否阻擋 |
+|---|---|---|---|---|
+| DataPack 尚未產生 | `missing: [prev_settlement]`、`account` null | 匯入拒絕（不當成空手） | 稍後重新下載再匯入 | 是（competition 模式需官方結算） |
+| DataPack 隊伍 / 日期不符 | 匯入 BLOCK | 拒絕 | 確認下載的是本隊、本交易日的資料包 | 是 |
+| 前一日委託被作廢 | DataPack `prev_day_orders.outcome = voided` | 匯入時 WARN 顯示原因 | 依 `void_reasons` 檢查（以資料包持股為準重新產生） | 否 |
+| Active Share < 15%（官方） | 驗證 `R_ACTIVE_SHARE` FAIL | 自動 fallback（維持前日組合）；仍 FAIL → BLOCK | 檢查 ETF 持股資料；連續 2 日 < 15% 可能被取消資格 | 是 |
+| Active Share 15%～30% | `R_ACTIVE_SHARE` WARNING（低於內部安全目標） | 可送出 | 留意趨勢 | 否 |
+| ETF 持股過期 > 10 天 | preflight `etf_holdings_freshness` BLOCK | 不產生 D-Plan | 重跑 refresh（中信投信 API 白天曾持續拒絕，夜間較穩）；不放寬門檻 | 是 |
+| 當日上傳超過 25 次 | 平台阻擋 | — | 停止重繳；以最後一次成功提交為準 | — |

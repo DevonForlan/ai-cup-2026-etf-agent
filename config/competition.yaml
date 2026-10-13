@@ -1,4 +1,5 @@
-# Official competition rules ONLY (source: 比賽辦法 PDF / D-Plan v4.2).
+# Official competition rules ONLY (source: 比賽辦法_1005更新 PDF / D-Plan v4.3 (2026-10-12) / organiser e-mail 2026-10-07;
+# see reports/OFFICIAL_RULE_SYNC_2026-10-07.md). Previous: 比賽辦法 (09-18) / D-Plan v4.2.
 # Do NOT put strategy safety margins here -> config/strategy.yaml.
 # Unclear items -> config/unconfirmed_rules.yaml.
 official_rules:
@@ -10,8 +11,18 @@ official_rules:
   cash_min: 0                       # 辦法 §六(十四)(2) 現金不得為負
   holdings_min: 20                  # 辦法 §六(八)
   holdings_max: 30
-  active_share_min: 0.20            # 辦法 §六(十三)
-  active_share_consecutive_days_dq: 2
+  active_share_min: 0.15            # 辦法_1005更新 §六(十三)（原 0.20）；< 15% 才視為違規
+  active_share_consecutive_days_dq: 2   # 連續 2 個交易日 < 15% -> 主辦方有權取消資格
+  active_share:                     # 主辦方 2026-10-07 Email 回覆 + 辦法_1005更新 §六(十三)
+    official_threshold: 0.15
+    top_n: 15                       # 雙方前 15 大持股（原前 10 大）
+    aggregation: union_of_top_n     # 加總範圍：雙方前 15 大聯集
+    weight_basis: nav               # Wi = 占整體 NAV 權重
+    include_cash: true              # 計算包含現金
+    benchmark_cash: NEED_CONFIRMATION   # 投信未揭露 ETF 現金權重 -> 不補 0；現金項僅在雙方皆已知時加入（不加入 = 較低、保守值）
+    compare_all_official_etfs: true # 逐一與每檔官方主動式 ETF 比較，取最小值
+    benchmark_data: latest_available    # 投信約每日 16:00 後更新；主辦方不定期抽驗
+    # internal safety target (0.30) is a STRATEGY buffer: config/strategy_quant_v1.yaml strategy_buffers, not official
   buy_fee_rate: 0.001425            # 辦法 §六(十一)；指南 ⑥ 買賣各收
   sell_fee_rate: 0.001425
   transaction_tax_rate: 0.003       # 賣出另收
@@ -26,12 +37,19 @@ official_rules:
     closes: "08:55"
     timezone: "+08:00"
   competition_period:
-    start: "2026-10-26"
+    start: "2026-10-26"             # nominal period (辦法)
     end: "2026-11-27"
+  first_trade_date: "2026-10-27"    # 2026-10-26 光復節補假休市（官網公告 2026-09-29 + Email 2026-10-07 + TWSE）
+  first_submission_window:
+    opens: "2026-10-26T19:30:00+08:00"
+    closes: "2026-10-27T08:55:00+08:00"
+  multiple_submission_rule: last_successful_submission_before_close_wins   # 每交易日 08:55 前最後一次「成功」提交生效
+                                    # （非最後一次上傳；被拒收的上傳不取代先前成功提交）；每日上限 25 次
 
 dplan:
-  schema_path: "D-Plan.schema_v4.2.json"
-  schema_version: "4.2"
+  schema_path: "research/official_updates/D-Plan.schema_v4.3.json"   # official v4.3 (2026-10-12)；根目錄 v4.2 原檔保留
+  schema_version: "4.3"
+  previous_schema_path: "D-Plan.schema_v4.2.json"
   c12_hold_tolerance_nav: 0.02      # schema: server 參數，預設 2% NAV
   filename_pattern: "D-Plan_{team_id}_{trade_date}.json"
 

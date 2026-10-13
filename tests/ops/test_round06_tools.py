@@ -63,7 +63,7 @@ def test_readiness_caps_at_dry_run_without_nc1(monkeypatch):
     from agent.ops import readiness as R
     res = R.assess({"ok": True, "failed": 0, "summary": "n passed"})
     assert res["level"] != "COMPETITION_READY"
-    assert res["nc1_status"] == "unknown" and "NC-1" in (res["cap_reason"] or "")
+    assert res["nc1_status"] != "confirmed" and "NC-1" in (res["cap_reason"] or "")   # partially_confirmed since 10-13
     assert any("NC-1" in b for b in res["blockers"])
 
 

@@ -3,14 +3,15 @@
 # `simulation_assumptions` is the value our simulator/validator uses *for now*;
 # every report states that it is an assumption.
 unconfirmed:
-  active_share_mode: unknown            # NC-2: NAV_WEIGHT | TOP10_NORMALIZED | FULL_PORTFOLIO
+  active_share_mode: confirmed_official_top15_nav   # NC-2 RESOLVED 2026-10-07 e-mail + 辦法_1005更新 (validator uses it; see competition.yaml);
+                                        # benchmark cash weight still NEED_CONFIRMATION
   cash_equal_25_allowed: null           # NC-6
   fee_rounding_mode: unknown            # NC-5
   no_trade_execution_mode: unknown      # NC-4: skip | reject
   mdd_include_initial_nav: null         # NC-8
-  daily_last_submission_wins: null      # NC-10 (11/27 is confirmed: last submission)
-  official_settlement_source: unknown   # NC-1
-  first_trade_date: unknown             # NC-15: 10/26 or 10/27
+  daily_last_submission_wins: true      # NC-10 RESOLVED 2026-10-07 e-mail: last SUCCESSFUL submission before 08:55 wins
+  official_settlement_source: datapack_manual_download   # NC-1 (settlement) per DataPack v4.3 spec 2026-10-12: backend 文件繳交 -> 下載資料包 (login, manual)
+  first_trade_date: "2026-10-27"        # NC-15 RESOLVED: 官網公告 2026-09-29 + e-mail 2026-10-07 (10/26 closed; window 10/26 19:30-10/27 08:55)
   bugfix_during_competition_allowed: null  # NC-9
   check_code_disposition: unknown       # NC-3: reject vs warning per C-code
   c12_estimate_includes_fees: null
@@ -18,7 +19,8 @@ unconfirmed:
   holdings_count_inclusive: null        # NC-6 (20 and 30 inclusive?)
 
 simulation_assumptions:
-  active_share_mode: UNKNOWN            # UNKNOWN = evaluate all modes, gate on the minimum
+  active_share_mode: UNKNOWN            # LEGACY internal guard metric of Quant Core v1 (frozen; min of top-10 interpretations).
+                                        # The OFFICIAL gate (top-15 NAV, 15%) is in the D-Plan validator.
   cash_equal_25_allowed: false          # conservative
   fee_rounding_mode: exact              # exact | round_half_up | floor | ceil  (to 1 TWD)
   no_trade_execution_mode: skip         # skip | reject

@@ -52,3 +52,18 @@
 | T4 | Agent framework 是否必要（LangGraph / Google ADK / 純 Python） | 本輪不決定；建議先純 Python pipeline |
 | T5 | 提交是否可程式化 | 向主辦方確認 |
 | T6 | 盤前試撮（08:30–08:55）是否值得納入（時間極緊） | 評估後決定；預設不依賴 |
+
+## 2026-10-13 更新：官方規則同步（主辦方 Email 2026-10-07 + 官網 2026-10-05 / 10-12 文件）
+
+| NC | 2026-10-13 狀態 | 依據 | 摘要 |
+|---|---|---|---|
+| NC-1 結算 | **RESOLVED（官方文件）** | DataPack 規格書 v4.3（2026-10-12） | 前日結算持股 / 現金 / `nav_tradable` 由後台「文件繳交」→「下載資料包」取得（需登入，人工下載）；`agent/ops/datapack.py` 匯入 |
+| NC-1 提交 | **OPEN（NEED_CONFIRMATION）** | 辦法 §二(八)；Email 2026-10-07 | 平台人工上傳、每日 25 次上限；上傳頁面與回執格式需登入後確認 |
+| NC-2 Active Share | **RESOLVED / UPDATED**（子項 OPEN） | Email 2026-10-07 + 辦法_1005更新 §六(十三) | Wi 占 NAV、含現金、雙方前 15 大聯集、逐一比較所有官方主動 ETF、< 15% 違規、連續 2 日可取消資格。子項：benchmark ETF 現金權重未揭露 → NEED_CONFIRMATION |
+| NC-3 C1～C14 處置 | **OPEN（部分已知）** | D-Plan v4.3 schema、DataPack 作廢原因；Email 2026-10-07 | 引用鏈、決策覆蓋、整股 →「整份退回」；作廢原因：資金不足 / 超賣 / 無價 / 合規 / 引用鏈 / 覆蓋 / 整股；C12、C14、時間戳之處置未寫 |
+| NC-9 比賽中修改 | PARTIALLY RESOLVED | Email 2026-10-07 | 建議完整保留修改紀錄 → `docs/CODE_CHANGE_GOVERNANCE.md` |
+| NC-10 重繳 | **RESOLVED** | Email 2026-10-07 | 每交易日 08:55 前最後一次**成功**提交生效（≠ 最後一次上傳） |
+| NC-15 第一個交易日 | **RESOLVED** | 官網公告 2026-09-29 + Email 2026-10-07 | 10/26 休市；首個交易日 10/27；10/26 19:30～10/27 08:55 可繳交 |
+
+其他 NC（NC-4/5/6/7/8、C12 現金估算含手續費）維持 OPEN。機器可讀版本：`config/organizer_clarifications.yaml`。
+詳細：`reports/OFFICIAL_RULE_SYNC_2026-10-07.md`。

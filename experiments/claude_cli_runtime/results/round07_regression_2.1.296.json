@@ -1,0 +1,107 @@
+{
+ "run_at": "2026-10-13T21:54:46+08:00",
+ "healthcheck": {
+  "primary": "claude-cli",
+  "status": "READY",
+  "fallback": "template",
+  "binary": "found",
+  "binary_kind": "native",
+  "version": "2.1.296",
+  "version_check": "WARNING_VERSION_DRIFT",
+  "supported_versions": [
+   "2.1.289",
+   "2.1.291"
+  ],
+  "loggedIn": true,
+  "authMethod": "claude.ai",
+  "subscriptionType": "team",
+  "apiProvider": "firstParty",
+  "profile": "NARRATIVE_LOCKED",
+  "detail": "READY",
+  "line": "LLM: PRIMARY=claude-cli STATUS=READY FALLBACK=template"
+ },
+ "smoke": {
+  "task": "mops_research",
+  "docs": 3,
+  "latency_sec": 13.6,
+  "stats": {
+   "docs": 3,
+   "returned": 3,
+   "accepted": 3,
+   "rejected": [],
+   "called": true
+  },
+  "accepted": 3,
+  "items": [
+   {
+    "event_type": "revenue",
+    "summary": "力積電針對經濟日報報導發布澄清重大訊息：公司表示今年前三季業績表現逐季上揚，反映產業景氣良好；對於媒體臆測營收雙位數季增幅，公司不予置評。",
+    "positive_evidence": [
+     "公司自述今年前三季業績表現逐季上揚",
+     "公司表示業績反映產業景氣良好"
+    ],
+    "negative_evidence": [
+     "公司對媒體所稱雙位數季增幅不予置評，未證實該預期",
+     "公告未提供具體營收數字或未來展望"
+    ],
+    "uncertainty": "公告僅為澄清性質，未揭露具體數據；第四季及全年營運是否如媒體報導持續向上，公司未予確認。",
+    "affected_tickers": [
+     "6770"
+    ],
+    "fact_refs": [
+     "MOPS-001"
+    ]
+   },
+   {
+    "event_type": "revenue",
+    "summary": "大聯大公告115年9月自結合併營收新台幣2,195.9億元，月增54.4%、年增146.5%；第三季營收新台幣5,079.3億元，季增10.8%、年增107.8%，超越財測高標；前三季累計營收新台幣1兆2,827.1億元，年增72.5%。",
+    "positive_evidence": [
+     "第三季營收5,079.3億元，超越財測新台幣4,600億元至5,000億元之高標",
+     "9月營收首度突破2,000億元，年增146.5%",
+     "公司表示伺服器、電源管理、網通、儲能等應用維持良好拉貨動能"
+    ],
+    "negative_evidence": [
+     "公司說明9月營收部分受客戶因應十一長假提前拉貨影響，可能有需求提前認列情形",
+     "部分成長來自產品價格調整因素"
+    ],
+    "uncertainty": "提前拉貨效應可能使後續月份營收回落；公告為自結數字，未揭露獲利率，營收成長對獲利的影響未知。",
+    "affected_tickers": [
+     "3702"
+    ],
+    "fact_refs": [
+     "MOPS-002"
+    ]
+   },
+   {
+    "event_type": "earnings",
+    "summary": "南亞科於法人說明會公布115年第3季自結合併財務資訊：營業收入新台幣1,336.49億元、營業淨利新台幣1,068.94億元、稅前淨利新台幣1,093.32億元、本期淨利新台幣876.27億元。",
+    "positive_evidence": [
+     "營業淨利新台幣1,068.94億元，相對營業收入新台幣1,336.49億元顯示高獲利水準",
+     "本期淨利新台幣876.27億元"
+    ],
+    "negative_evidence": [
+     "公告未提供前期或去年同期比較數據"
+    ],
+    "uncertainty": "公告摘要僅列單季自結數字，缺乏比較基期及未來展望，無法判斷趨勢延續性；數字為自結，尚待正式財報確認。",
+    "affected_tickers": [
+     "2408"
+    ],
+    "fact_refs": [
+     "MOPS-003"
+    ]
+   }
+  ],
+  "llm": {
+   "calls": 1,
+   "ok": 1,
+   "failed": 0,
+   "skipped_budget": 0,
+   "retries": 0,
+   "input_tokens": 2,
+   "output_tokens": 1014,
+   "cost_usd": 0,
+   "latency_mean": 13.5839,
+   "latency_p95": 13.5839
+  }
+ }
+}

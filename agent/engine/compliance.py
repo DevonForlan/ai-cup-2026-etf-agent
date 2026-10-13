@@ -150,7 +150,7 @@ def check_active_share(res: ActiveShareResult, rb: RuleBook, target: Decimal | N
                        rep: Report | None = None) -> Report:
     rep = rep or Report("active_share")
     lim = rb.rules.active_share_min
-    detail = {"mode_used": res.mode_used, "min_by_mode": res.min_by_mode,
+    detail = {"mode_used": res.mode_used, "min_by_mode": res.min_by_mode, "cash_term": res.cash_term,
               "missing_benchmarks": res.missing_benchmarks, "benchmarks_synthetic": res.benchmarks_synthetic,
               "data_date": res.benchmarks_data_date}
     if res.minimum_active_share is None:
@@ -159,10 +159,12 @@ def check_active_share(res: ActiveShareResult, rb: RuleBook, target: Decimal | N
         return rep
     m = res.minimum_active_share
     note = "（官方 W_i 定義未確認 NC-2；取所有解讀之最小值）" if res.mode_used == "UNKNOWN" else ""
+    if res.mode_used == "OFFICIAL_TOP15_NAV":     # 辦法 1005 §六(十三) + 主辦方 2026-10-07 回覆
+        note = f"（官方：雙方前 15 大聯集、占 NAV 權重；benchmark 現金項 {res.cash_term or '-'}）"
     if res.benchmarks_synthetic:
         note += "（benchmark 為合成資料）"
     if m < lim:
-        st, msg = Status.FAIL, f"Active Share 最小值 {float(m):.2%} < 20%（{res.benchmark_ticker}）{note}"
+        st, msg = Status.FAIL, f"Active Share 最小值 {float(m):.2%} < 官方門檻 {float(lim):.0%}（{res.benchmark_ticker}）{note}"
     elif target is not None and m < target:
         st, msg = Status.WARNING, f"Active Share 最小值 {float(m):.2%} 低於策略目標 {float(target):.0%}（{res.benchmark_ticker}）{note}"
     else:

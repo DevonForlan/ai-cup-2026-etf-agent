@@ -306,6 +306,9 @@ def run_competition_day(trade_date: str, team_id: str, mode: str = "dry-run", *,
                 "research_inferences": len((r.research or {}).get("inferences") or [])}
         if llm else {"used": False, "mode": "template"},
     })
+    from agent.ops import compliance_summary as CS          # rule sync 2026-10-07/12: daily compliance view
+    summary["compliance_summary"] = CS.build(r.validation.to_dict(), float(cfg["strategy_buffers"]["active_share_target"]),
+                                             summary["llm"], bool(llm))
     if not r.validation.ok and dls.phase == "PAST_CUTOFF" and mode != "historical":
         return finish("LATE_PAST_CUTOFF", reason="past submission cutoff (validator rejects late timestamps); "
                                                  "no package / FINAL produced")
@@ -429,6 +432,12 @@ def operator_summary(s: dict) -> str:
             f" RUNTIME     : {s.get('total_sec')} s   SLA breaches: {[x['metric'] for x in s.get('sla', []) if x['breach']]}"]
     for n in s.get("notes", [])[:6]:
         body.append(f" NOTE        : {n}")
+    if s.get("compliance_summary"):
+        from agent.ops.compliance_summary import overall
+        body.append(" COMPLIANCE  :")
+        for k, v in s["compliance_summary"].items():
+            body.append(f"   {k:38s} {v}")
+        body.append(f"   {'Overall':38s} {overall(s['compliance_summary'], s['status'])}")
     ready = s["status"] == "READY_TO_SUBMIT"
     comp = s["mode"] == "competition"
     big = f"#####  {s['trade_date']}  #####  {s['team_id']}  #####  {'COMPETITION' if comp else 'DRY RUN — DO NOT UPLOAD'}  #####"

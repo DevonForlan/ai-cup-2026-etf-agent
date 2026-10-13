@@ -92,3 +92,15 @@
 - 新增 PASS：24 日彩排、結算 SOP、提交介面 / 狀態機、指紋 / 比對、soak、crash / lock 恢復、備份還原、斷網、資安掃描、發版驗證。
 - Round 06 修正的真問題：休市造成假 STALE BLOCK、ETF 新鮮度使用未來資料（replay）、MOPS 未來日重試浪費 157 s、他隊 FINAL 被顯示 / 保留。
 - 等級不變：DRY_RUN_READY（阻擋項皆為外部：NC-1、真實 LLM key、首日 NC-15）。
+
+## 2026-10-13 官方規則同步
+- [x] 官網新版附件下載與比對（`research/official_updates/OFFICIAL_UPDATE_INDEX.md`）
+- [x] D-Plan runtime 升級為官方 v4.3（`research/official_updates/DPLAN_VERSION_DIFF.md`）
+- [x] Active Share 官方規則：前 15 大聯集、占 NAV、含現金（benchmark 現金 NEED_CONFIRMATION）、門檻 15%；內部安全目標 30% 另列
+- [x] 首個交易日 2026-10-27、首次繳交窗口 10/26 19:30～10/27 08:55（NC-15 RESOLVED）
+- [x] 重繳：08:55 前最後一次成功提交生效（NC-10 RESOLVED）；每日 25 次上限
+- [x] DataPack 匯入（`agent/ops/datapack.py`）— 結算來源 NC-1（結算部分）RESOLVED
+- [ ] NC-1 提交：平台上傳頁面 / 回執格式需登入後確認
+- [ ] NC-3：C12 / C14 / 時間戳處置待主辦方說明
+- [ ] 中信投信 ETF 持股（00983A / 00995A / 00406A）恢復更新（目前觸發 ETF 新鮮度 BLOCK）
+- Readiness：DRY_RUN_READY（不變）

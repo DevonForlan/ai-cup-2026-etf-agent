@@ -14,7 +14,11 @@ enabled: false                  # this file alone does not activate the CLI; the
 provider:
   name: claude-cli
   binary: claude                # official native binary found on PATH / native installer; never a shim or script
-  supported_versions: ["2.1.289"]   # verified in Round 06B; other versions -> WARNING_VERSION_DRIFT (not a block)
+  # validated versions (each passed auth + structured smoke + grounding + full regression suite):
+  #   2.1.289 = Round 06B / Round 07 (historical); 2.1.291 = validated 2026-10-07;
+  #   2.1.296 = current validated 2026-10-13 (reports/CLAUDE_CLI_VERSION_VALIDATION_2.1.296.md)
+  # any other version -> WARNING_VERSION_DRIFT (never a block); rerun round07_regression.py before adding one
+  supported_versions: ["2.1.289", "2.1.291", "2.1.296"]
   accepted_auth_methods: ["claude.ai"]   # `claude auth status`: loggedIn=true + authMethod=claude.ai -> READY
   prompt_guard: claude_cli_narrative_v1
 
