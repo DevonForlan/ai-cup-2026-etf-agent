@@ -111,7 +111,7 @@ def test_unconfirmed_official_blocks_competition_but_not_dry_run(fixture_store, 
            "warnings": []}
     enter_official(off, ops_cfg, Path(ops_cfg["paths"]["settlement_dir"]).parent / "e", confirm=False)
     s = run(fixture_store, ops_cfg, T2, CLK2)
-    assert s["status"] == "BLOCKED" and "settlement_confirmed" in s["reason"]
+    assert s["status"] == "BLOCKED" and "DATAPACK_MISSING" in s["reason"]     # 2026-10-14: official DataPack required
     assert run(fixture_store, ops_cfg, T2, CLK2, mode="dry-run")["status"] == "DRY_RUN_OK"
 
 

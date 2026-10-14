@@ -43,6 +43,7 @@ paths:
   etf_snapshots_dir: data/raw/active_etf
   first_seen_ledger: data/observations/mops_revenue_first_seen.parquet
   ops_reports_dir: reports/ops_daily
+  official_datapack_dir: data/official_datapack   # ONLY organiser DataPacks (docs/OFFICIAL_DATAPACK_INTEGRATION.md)
 
 freeze:                  # docs/STRATEGY_FREEZE_RECORD.md; preflight/healthcheck BLOCK on mismatch in competition mode
   strategy_config: config/strategy_quant_v1.yaml
@@ -89,3 +90,7 @@ market_holidays:              # 2026 TWSE official (config/trading_calendar_2026
   - '2026-10-09'
   - '2026-10-26'
   - '2026-12-25'
+
+# Scheduler run mode (agent/ops/scheduled_run.py). PRECOMPETITION: paper ledger, DataPack NOT_REQUIRED, labelled
+# PRECOMPETITION_PAPER_RUN. COMPETITION: official DataPack REQUIRED (no fallback). Switch only by explicit decision.
+run_mode: PRECOMPETITION

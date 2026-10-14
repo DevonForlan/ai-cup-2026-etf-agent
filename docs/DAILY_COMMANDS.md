@@ -78,3 +78,8 @@ DataPack 取代步驟 7 的人工 CSV 雙重輸入（CSV 方式保留作備援�
 - 查看：`.\automation\check_last_evaluation.ps1`、`.\automation\check_last_scheduled_run.ps1`
 - 手動：`Start-ScheduledTask -TaskName "AI_CUP_Precompetition_Evaluation_1700"`
 - 全部標示 PRECOMPETITION_PAPER_RUN（不是正式成績、不上傳）。細節：`docs\ROUND08_FINAL_VALIDATION.md`
+
+## 官方 DataPack（正式比賽；2026-10-14 起已實作）
+- 每天 19:00 後下載資料包，存到 `data\official_datapack\`（不需手動輸入任何數字）。比賽模式會自動找檔、驗證、檢查日期；缺檔 / 過期 / 格式錯 → BLOCKED。
+- 查詢：`.venv\Scripts\python.exe -m agent.ops.datapack_status`
+- 細節：`docs\OFFICIAL_DATAPACK_INTEGRATION.md`（目前 run_mode = PRECOMPETITION，DataPack 不需要）

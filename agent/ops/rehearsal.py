@@ -50,7 +50,8 @@ def rehearsal_ops_cfg(root: Path, base: dict | None = None) -> dict:
     c = copy.deepcopy(base or load_ops_config())
     rel = {"settlement_dir": "data/settlement", "submissions_dir": "submissions", "archive_dir": "archive",
            "ops_logs_dir": "logs/ops", "etf_snapshots_dir": "data/raw/active_etf",
-           "first_seen_ledger": "data/observations/mops_revenue_first_seen.parquet", "ops_reports_dir": "reports/ops_daily"}
+           "first_seen_ledger": "data/observations/mops_revenue_first_seen.parquet", "ops_reports_dir": "reports/ops_daily",
+           "official_datapack_dir": "data/official_datapack"}
     for k in c["paths"]:
         c["paths"][k] = str(root / rel.get(k, k))
     return c
@@ -81,9 +82,10 @@ def continuity_problems(prev_settlement, start: dict | None, prev_start: dict | 
         p.append(f"start date {start['date']} != settlement {prev_settlement.date}")
     if start["holdings"] != prev_settlement.holdings:
         p.append("holdings break")
-    if Decimal(start["cash"]) != prev_settlement.cash:
+    # official DataPack amounts are JSON numbers (spec v4.3): allow 1 TWD rounding, far inside the 5 TWD MATCH
+    if abs(Decimal(start["cash"]) - prev_settlement.cash) > Decimal(1):
         p.append("cash break")
-    if Decimal(start["nav"]) != prev_settlement.nav:
+    if abs(Decimal(start["nav"]) - prev_settlement.nav) > Decimal(1):
         p.append("NAV break")
     if Decimal(start["accrued_dividends"]) != prev_settlement.accrued_dividends:
         p.append("accrued dividend break")
@@ -138,6 +140,11 @@ def rehearse(start_date: str, *, end_date: str | None = None, days: int | None =
     cal = TradingCalendar(store.dates("daily_prices"))
     all_days = [d for d in cal.days if d >= start_date and (end_date is None or d <= end_date)]
     tdays = all_days[:days] if days else all_days
+    if tdays:   # rehearsal calendar = the store's trading days; day 1 = first rehearsal day (DataPack gate)
+        from datetime import date as _dd, timedelta as _tdd
+        d0, d1 = _dd.fromisoformat(cal.days[0]), _dd.fromisoformat(all_days[-1]) + _tdd(days=10)
+        wk = {(d0 + _tdd(days=k)).isoformat() for k in range((d1 - d0).days + 1) if (d0 + _tdd(days=k)).weekday() < 5}
+        ops_cfg["datapack_calendar_override"] = {"first_trade_date": tdays[0], "hol": wk - set(cal.days)}
     base = Path(baseline_run) if baseline_run else None
     rows, prev_settlement, prev_start, run_ids, fail_days = [], None, None, [], []
     t_all = time.perf_counter()
@@ -204,6 +211,13 @@ def rehearse(start_date: str, *, end_date: str | None = None, days: int | None =
                                     snapshot_ref=None, confirm=True, ops_cfg=ops_cfg, closes=closes)
             if ent["status"] != "DOUBLE_ENTRY_MATCH":
                 probs.append(f"official entry {ent['status']}: {ent['problems'][:3]}")
+            nxt_day = all_days[i + 1] if i + 1 < len(all_days) else None
+            if mode == "clock-sim" and nxt_day:      # simulated organiser DataPack (isolated rehearsal folder only)
+                from agent.ops.datapack import simulated_datapack
+                dpd = Path(ops_cfg["paths"]["official_datapack_dir"])
+                dpd.mkdir(parents=True, exist_ok=True)
+                write_json(dpd / f"SIMULATED_DataPack_{team_id}_{nxt_day}.json",
+                           simulated_datapack(off, closes, team_id, nxt_day))
             sm = reconcile({"holdings": sett.holdings, "cash": str(sett.cash), "nav": str(sett.nav),
                             "accrued_dividends": str(sett.accrued_dividends),
                             "warnings": [w["rule"] for w in sett.warnings]}, off, ops_cfg)["status"]

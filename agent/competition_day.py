@@ -172,7 +172,28 @@ def run_competition_day(trade_date: str, team_id: str, mode: str = "dry-run", *,
     sstat = {"previous_date": prev_date, "initial_day": initial}
     rec = None
     start: Settlement | None = None
+    official = None
     extra_checks: list[Check] = []
+    dpg = None
+    if mode == "competition":            # official DataPack gate: REQUIRED, no fallback (docs/OFFICIAL_DATAPACK_INTEGRATION.md)
+        from agent.ops.datapack import datapack_gate, import_datapack
+        dpg = datapack_gate(trade_date, team_id, initial=initial, ops_cfg=ops_cfg,
+                            **(ops_cfg.get("datapack_calendar_override") or {}))   # tests only
+        summary["datapack"] = {k: dpg.get(k) for k in ("status", "reason", "expected_previous_trading_day", "file",
+                                                       "settlement_date", "schema_version", "validation", "freshness",
+                                                       "problems", "warnings")}
+        if dpg["status"] != "PASS":
+            durations["settlement"] = round(time.perf_counter() - t0, 2)
+            return finish("BLOCKED", reason=f"{dpg['reason']}: expected official DataPack settlement "
+                                            f"{dpg['expected_previous_trading_day']} for {trade_date}; "
+                                            + "; ".join(dpg.get("problems") or [])[:300])
+        if dpg.get("official"):
+            imp = import_datapack(Path(dpg["file"]), team_id, trade_date, operator or "agent:datapack_gate", ops_cfg,
+                                  supersede_reason=f"official DataPack {Path(dpg['file']).name}",
+                                  expected_prev=dpg["expected_previous_trading_day"],
+                                  first_trade_date=(ops_cfg.get("datapack_calendar_override") or {}).get("first_trade_date"))
+            if imp["status"] != "IMPORTED":
+                return finish("BLOCKED", reason="DATAPACK_INVALID: import failed: " + "; ".join(imp["problems"])[:300])
     if initial:
         start = Settlement.initial(prev_date or "initial", rb.rules.initial_cash)
         sstat.update(previous_available=True, source="initial cash")
@@ -206,6 +227,9 @@ def run_competition_day(trade_date: str, team_id: str, mode: str = "dry-run", *,
                 sstat.update(previous_available=True, source=f"official ({official.get('source')}) + internal state")
             else:                       # both exist but disagree: a human decides, the agent never picks a side
                 sstat.update(previous_available=True, source="internal and official DISAGREE (see reconciliation)")
+        elif internal is not None and mode == "competition":       # never pass our own ledger off as official
+            sstat["reconciliation"] = "UNAVAILABLE"
+            sstat.update(previous_available=False, source="REFUSED: internal settlement without official DataPack")
         elif internal is not None:
             sstat["reconciliation"] = "UNAVAILABLE"
             start = internal
@@ -226,6 +250,14 @@ def run_competition_day(trade_date: str, team_id: str, mode: str = "dry-run", *,
                             "warning_count": start.warning_count}
     summary["settlement"] = sstat
     summary["reconciliation"] = rec
+    from_datapack = bool(official and str(official.get("source", "")).startswith("official DataPack"))
+    summary["settlement_source"] = {
+        "settlement_source": ("INITIAL_CAPITAL" if initial else
+                              "OFFICIAL_DATAPACK" if (mode == "competition" or from_datapack) else
+                              "PRECOMPETITION_PAPER_LEDGER"),
+        "settlement_date": None if (start is None or initial) else start.date,
+        "datapack_file": (dpg or {}).get("file"), "datapack_schema_version": (dpg or {}).get("schema_version"),
+        "datapack_validation": (dpg or {}).get("validation"), "datapack_freshness": (dpg or {}).get("freshness")}
     durations["settlement"] = round(time.perf_counter() - t0, 2)
     # ---------------------------------------------------------------- preflight
     t0 = time.perf_counter()
@@ -334,7 +366,8 @@ def run_competition_day(trade_date: str, team_id: str, mode: str = "dry-run", *,
             "provider": (llm["cfg"].get("provider") if llm else "template"),
             "model": (llm["cfg"].get("model") if llm else None),
             "llm_replay_id": f"logs/llm/{ymd(trade_date)}/calls.jsonl" if llm else None,
-            "degradation_level": level, "deadline": dls.to_dict(), "run_durations": durations}
+            "degradation_level": level, "deadline": dls.to_dict(), "run_durations": durations,
+            "settlement_source": summary.get("settlement_source")}
     summary["decision_fingerprint"] = fp
     pkg = build_package(r, team_id=team_id, trade_date=trade_date, run_id=run_id, mode=mode,
                         data_health=data_health, reconciliation=rec, preflight=pf, run_metadata=meta, ops_cfg=ops_cfg,

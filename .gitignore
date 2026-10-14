@@ -29,3 +29,4 @@ logs/scheduled/
 logs/wake_test/
 logs/evaluation/
 data/paper_ledger/
+data/official_datapack/*.json

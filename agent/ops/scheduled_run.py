@@ -42,7 +42,8 @@ STATUSES = ("PASS", "BLOCKED", "FAILED", "SKIPPED")
 NETWORK_TARGETS = [("DNS", "www.twse.com.tw"), ("HTTPS", "https://www.google.com/"),
                    ("ESUN", "https://esun-ai-challenge.tw/"),
                    ("TWSE", "https://www.twse.com.tw/zh/"), ("TPEX", "https://www.tpex.org.tw/")]
-LOG_KEYS = ["LABEL", "PAPER_CHAIN", "SCHEDULED_TIME", "ACTUAL_START_TIME", "RUN_DELAY_MINUTES", "TRADE_DATE", "NETWORK", "NETWORK_RETRIES",
+LOG_KEYS = ["LABEL", "RUN_MODE", "DATAPACK_STATUS", "DATAPACK_DATE", "DATAPACK_FILE", "SETTLEMENT_SOURCE",
+            "PAPER_CHAIN", "SCHEDULED_TIME", "ACTUAL_START_TIME", "RUN_DELAY_MINUTES", "TRADE_DATE", "NETWORK", "NETWORK_RETRIES",
             "CLAUDE_VERSION", "CLAUDE_STATUS", "DATA_REFRESH", "ETF_FRESHNESS", "QUANT", "ACTIVE_SHARE", "GROUNDING",
             "DPLAN_VERSION", "DPLAN_VALIDATION", "FINAL_CANDIDATE", "OVERALL_STATUS", "BLOCKED_REASON",
             "ERROR_MESSAGE", "END_TIME"]
@@ -199,13 +200,17 @@ def summarize(summary: dict | None, preflight: dict | None, rc: int) -> dict:
                          "TEMPLATE_FALLBACK" if llm.get("calls") is not None else "NOT_RUN"),
            "dplan_validation": summary.get("validation") or "NOT_RUN",
            "final_candidate": summary.get("final_file"),
+           "settlement_source": (summary.get("settlement_source") or {}).get("settlement_source"),
+           "settlement_date": (summary.get("settlement_source") or {}).get("settlement_date"),
            "blocked_reason": None, "error_message": None}
     if st in ("DRY_RUN_OK", "READY_TO_SUBMIT", "HISTORICAL_OK"):
         out["status"] = "PASS"
     elif st in ("BLOCKED", "LATE_PAST_CUTOFF"):
         r = str(summary.get("reason") or "")
         out["status"] = "BLOCKED"
-        out["blocked_reason"] = ("ETF_HOLDINGS_STALE" if "etf_holdings_freshness" in r else
+        dp_reason = next((x for x in ("DATAPACK_MISSING", "DATAPACK_STALE", "DATAPACK_INVALID") if r.startswith(x)), None)
+        out["blocked_reason"] = (dp_reason if dp_reason else
+                                 "ETF_HOLDINGS_STALE" if "etf_holdings_freshness" in r else
                                  "LATE_PAST_CUTOFF" if st == "LATE_PAST_CUTOFF" else
                                  "SUBMISSION_WINDOW_NOT_OPEN" if "submission_window_open" in r else
                                  "PREFLIGHT_BLOCK: " + r[:200])
@@ -220,7 +225,10 @@ def finish(rec: dict, log: RunLog) -> dict:
     rec["log_file"] = str(log.path)
     assert rec["status"] in STATUSES
     for k in LOG_KEYS:
-        v = {"LABEL": "PRECOMPETITION_PAPER_RUN", "PAPER_CHAIN": rec.get("paper_chain"),
+        v = {"LABEL": rec.get("label") or "PRECOMPETITION_PAPER_RUN", "RUN_MODE": rec.get("run_mode"),
+             "DATAPACK_STATUS": rec.get("datapack_status"), "DATAPACK_DATE": rec.get("datapack_date"),
+             "DATAPACK_FILE": rec.get("datapack_file"), "SETTLEMENT_SOURCE": rec.get("settlement_source"),
+             "PAPER_CHAIN": rec.get("paper_chain"),
              "SCHEDULED_TIME": rec.get("scheduled_time"), "ACTUAL_START_TIME": rec.get("actual_start_time"),
              "RUN_DELAY_MINUTES": rec.get("run_delay_minutes"), "TRADE_DATE": rec.get("trade_date"),
              "NETWORK": rec.get("network"), "NETWORK_RETRIES": rec.get("network_retries"),
@@ -245,7 +253,10 @@ def run(now: datetime | None = None, setup_test: bool = False, net_retries: int 
     p = plan(now, holidays(), window_open_time())
     rec = {k: None for k in ("network", "network_retries", "claude", "claude_version", "claude_fallback",
                              "data_refresh", "etf_freshness", "quant", "active_share", "grounding", "dplan_version",
-                             "dplan_validation", "final_candidate", "blocked_reason", "error_message")}
+                             "dplan_validation", "final_candidate", "blocked_reason", "error_message",
+                             "datapack_status", "datapack_date", "datapack_source", "datapack_file",
+                             "settlement_source", "settlement_date")}
+    rec["run_mode"] = run_mode()
     rec.update({k: p[k] for k in ("scheduled_date", "scheduled_time", "actual_start_time", "run_delay_minutes",
                                   "trade_date")}, mode="SETUP_TEST_MODE" if setup_test else "PRECOMPETITION_REAL_DATA_DRY_RUN")
     log.w("MODE", rec["mode"])
@@ -267,15 +278,19 @@ def run(now: datetime | None = None, setup_test: bool = False, net_retries: int 
     if setup_test:                       # scheduler / logging / network / Claude context only — never a real PASS
         rec.update(status="SKIPPED", blocked_reason="SETUP_TEST_MODE (no dry-run executed)")
         return finish(rec, log)
-    rec["label"] = "PRECOMPETITION_PAPER_RUN"
-    rec["data_backfill"] = backfill_gaps(p["trade_date"], log)
-    start = paper_start(p["trade_date"], log)
-    rec["paper_chain"] = start["source"]
     from agent.config import load_strategy
     team = load_strategy("config/strategy_quant_v1.yaml")["team_id"]
+    mode = run_mode()
+    rec["run_mode"] = mode
+    rec["data_backfill"] = backfill_gaps(p["trade_date"], log)
+    pre = competition_preparation(mode, p["trade_date"], team, log)
+    rec.update({k: pre[k] for k in ("label", "datapack_status", "datapack_date", "datapack_source", "datapack_file",
+                                    "paper_chain", "settlement_source")})
+    if pre["blocked_reason"]:
+        rec.update(status="BLOCKED", blocked_reason=pre["blocked_reason"], error_message=pre.get("detail"))
+        return finish(rec, log)
     cmd = [sys.executable, str(ROOT / "agent" / "competition_day.py"), "--date", p["trade_date"], "--team-id", team,
-           "--mode", "dry-run", "--competition-profile", "prod"]
-    cmd += ["--replay-run", start["ledger"]] if start["source"].startswith("CHAIN") else ["--initial"]
+           "--mode", pre["cd_mode"], "--competition-profile", "prod"] + pre["extra_args"]
     log.w("COMMAND", " ".join(cmd[1:]))
     rc, err = None, None
     try:
@@ -308,13 +323,52 @@ def run(now: datetime | None = None, setup_test: bool = False, net_retries: int 
             rec["dplan_version"] = json.loads(fp.read_text(encoding="utf-8")).get("schema_version")
         except (OSError, ValueError):
             pass
-    if rec.get("status") == "PASS":
+    if rec.get("status") == "PASS" and mode == "PRECOMPETITION":
         try:
             from agent.ops.prediction_summary import build
             rec["prediction_summary"] = str(build(p["trade_date"], run_summary=summary))
         except Exception as e:  # noqa: BLE001
             rec["prediction_summary"] = f"ERROR {type(e).__name__}: {str(e)[:200]}"
     return finish(rec, log)
+
+
+def run_mode(ops_cfg: dict | None = None) -> str:
+    m = str((ops_cfg or load_ops_config()).get("run_mode") or "PRECOMPETITION").upper()
+    if m not in ("PRECOMPETITION", "COMPETITION"):
+        raise ValueError(f"config/ops.yaml run_mode {m!r} must be PRECOMPETITION or COMPETITION")
+    return m
+
+
+def competition_preparation(mode: str, trade_date: str, team: str, log: RunLog, provider=None,
+                            ops_cfg: dict | None = None) -> dict:
+    """PRECOMPETITION: DataPack NOT_REQUIRED, paper ledger (or initial capital) as the starting point.
+    COMPETITION: official DataPack REQUIRED via the gate; missing / stale / invalid -> BLOCKED, NO fallback to
+    the paper ledger, internal settlement, estimates or the previous prediction."""
+    out = {"label": None, "datapack_status": None, "datapack_date": None, "datapack_source": None,
+           "datapack_file": None, "paper_chain": None, "settlement_source": None, "blocked_reason": None,
+           "detail": None, "cd_mode": None, "extra_args": []}
+    if mode == "COMPETITION":
+        from agent.config import load_official_rules
+        from agent.ops.datapack import datapack_gate
+        first = str(load_official_rules().raw["official_rules"].get("first_trade_date") or "")
+        initial = trade_date == first
+        g = datapack_gate(trade_date, team, provider=provider, initial=initial, ops_cfg=ops_cfg)
+        out.update(label="COMPETITION", datapack_status=g["status"] if g["status"] != "PASS" else
+                   f"PASS ({g['freshness']})", datapack_date=g["settlement_date"], datapack_source="ManualFileProvider",
+                   datapack_file=g["file"], cd_mode="competition",
+                   settlement_source="INITIAL_CAPITAL" if initial else "OFFICIAL_DATAPACK",
+                   extra_args=["--initial"] if initial else [])
+        log.w("DATAPACK_GATE", f"{g['status']} {g.get('reason') or ''} expected {g['expected_previous_trading_day']} "
+                               f"file={g['file']}")
+        if g["status"] != "PASS":
+            out.update(blocked_reason=g["reason"], detail="; ".join(g.get("problems") or [])[:300])
+        return out
+    start = paper_start(trade_date, log)
+    out.update(label="PRECOMPETITION_PAPER_RUN", datapack_status="NOT_REQUIRED", paper_chain=start["source"],
+               cd_mode="dry-run",
+               settlement_source="PRECOMPETITION_PAPER_LEDGER" if start["source"].startswith("CHAIN") else "INITIAL_CAPITAL",
+               extra_args=["--replay-run", start["ledger"]] if start["source"].startswith("CHAIN") else ["--initial"])
+    return out
 
 
 def backfill_gaps(trade_date: str, log: RunLog) -> list[str]:

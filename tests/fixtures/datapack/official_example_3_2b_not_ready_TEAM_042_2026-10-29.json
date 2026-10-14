@@ -1,0 +1,23 @@
+{
+ "schema_version": "3.0",
+ "doc_type": "DataPack",
+ "team_id": "TEAM_042",
+ "trade_date": "2026-10-29",
+ "as_of_date": null,
+ "generated_at": "2026-10-28T18:58:11+08:00",
+ "missing": [
+  "prev_settlement"
+ ],
+ "prev_day_orders": {
+  "outcome": "unknown",
+  "void_reasons": [],
+  "excluded_codes": []
+ },
+ "account": null,
+ "holdings": null,
+ "compliance": {
+  "violations": 0,
+  "notices": 0,
+  "incidents": []
+ }
+}

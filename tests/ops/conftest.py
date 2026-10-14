@@ -16,7 +16,33 @@ def ops_cfg(tmp_path):
     for i, k in enumerate(c["paths"]):
         c["paths"][k] = str(tmp_path / f"{k[:3]}{i}")
     c["paths"]["first_seen_ledger"] = str(tmp_path / "obs" / "fs.parquet")
+    # synthetic fixture world: 2026-10-26 is its first trading day and it has no market holidays (TESTS ONLY;
+    # the real config/ops.yaml never contains this key — asserted in tests/ops/test_datapack_integration.py)
+    c["datapack_calendar_override"] = {"first_trade_date": "2026-10-26", "hol": set()}
     return c
+
+
+def write_official_datapack(off: dict, ops_cfg, team_id: str = "TEAM_TEST") -> Path:
+    """What the organiser will provide: the official DataPack for the NEXT trading day, put in the (tmp)
+    official_datapack_dir. Closes come from the synthetic fixture so the file is internally consistent."""
+    import csv
+    import json
+    from datetime import date, timedelta
+    from agent.ops.datapack import simulated_datapack
+    closes = {}
+    with open(Path(__file__).resolve().parents[1] / "fixtures" / "synthetic" / "daily_prices.csv", encoding="utf-8") as f:
+        for r in csv.DictReader(f):
+            if r["date"] == off["date"] and r.get("close"):
+                closes[r["ticker"]] = float(r["close"])
+    nxt = date.fromisoformat(off["date"]) + timedelta(days=1)
+    while nxt.weekday() >= 5:
+        nxt += timedelta(days=1)
+    d = Path(ops_cfg["paths"]["official_datapack_dir"])
+    d.mkdir(parents=True, exist_ok=True)
+    p = d / f"DataPack_{team_id}_{nxt.isoformat()}.json"
+    p.write_text(json.dumps(simulated_datapack(off, closes, team_id, nxt.isoformat()), ensure_ascii=False),
+                 encoding="utf-8")
+    return p
 
 
 def store_without_date(src_store, dst: Path, date: str, tables=("daily_prices", "institutional")):
@@ -43,6 +69,8 @@ def enter_official(off: dict, ops_cfg, tmp_dir: Path, closes: dict | None = None
     a, b = tmp_dir / f"off_{off['date']}_A.csv", tmp_dir / f"off_{off['date']}_B.csv"
     for f in (a, b):
         f.write_text("\n".join(rows) + "\n", encoding="utf-8")
-    return import_settlement(off["date"], a, verify_file=b, operator="test operator", source="test back office",
-                             confirm=confirm, ops_cfg=ops_cfg, closes=closes or {},
-                             supersede_reason="test re-entry")
+    r = import_settlement(off["date"], a, verify_file=b, operator="test operator", source="test back office",
+                          confirm=confirm, ops_cfg=ops_cfg, closes=closes or {}, supersede_reason="test re-entry")
+    if confirm:                      # the organiser's machine-produced settlement is the official DataPack
+        write_official_datapack(off, ops_cfg)
+    return r

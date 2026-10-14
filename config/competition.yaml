@@ -56,3 +56,11 @@ dplan:
 reference_files:
   universe_csv: "config/universe_150.csv"
   active_etf_csv: "config/active_etf_list.csv"
+
+
+datapack:                           # 官方資料包（DataPack 規格書 v4.3, 2026-10-12）— docs/OFFICIAL_DATAPACK_INTEGRATION.md
+  supported_schema_versions: ["3.0", "4.3"]   # 規格書範例檔為 "3.0"、規格書版本 4.3；其他值 -> DATAPACK_INVALID
+  # folder: config/ops.yaml paths.official_datapack_dir（只放主辦方正式 DataPack；測試 fixture 在 tests/fixtures/datapack/）
+  providers:
+    manual_file: ENABLED                      # 操作者手動從後台下載後放入 official_dir
+    official_portal: DISABLED_PENDING_OFFICIAL_PORTAL_VALIDATION   # 不登入、不猜 URL / API、不讀 cookie
