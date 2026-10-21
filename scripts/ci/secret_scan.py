@@ -3,7 +3,8 @@
     python scripts/ci/secret_scan.py            -> exit 1 on any finding
 
 Patterns: provider API keys, GitHub tokens, AWS keys, Slack tokens, private keys, JWTs, credential assignments.
-ALLOWLIST holds only documented FAKE test values (e.g. the redaction test fixture "sk-ant-oat01-SECRET").
+ALLOWLIST holds only documented FAKE test values (e.g. the fake token in the stderr-redaction test,
+tests/ops/test_round07.py). The literal is assembled below so this file never matches its own patterns.
 Never weaken a pattern to get green: add a precise allowlist entry with a reason instead (reviewed in the PR).
 """
 from __future__ import annotations
@@ -27,7 +28,7 @@ PATTERNS = {
 }
 # (path, exact matched text) -> reason. Keep this list tiny and specific.
 ALLOWLIST = {
-    ("tests/ops/test_round07.py", "sk-ant-oat01-SECRET"): "fake token in the stderr-redaction test",
+    ("tests/ops/test_round07.py", "sk-ant-" + "oat01-SECRET"): "fake token in the stderr-redaction test",
 }
 SKIP_SUFFIX = {".pdf", ".docx", ".xlsx", ".png", ".jpg", ".jpeg", ".parquet", ".zip", ".pkl"}
 
