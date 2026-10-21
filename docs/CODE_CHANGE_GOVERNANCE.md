@@ -50,3 +50,22 @@
 - 內容：Active Share 官方定義（前 15 大、占 NAV、15%）、D-Plan v4.3、DataPack 匯入、首個交易日、重繳規則
 - Quant fingerprint：W5 NAV 與 24/24 日 decision_core_hash 不變
 - 報告：`reports/OFFICIAL_RULE_SYNC_2026-10-07.md`
+
+## 5. GitHub 流程（2026-10-21 起；`docs/COLLABORATION_WORKFLOW.md`、`CLAUDE.md`）
+
+- 每一次修改都要有 GitHub Issue、feature branch 與 PR。PR 必須填 `.github/PULL_REQUEST_TEMPLATE.md` 全部欄位。
+  上面 §1 要求的紀錄（timestamp、reason、Issue、affected files、diff、git SHA、code_version、before / after、
+  regression、Quant fingerprint、D-Plan impact）都寫在 PR 中。merge 後 git 歷史即為紀錄。
+- **Investment Behavior Change**（選股、排序、因子與權重、組合權重、rebalance、持有政策、委託股數、現金政策、
+  risk overlay、regime、門檻、參數、會改變決策的 prompt / 模型行為）：
+  - 必須先有 Owner 核准的 Issue（PROMOTION 或 COMPETITION_RULE_CHANGE）。
+  - PR 要有 Owner 加上的 label `owner-approved-investment-change`。CI 的 `quant-freeze-check` 沒有這個 label 會擋下
+    凍結路徑的修改。
+  - 需附 freeze 前後比較。
+  - 不得因近期績效而修改。
+- **Technical / Operational Change**（parser、資料源、API 格式、timeout、auth、排程、送件格式、schema 相容、DataPack /
+  receipt parser）：依 Issue 處理，附本機 `scripts\ci\local_freeze_regression.py` 結果，證明 Quant 不變。
+- **Research ≠ production**：研究結果升級正式策略只能經由 PROMOTION Issue（production 設計 → 實作 → regression →
+  freeze 比較 → PR → ChatGPT Review → Owner 決策）。負面結果必須保留。
+- **Merge**：只有 Owner 能決定 merge（squash 優先）。不 auto-merge、不 force push、不 rewrite 歷史。
+- 比賽期間的 D-Plan、DataPack、receipt、log 等原始證據留在本機。Git 只保留 metadata（hash、時間、路徑、版本）。
