@@ -138,8 +138,11 @@ def evaluate(ev_date: str, *, ops_cfg: dict | None = None, store=None, paths: Pa
     if not force and already_passed(ev_date, fin["sha256"], read_history(paths)):
         rec.update(status="SKIPPED", blocked_reason="SKIP_ALREADY_PASSED")
         return rec
-    # 2. actual market data of the evaluation date (after close)
-    if refresh and ev_date not in set(store.dates("daily_prices")):
+    # 2. actual market data of the evaluation date (after close). A date that merely EXISTS is not enough: a
+    #    partially fetched day (2026-10-16: TWSE failed, TPEx stored) is re-fetched and must be COMPLETE (P-2).
+    from agent.ops.market_coverage import day_coverage, summary_line
+    if refresh and (ev_date not in set(store.dates("daily_prices"))
+                    or day_coverage(store, ev_date, ops_cfg=ops_cfg)["status"] != "COMPLETE"):
         try:
             from agent.ops.refresh_daily import refresh as do_refresh
             nxt = (date.fromisoformat(ev_date) + timedelta(days=1)).isoformat()
@@ -150,6 +153,10 @@ def evaluate(ev_date: str, *, ops_cfg: dict | None = None, store=None, paths: Pa
     days = store.dates("daily_prices")
     if ev_date not in set(days):
         rec.update(status="BLOCKED", blocked_reason="MARKET_DATA_NOT_AVAILABLE", market_data="MISSING")
+        return rec
+    cov = day_coverage(store, ev_date, ops_cfg=ops_cfg)
+    if cov["status"] != "COMPLETE":
+        rec.update(status="BLOCKED", blocked_reason="MARKET_DATA_INCOMPLETE", market_data=summary_line(cov))
         return rec
     mkt = day_market(store, ev_date)
     need = {o["ticker"] for o in doc.get("orders", [])}
@@ -169,6 +176,12 @@ def evaluate(ev_date: str, *, ops_cfg: dict | None = None, store=None, paths: Pa
         return rec
     start_src, prev = match
     rec.update(start_source=start_src, previous_date=prev_date)
+    # every held ticker needs a valid close, every ordered ticker a valid vwap/volume, on the evaluation date
+    hcov = day_coverage(store, ev_date, holdings=[t for t, n in prev.holdings.items() if int(n) > 0],
+                        order_tickers=need, ops_cfg=ops_cfg)
+    if hcov["status"] != "COMPLETE":
+        rec.update(status="BLOCKED", blocked_reason="MARKET_DATA_INCOMPLETE", market_data=summary_line(hcov))
+        return rec
     # 4. execution + settlement with the EXISTING deterministic simulator
     s = settle(prev, doc.get("orders", []), mkt, rb)
     s.agent_state = update_state_after_settlement(state or prev.agent_state, prev.holdings, s.holdings, ev_date)

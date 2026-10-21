@@ -152,6 +152,17 @@ def run_competition_day(trade_date: str, team_id: str, mode: str = "dry-run", *,
     dls = DL.status(trade_date, clock, ops_cfg)
     summary["deadline"] = dls.to_dict()
     lg.info(f"deadline phase {dls.phase} ({dls.minutes_left:.1f} min left)")
+    if mode != "historical":                    # T 08:30 internal decision stop / 08:55 official close (hard)
+        from agent.ops import submission_window as SW
+        wp = SW.phase(trade_date, clock.now(), ops_cfg)
+        summary["window_phase"] = wp
+        if wp in ("DECISION_WINDOW_CLOSED", "SUBMISSION_WINDOW_CLOSED"):
+            return finish(wp, reason=f"{wp}: no new investment decision for {trade_date} at {clock.now():%m-%d %H:%M} "
+                                     "(decision cutoff / official close); existing candidates are unchanged")
+        from agent.submission.base import CONFIRMED, get_state
+        if get_state(trade_date, ops_cfg).get("state") == CONFIRMED:
+            return finish("BLOCKED", reason=f"SUBMISSION_ALREADY_ACCEPTED: {trade_date} already has an accepted "
+                                             "submission; no new decision")
     # ---------------------------------------------------------------- data refresh
     t0 = time.perf_counter()
     data_health = None
@@ -266,6 +277,12 @@ def run_competition_day(trade_date: str, team_id: str, mode: str = "dry-run", *,
     extra_checks.append(clock_skew_check(clock.now(), reference_time, ops_cfg, mode == "competition"))
     if mode != "historical" and prev_date:
         extra_checks.append(t1_visibility_check(store, prev_date, clock.now()))
+        from agent.ops.market_coverage import coverage_check          # P-2: T-1 data must be COMPLETE, not just present
+        extra_checks.append(coverage_check(store, prev_date, holdings=[t for t, n in (start.holdings if start else {}).items()
+                                                                       if int(n) > 0], ops_cfg=ops_cfg))
+    if mode != "historical":                    # P-5: benchmark holdings for the official Active Share (mode-aware)
+        from agent.ops.active_share_gate import source_check
+        extra_checks.append(source_check(store, trade_date, ops_cfg, mode == "competition", store_is_fixture))
     summary["llm_runtime"] = llm_runtime_status(llm_provider, dls)
     if llm_provider is not None and hasattr(llm_provider, "healthcheck") and dls.allow_llm:
         hc = summary["llm_runtime"]                  # never BLOCK: an unavailable LLM only means template narrative
@@ -347,6 +364,13 @@ def run_competition_day(trade_date: str, team_id: str, mode: str = "dry-run", *,
     if not r.validation.ok:
         return finish("BLOCKED", reason="D-Plan validation FAIL even after deterministic fallback "
                                         "(previous portfolio may be illegal: see EMERGENCY_RUNBOOK)")
+    from agent.ops.active_share_gate import result_gate          # P-5: UNKNOWN Active Share is not submittable
+    asg = result_gate(summary["active_share_min"], mode == "competition") if mode != "historical" else None
+    if asg:
+        summary["active_share_gate"] = asg
+        if asg["level"] == "BLOCK":
+            return finish("BLOCKED", reason=f"{asg['code']}: {asg['detail']}")
+        notes.append(f"{asg['code']}: {asg['detail']}")
     hook("before_package")
     # ---------------------------------------------------------------- package + final + archive
     t0 = time.perf_counter()
@@ -520,6 +544,13 @@ def main(argv=None) -> int:
     if a.mode == "competition" and a.replay_run:
         print("--replay-run is not allowed in competition mode")
         return 2
+    if a.mode == "competition":                 # P-1: never produce a competition D-Plan for a placeholder team
+        from agent.ops.team import is_placeholder, resolve as resolve_team
+        tm = resolve_team("COMPETITION")
+        if is_placeholder(a.team_id) or tm["status"] != "OK" or a.team_id != tm["team_id"]:
+            print(f"BLOCKED TEAM_ID_NOT_CONFIGURED: --team-id {a.team_id!r} vs {tm['source']} = {tm['configured_value']!r} "
+                  "(competition requires the official Team ID configured in config/ops.yaml)")
+            return 2
     fetchers = None
     if a.offline:
         from agent.ops.refresh_daily import offline_fetchers
@@ -548,3 +579,4 @@ def main(argv=None) -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
+

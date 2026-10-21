@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from agent.submission.base import OfficialSubmissionUnavailable, SubmissionProvider
 
+PORTAL_STATUS = "DISABLED_PENDING_OFFICIAL_PORTAL_VALIDATION"   # no login / guessed URL / cookie / token use
+
 
 class FutureOfficialAPISubmissionProvider(SubmissionProvider):
     name = "official_api"
@@ -16,3 +18,6 @@ class FutureOfficialAPISubmissionProvider(SubmissionProvider):
 
     def verify_receipt(self, receipt: dict) -> dict:
         raise OfficialSubmissionUnavailable("no official submission API documented (NC-1)")
+
+
+OfficialPortalProvider = FutureOfficialAPISubmissionProvider    # extension point; stays disabled (PORTAL_STATUS)

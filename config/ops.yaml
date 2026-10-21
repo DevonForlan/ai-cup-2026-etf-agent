@@ -34,6 +34,10 @@ deadline:                # minutes before submission cutoff (competition.yaml su
   restrict_refresh_minutes: 30          # skip non-critical data refresh
   no_llm_minutes: 15                    # template narrative only, no LLM retries
   package_only_minutes: 10              # only quant-only run + validation + package
+  decision_cutoff: "08:30"              # internal hard stop: no NEW investment decision at/after T 08:30
+  warn_0800: "08:00"                    # no READY_FOR_UPLOAD yet -> SUBMISSION_WARNING_0800
+  high_warn_0815: "08:15"               # no READY_FOR_UPLOAD yet -> SUBMISSION_HIGH_WARNING_0815
+  critical_warn_0845: "08:45"           # not ACCEPTED yet -> SUBMISSION_CRITICAL_WARNING_0845 (official close 08:55)
 
 paths:
   settlement_dir: data/settlement
@@ -94,3 +98,31 @@ market_holidays:              # 2026 TWSE official (config/trading_calendar_2026
 # Scheduler run mode (agent/ops/scheduled_run.py). PRECOMPETITION: paper ledger, DataPack NOT_REQUIRED, labelled
 # PRECOMPETITION_PAPER_RUN. COMPETITION: official DataPack REQUIRED (no fallback). Switch only by explicit decision.
 run_mode: PRECOMPETITION
+
+# Runtime Team ID (P-1, approved 2026-10-16): OPERATIONS config, decoupled from the frozen strategy file
+# (config/strategy_quant_v1.yaml team_id is no longer read at runtime; its sha256 stays pinned). agent/ops/team.py.
+#   competition_team_id     the OFFICIAL Team ID from the organiser. null = TEAM_ID_NOT_CONFIGURED: every COMPETITION
+#                           entry point BLOCKS. Fill ONLY from the organiser's official notice; never guess.
+#   precompetition_team_id  label for PRECOMPETITION paper runs only (placeholders allowed there).
+team:
+  competition_team_id: null
+  precompetition_team_id: TEAM_TEST
+
+# Market-data coverage gate (P-2): a date is usable only when every market of the universe is present with at least
+# this share of its universe tickers priced, and every holding (and ordered ticker) has a valid price.
+market_coverage:
+  min_market_share: 0.95
+
+# Submission portal (manual upload only). portal_url: set ONLY by the operator to the official back-office page
+# (never guessed). ui_status: NOT_YET_VERIFIED | AVAILABLE | UNAVAILABLE | LOGIN_REQUIRED. agent/submission/portal.py
+# can open the page in a browser; it never logs in, selects files, uploads or submits.
+submission:
+  portal_url: null
+  ui_status: LOGIN_REQUIRED      # 2026-10-21: back office is a separate SSO system behind login (public code check)
+  official_portal_provider: DISABLED_PENDING_OFFICIAL_PORTAL_VALIDATION
+  receipt_format: PENDING_PORTAL_VALIDATION   # official receipt layout unknown until the operator logs in
+  # official TEST period (封測; organiser clears test data before the competition) — kept apart from competition
+  # artefacts (never data/official_datapack/ or submissions/<T>/receipts.jsonl): agent/submission/official_test.py
+  official_test_reports_dir: reports/official_test
+  official_test_receipts_dir: data/official_test_receipts
+  official_test_datapack_dir: data/official_test_datapack

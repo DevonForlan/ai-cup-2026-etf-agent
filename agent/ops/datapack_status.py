@@ -31,7 +31,7 @@ def next_trade_date(now: datetime, hol: set[str]) -> str:
 def status(mode: str | None = None, trade_date: str | None = None, team_id: str | None = None, now: datetime | None = None,
            ops_cfg: dict | None = None, provider=None, hol: set[str] | None = None,
            first_trade_date: str | None = None) -> dict:
-    from agent.config import load_official_rules, load_strategy
+    from agent.config import load_official_rules
     from agent.ops.daily_evaluation import Paths
     from agent.ops.datapack import calendar_holidays, previous_trading_day, validate_official_datapack
     from agent.ops.datapack_downloader import PORTAL_STATUS, ManualFileProvider
@@ -39,7 +39,18 @@ def status(mode: str | None = None, trade_date: str | None = None, team_id: str 
     ops_cfg = ops_cfg or load_ops_config()
     hol = calendar_holidays() if hol is None else hol
     mode = (mode or run_mode(ops_cfg)).upper()
-    team_id = team_id or load_strategy("config/strategy_quant_v1.yaml")["team_id"]
+    if team_id is None:                       # P-1: runtime team id from config/ops.yaml (agent/ops/team.py)
+        from agent.ops.team import resolve as resolve_team
+        tm = resolve_team(mode, ops_cfg)
+        if tm["status"] != "OK":
+            return {"mode": mode, "team_id": None, "trade_date": trade_date or next_trade_date(now or datetime.now(TPE), hol),
+                    "expected_previous_trading_day": None, "datapack_required": mode == "COMPETITION",
+                    "latest_datapack_found": False, "datapack_file": None, "datapack_date": None, "schema_version": None,
+                    "freshness": None, "validation": None, "problems": [], "provider": "ManualFileProvider",
+                    "official_portal_provider": PORTAL_STATUS, "status": "BLOCKED", "reason": "TEAM_ID_NOT_CONFIGURED",
+                    "settlement_source": None,
+                    "recommended_action": "set config/ops.yaml team.competition_team_id from the organiser's official notice"}
+        team_id = tm["team_id"]
     trade_date = trade_date or next_trade_date(now or datetime.now(TPE), hol)
     first = first_trade_date or str(load_official_rules().raw["official_rules"].get("first_trade_date") or "")
     exp = previous_trading_day(trade_date, hol)

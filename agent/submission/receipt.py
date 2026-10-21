@@ -11,13 +11,17 @@ from __future__ import annotations
 import argparse
 import json
 import sys
-from dataclasses import asdict, dataclass, fields
+from dataclasses import asdict, dataclass, field, fields
 from datetime import datetime
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 from agent.ops.common import TPE, load_ops_config, ops_path, write_json, ymd  # noqa: E402
+
+# The official receipt layout (wording, receipt id, acceptance field) is NOT known yet: it can only be confirmed by
+# the operator after logging in to the competition back office. Nothing below guesses it.
+OFFICIAL_RECEIPT_FORMAT = "PENDING_PORTAL_VALIDATION"
 
 RECEIPT_SCHEMA = {
     "$schema": "https://json-schema.org/draft/2020-12/schema", "title": "SubmissionReceipt", "type": "object",
@@ -33,6 +37,11 @@ RECEIPT_SCHEMA = {
         "screenshot_reference": {"type": ["string", "null"]},
         "confirmed_by": {"type": "string", "minLength": 1},
         "notes": {"type": ["string", "null"]},
+        "accepted_at": {"type": ["string", "null"]},          # official acceptance time (from the receipt only)
+        "failure_reason": {"type": ["string", "null"]},       # official rejection reason (from the receipt only)
+        "evidence_files": {"type": "array", "items": {"type": "string"}},   # screenshots / downloaded receipts
+        "filename": {"type": ["string", "null"]},             # file name as uploaded / shown by the portal
+        "receipt_text": {"type": ["string", "null"]},         # verbatim official message (copied by the operator)
     },
     "additionalProperties": False,
 }
@@ -50,6 +59,11 @@ class Receipt:
     official_status: str = "unknown"
     screenshot_reference: str | None = None
     notes: str | None = None
+    accepted_at: str | None = None
+    failure_reason: str | None = None
+    evidence_files: list = field(default_factory=list)
+    filename: str | None = None
+    receipt_text: str | None = None
 
     def validate(self) -> list[str]:
         import jsonschema
@@ -110,9 +124,15 @@ def main(argv=None) -> int:
     ap.add_argument("--screenshot", default=None)
     ap.add_argument("--confirmed-by", required=True)
     ap.add_argument("--notes", default=None)
+    ap.add_argument("--accepted-at", default=None, help="official acceptance time shown on the receipt")
+    ap.add_argument("--failure-reason", default=None, help="official rejection reason shown on the receipt")
+    ap.add_argument("--evidence", action="append", default=[], help="evidence file (repeatable)")
+    ap.add_argument("--filename", default=None, help="file name as shown by the portal")
+    ap.add_argument("--receipt-text", default=None, help="verbatim official response text")
     a = ap.parse_args(argv)
     r = Receipt(a.date, a.team_id, a.sha256, a.submitted_at or datetime.now(TPE).isoformat(), a.method,
-                a.confirmed_by, a.receipt_id, a.official_status, a.screenshot, a.notes)
+                a.confirmed_by, a.receipt_id, a.official_status, a.screenshot, a.notes, a.accepted_at,
+                a.failure_reason, list(a.evidence), a.filename, a.receipt_text)
     st = record_receipt(r)
     print(f"SUBMISSION STATE {a.date}: {st['state']}  ({st.get('reason', '')})")
     return 0 if st["state"] in ("SUBMISSION_CONFIRMED", "SUBMITTED_UNVERIFIED") else 2
