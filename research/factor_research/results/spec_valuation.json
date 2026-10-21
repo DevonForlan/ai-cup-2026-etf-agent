@@ -1,0 +1,1 @@
+[{"sid": "BASE_V1", "extra": {}}, {"sid": "F_earnings_yield", "extra": {"earnings_yield": 0.2}}, {"sid": "F_book_to_price", "extra": {"book_to_price": -0.2}}, {"sid": "F_div_yield", "extra": {"div_yield": 0.2}}, {"sid": "F_roe_proxy", "extra": {"roe_proxy": 0.2}}, {"sid": "F_eps_ttm_growth", "extra": {"eps_ttm_growth": 0.2}}]

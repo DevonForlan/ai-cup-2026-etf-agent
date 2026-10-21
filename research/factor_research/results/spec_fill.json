@@ -1,0 +1,296 @@
+[
+{
+"sid": "BASE_V1",
+"extra": {},
+"cost_mult": 1.25,
+"slippage": 0.0,
+"periods": [
+"VALIDATION",
+"HOLDOUT"
+]
+},
+{
+"sid": "F_foreign_5",
+"extra": {
+"foreign_5": 0.2
+},
+"cost_mult": 1.25,
+"slippage": 0.0,
+"periods": [
+"VALIDATION",
+"HOLDOUT"
+]
+},
+{
+"sid": "F_rev_3m_yoy",
+"extra": {
+"rev_3m_yoy": 0.2
+},
+"cost_mult": 1.25,
+"slippage": 0.0,
+"periods": [
+"VALIDATION",
+"HOLDOUT"
+]
+},
+{
+"sid": "A_REV3M+FOREIGN5",
+"extra": {
+"rev_3m_yoy": 0.2,
+"foreign_5": 0.2
+},
+"cost_mult": 1.25,
+"slippage": 0.0,
+"periods": [
+"VALIDATION",
+"HOLDOUT"
+]
+},
+{
+"sid": "BASE_V1",
+"extra": {},
+"cost_mult": 1.5,
+"slippage": 0.0,
+"periods": [
+"VALIDATION",
+"HOLDOUT"
+]
+},
+{
+"sid": "F_foreign_5",
+"extra": {
+"foreign_5": 0.2
+},
+"cost_mult": 1.5,
+"slippage": 0.0,
+"periods": [
+"VALIDATION",
+"HOLDOUT"
+]
+},
+{
+"sid": "F_rev_3m_yoy",
+"extra": {
+"rev_3m_yoy": 0.2
+},
+"cost_mult": 1.5,
+"slippage": 0.0,
+"periods": [
+"VALIDATION",
+"HOLDOUT"
+]
+},
+{
+"sid": "A_REV3M+FOREIGN5",
+"extra": {
+"rev_3m_yoy": 0.2,
+"foreign_5": 0.2
+},
+"cost_mult": 1.5,
+"slippage": 0.0,
+"periods": [
+"VALIDATION",
+"HOLDOUT"
+]
+},
+{
+"sid": "BASE_V1",
+"extra": {},
+"cost_mult": 1.0,
+"slippage": 0.001,
+"periods": [
+"VALIDATION",
+"HOLDOUT"
+]
+},
+{
+"sid": "F_foreign_5",
+"extra": {
+"foreign_5": 0.2
+},
+"cost_mult": 1.0,
+"slippage": 0.001,
+"periods": [
+"VALIDATION",
+"HOLDOUT"
+]
+},
+{
+"sid": "F_rev_3m_yoy",
+"extra": {
+"rev_3m_yoy": 0.2
+},
+"cost_mult": 1.0,
+"slippage": 0.001,
+"periods": [
+"VALIDATION",
+"HOLDOUT"
+]
+},
+{
+"sid": "A_REV3M+FOREIGN5",
+"extra": {
+"rev_3m_yoy": 0.2,
+"foreign_5": 0.2
+},
+"cost_mult": 1.0,
+"slippage": 0.001,
+"periods": [
+"VALIDATION",
+"HOLDOUT"
+]
+},
+{
+"sid": "BASE_V1",
+"extra": {},
+"cost_mult": 1.0,
+"slippage": 0.002,
+"periods": [
+"VALIDATION",
+"HOLDOUT"
+]
+},
+{
+"sid": "F_foreign_5",
+"extra": {
+"foreign_5": 0.2
+},
+"cost_mult": 1.0,
+"slippage": 0.002,
+"periods": [
+"VALIDATION",
+"HOLDOUT"
+]
+},
+{
+"sid": "F_rev_3m_yoy",
+"extra": {
+"rev_3m_yoy": 0.2
+},
+"cost_mult": 1.0,
+"slippage": 0.002,
+"periods": [
+"VALIDATION",
+"HOLDOUT"
+]
+},
+{
+"sid": "A_REV3M+FOREIGN5",
+"extra": {
+"rev_3m_yoy": 0.2,
+"foreign_5": 0.2
+},
+"cost_mult": 1.0,
+"slippage": 0.002,
+"periods": [
+"VALIDATION",
+"HOLDOUT"
+]
+},
+{
+"sid": "A_REV3M+FOREIGN5",
+"extra": {
+"rev_3m_yoy": 0.2,
+"foreign_5": 0.2
+}
+},
+{
+"sid": "S_A_REV3M+FOREIGN5_x0.8",
+"extra": {
+"rev_3m_yoy": 0.16,
+"foreign_5": 0.16
+},
+"periods": [
+"VALIDATION",
+"HOLDOUT"
+]
+},
+{
+"sid": "S_A_REV3M+FOREIGN5_x0.9",
+"extra": {
+"rev_3m_yoy": 0.18,
+"foreign_5": 0.18
+},
+"periods": [
+"VALIDATION",
+"HOLDOUT"
+]
+},
+{
+"sid": "S_A_REV3M+FOREIGN5_x1.1",
+"extra": {
+"rev_3m_yoy": 0.22,
+"foreign_5": 0.22
+},
+"periods": [
+"VALIDATION",
+"HOLDOUT"
+]
+},
+{
+"sid": "S_A_REV3M+FOREIGN5_x1.2",
+"extra": {
+"rev_3m_yoy": 0.24,
+"foreign_5": 0.24
+},
+"periods": [
+"VALIDATION",
+"HOLDOUT"
+]
+},
+{
+"sid": "P2_placebo_0+1",
+"extra": {
+"placebo_0": 0.2,
+"placebo_1": 0.2
+},
+"periods": [
+"VALIDATION",
+"HOLDOUT"
+]
+},
+{
+"sid": "P2_placebo_2+3",
+"extra": {
+"placebo_2": 0.2,
+"placebo_3": 0.2
+},
+"periods": [
+"VALIDATION",
+"HOLDOUT"
+]
+},
+{
+"sid": "P2_placebo_4+5",
+"extra": {
+"placebo_4": 0.2,
+"placebo_5": 0.2
+},
+"periods": [
+"VALIDATION",
+"HOLDOUT"
+]
+},
+{
+"sid": "P2_placebo_6+7",
+"extra": {
+"placebo_6": 0.2,
+"placebo_7": 0.2
+},
+"periods": [
+"VALIDATION",
+"HOLDOUT"
+]
+},
+{
+"sid": "P2_placebo_8+9",
+"extra": {
+"placebo_8": 0.2,
+"placebo_9": 0.2
+},
+"periods": [
+"VALIDATION",
+"HOLDOUT"
+]
+}
+]

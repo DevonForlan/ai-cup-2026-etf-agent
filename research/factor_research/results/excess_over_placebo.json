@@ -1,0 +1,42 @@
+{
+ "F_foreign_5": {
+  "excess_over_placebo_pp": 0.284,
+  "ci95_pp": [
+   -0.634,
+   1.261
+  ],
+  "perm_p": 0.586,
+  "n": 12,
+  "disc_excess_pp": -0.062
+ },
+ "F_rev_3m_yoy": {
+  "excess_over_placebo_pp": 0.175,
+  "ci95_pp": [
+   -0.668,
+   0.977
+  ],
+  "perm_p": 0.693,
+  "n": 12,
+  "disc_excess_pp": -0.024
+ },
+ "F_illiquidity": {
+  "excess_over_placebo_pp": 0.736,
+  "ci95_pp": [
+   -0.524,
+   2.13
+  ],
+  "perm_p": 0.339,
+  "n": 12,
+  "disc_excess_pp": 0.356
+ },
+ "A_REV3M+FOREIGN5": {
+  "excess_over_placebo_pp": 0.385,
+  "ci95_pp": [
+   -0.562,
+   1.449
+  ],
+  "perm_p": 0.5,
+  "n": 12,
+  "disc_excess_pp": NaN
+ }
+}
