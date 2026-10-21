@@ -1,0 +1,189 @@
+{
+ "decision_points": {
+  "T=2026-10-14 07:00": {
+   "signals": {
+    "breadth": 0.5867,
+    "ew_trend20": -0.0219,
+    "ew_dd60": -0.0531,
+    "ew_vol20": 0.1536,
+    "SOX": -0.0023,
+    "NDX": -0.0031,
+    "SPX": -0.0002,
+    "TSM": 0.0017,
+    "TXF_NIGHT": 0.0075,
+    "USDTWD_5d": 0.0093
+   },
+   "votes_on": [],
+   "n_votes": 0
+  },
+  "paper run 2026-10-14 21:26 for T=10/15": {
+   "signals": {
+    "breadth": 0.6467,
+    "ew_trend20": 0.0053,
+    "ew_dd60": -0.0416,
+    "ew_vol20": 0.1507,
+    "SOX": -0.0023,
+    "NDX": -0.0031,
+    "SPX": -0.0002,
+    "TSM": 0.0017,
+    "TXF_NIGHT": 0.0075,
+    "USDTWD_5d": 0.0092
+   },
+   "votes_on": [],
+   "n_votes": 0,
+   "overnight_used": {
+    "SOX": "2026-10-14 05:30:00",
+    "NDX": "2026-10-14 05:30:00",
+    "SPX": "2026-10-14 05:30:00",
+    "TSM": "2026-10-14 05:30:00",
+    "TXF_NIGHT": "2026-10-14 05:05:00",
+    "USDTWD_5d": "2026-10-14 17:00:00"
+   }
+  },
+  "T=2026-10-15 07:00": {
+   "signals": {
+    "breadth": 0.6467,
+    "ew_trend20": 0.0053,
+    "ew_dd60": -0.0416,
+    "ew_vol20": 0.1507,
+    "SOX": -0.043,
+    "NDX": -0.0202,
+    "SPX": -0.0111,
+    "TSM": -0.034,
+    "TXF_NIGHT": -0.0175,
+    "USDTWD_5d": 0.0092
+   },
+   "votes_on": [
+    "v_sox",
+    "v_ndx",
+    "v_tsm",
+    "v_txf"
+   ],
+   "n_votes": 4
+  }
+ },
+ "states": {
+  "2026-10-14": {
+   "SLOW": "NORMAL",
+   "FAST": "NORMAL",
+   "VOL": "NORMAL",
+   "VOTE": "NORMAL",
+   "GRADED": "NORMAL"
+  },
+  "2026-10-15": {
+   "SLOW": "NORMAL",
+   "FAST": "RISK_OFF",
+   "VOL": "NORMAL",
+   "VOTE": "RISK_OFF",
+   "GRADED": "RISK_OFF"
+  },
+  "2026-10-16": {
+   "SLOW": "NORMAL",
+   "FAST": "RISK_OFF",
+   "VOL": "NORMAL",
+   "VOTE": "RISK_OFF",
+   "GRADED": "RISK_OFF"
+  }
+ },
+ "paper_portfolio": {
+  "nav_10_14": 996783296.7859805,
+  "cash_ratio_10_14": 0.06334029371234189,
+  "holdings": 24,
+  "actual_return_10_15": -0.05649567983490311,
+  "recomputed_return_10_15": -0.056495679834903154,
+  "gap_close14_to_vwap15": -0.04760578039195158,
+  "vwap15_to_close15": -0.008889899442951573
+ },
+ "counterfactual_10_15": {
+  "A_SLOW": {
+   "state_at_10_15_0700": "NORMAL",
+   "state_at_10_14_0700": "NORMAL",
+   "sold_nav": 0.0,
+   "saved_nav": 0.0,
+   "day_return": -0.056495679834903154
+  },
+  "A_FAST": {
+   "state_at_10_15_0700": "RISK_OFF",
+   "state_at_10_14_0700": "NORMAL",
+   "target_cash": [
+    0.12,
+    0.16
+   ],
+   "sold_nav": 0.07276347255630017,
+   "vol_cap_trim_nav": 0.0,
+   "saved_nav": 0.0004056039945851398,
+   "day_return": -0.05609007584031801,
+   "saved_twd": 404299.28691213863
+  },
+  "A_VOL": {
+   "state_at_10_15_0700": "NORMAL",
+   "state_at_10_14_0700": "NORMAL",
+   "sold_nav": 0.0,
+   "saved_nav": 0.0,
+   "day_return": -0.056495679834903154
+  },
+  "A_VOTE": {
+   "state_at_10_15_0700": "RISK_OFF",
+   "state_at_10_14_0700": "NORMAL",
+   "target_cash": [
+    0.12,
+    0.16
+   ],
+   "sold_nav": 0.07276347255630017,
+   "vol_cap_trim_nav": 0.0,
+   "saved_nav": 0.0004056039945851398,
+   "day_return": -0.05609007584031801,
+   "saved_twd": 404299.28691213863
+  },
+  "B_VOTE": {
+   "state_at_10_15_0700": "RISK_OFF",
+   "state_at_10_14_0700": "NORMAL",
+   "sold_nav": 0.0,
+   "saved_nav": 0.0,
+   "day_return": -0.056495679834903154
+  },
+  "C_FAST": {
+   "state_at_10_15_0700": "RISK_OFF",
+   "state_at_10_14_0700": "NORMAL",
+   "target_cash": [
+    0.15,
+    0.19
+   ],
+   "sold_nav": 0.10123872092860499,
+   "vol_cap_trim_nav": 0.0,
+   "saved_nav": 0.000564333011780881,
+   "day_return": -0.05593134682312227,
+   "saved_twd": 562517.7199681081
+  },
+  "C_VOTE": {
+   "state_at_10_15_0700": "RISK_OFF",
+   "state_at_10_14_0700": "NORMAL",
+   "target_cash": [
+    0.15,
+    0.19
+   ],
+   "sold_nav": 0.10123872092860499,
+   "vol_cap_trim_nav": 0.0,
+   "saved_nav": 0.000564333011780881,
+   "day_return": -0.05593134682312227,
+   "saved_twd": 562517.7199681081
+  },
+  "D_GRADED": {
+   "state_at_10_15_0700": "RISK_OFF",
+   "state_at_10_14_0700": "NORMAL",
+   "target_cash": [
+    0.15,
+    0.19
+   ],
+   "sold_nav": 0.10123872092860499,
+   "vol_cap_trim_nav": 0.0,
+   "saved_nav": 0.000564333011780881,
+   "day_return": -0.05593134682312227,
+   "saved_twd": 562517.7199681081
+  }
+ },
+ "non_pit_upper_bound": {
+  "cash_14%_at_entry": 0.004623816092004675,
+  "cash_17%_at_entry": 0.0064332997109429945
+ }
+}
