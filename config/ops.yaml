@@ -105,7 +105,7 @@ run_mode: PRECOMPETITION
 #                           entry point BLOCKS. Fill ONLY from the organiser's official notice; never guess.
 #   precompetition_team_id  label for PRECOMPETITION paper runs only (placeholders allowed there).
 team:
-  competition_team_id: null
+  competition_team_id: TEAM_11442     # official Team ID (Owner-confirmed 2026-10-22, Issue #4)
   precompetition_team_id: TEAM_TEST
 
 # Market-data coverage gate (P-2): a date is usable only when every market of the universe is present with at least
@@ -117,12 +117,25 @@ market_coverage:
 # (never guessed). ui_status: NOT_YET_VERIFIED | AVAILABLE | UNAVAILABLE | LOGIN_REQUIRED. agent/submission/portal.py
 # can open the page in a browser; it never logs in, selects files, uploads or submits.
 submission:
-  portal_url: null
-  ui_status: LOGIN_REQUIRED      # 2026-10-21: back office is a separate SSO system behind login (public code check)
+  portal_url: "https://fundaiagent.esun-ai-challenge.tw/docs"   # 文件繳交 page (Owner-confirmed, Issue #4)
+  ui_status: AVAILABLE           # Owner observed: upload -> 檢核結果 -> 送出繳交 -> 歷史繳交紀錄 (login required)
   official_portal_provider: DISABLED_PENDING_OFFICIAL_PORTAL_VALIDATION
-  receipt_format: PENDING_PORTAL_VALIDATION   # official receipt layout unknown until the operator logs in
+  receipt_format: PENDING_PORTAL_VALIDATION   # exact receipt / history wording confirmed only after the manual E2E
+  max_upload_bytes: 2097152       # D-Plan JSON <= 2 MB (portal)
+  official_daily_limit: 25        # portal: 25 attempts per trading day; the accepted version is not affected
   # official TEST period (封測; organiser clears test data before the competition) — kept apart from competition
   # artefacts (never data/official_datapack/ or submissions/<T>/receipts.jsonl): agent/submission/official_test.py
   official_test_reports_dir: reports/official_test
   official_test_receipts_dir: data/official_test_receipts
   official_test_datapack_dir: data/official_test_datapack
+
+# Guarded automated upload (Issue #4). NO documented participant API exists (portal uses SSO session + CSRF on a
+# private /api) -> only normal browser automation of the human UI may ever be used, after a successful manual E2E.
+# Disabled until the Owner enables it after a sealed-test automatic run reaches an official accepted state.
+auto_upload:
+  enabled: false
+  method: none                    # none | browser   (official API: not available)
+  max_automated_attempts: 3       # internal cap per trade date (official limit 25 is never exhausted)
+  browser_profile_dir: data/browser_profiles/fundaiagent   # gitignored; the Owner logs in interactively once
+  selectors: {}                   # filled ONLY from the observed UI after the manual E2E; empty -> fail closed
+  accepted_markers: []            # verbatim official history wording meaning accepted (e.g. from the E2E); empty -> never ACCEPTED

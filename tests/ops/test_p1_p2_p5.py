@@ -47,8 +47,10 @@ def test_team_id_comes_from_ops_config_not_frozen_strategy():
     assert sha256_file(ROOT / "config" / "strategy_quant_v1.yaml").endswith(FROZEN_SHA.split(":")[1])
     pre = TEAM.resolve("PRECOMPETITION", ops)
     assert pre["status"] == "OK" and pre["team_id"] == "TEAM_TEST" and "ops.yaml" in pre["source"]
-    comp = TEAM.resolve("COMPETITION", ops)                 # real config: not configured yet -> never guessed
-    assert comp["status"] == "TEAM_ID_NOT_CONFIGURED" and comp["team_id"] is None
+    comp = TEAM.resolve("COMPETITION", ops)                 # Issue #4: official Team ID bound in ops config
+    assert comp["status"] == "OK" and comp["team_id"] == "TEAM_11442" and "ops.yaml" in comp["source"]
+    none = TEAM.resolve("COMPETITION", dict(ops, team={"competition_team_id": None}))
+    assert none["status"] == "TEAM_ID_NOT_CONFIGURED" and none["team_id"] is None   # never guessed
 
 
 @pytest.mark.parametrize("value", [None, "", "TEAM_TEST", "team_test", "TEAM_SIM", "TEAM_XXX"])
@@ -71,7 +73,8 @@ def test_competition_cli_refuses_placeholder_team(capsys):
 
 def test_datapack_status_blocks_competition_without_team_id():
     from agent.ops.datapack_status import status
-    s = status("COMPETITION", "2026-10-28")
+    ops = dict(load_ops_config(), team={"competition_team_id": None, "precompetition_team_id": "TEAM_TEST"})
+    s = status("COMPETITION", "2026-10-28", ops_cfg=ops)
     assert s["status"] == "BLOCKED" and s["reason"] == "TEAM_ID_NOT_CONFIGURED"
     assert status("PRECOMPETITION", "2026-10-19")["team_id"] == "TEAM_TEST"
 

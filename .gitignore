@@ -51,3 +51,4 @@ id_rsa*
 **/screenshots/
 **/browser-profile/
 **/browser_profiles/
+data/official_test_runs/
