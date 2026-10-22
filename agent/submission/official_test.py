@@ -46,19 +46,27 @@ def dirs(trade_date: str, ops_cfg: dict | None = None) -> dict[str, Path]:
             "datapack": _dir("official_test_datapack_dir", "data/official_test_datapack", ops_cfg) / d}
 
 
-def map_official_result(result: str, submission_id: str | None, official_confirmation: bool = False) -> dict:
-    """Official UI / receipt -> existing internal submission state (agent/submission/status.py). Conservative:
-    'accepted' becomes ACCEPTED only with an official submission id or an explicit official confirmation; an
-    'upload completed' style message without that is only UPLOADED."""
-    if result == "accepted" and (submission_id or official_confirmation):
-        return {"state": "ACCEPTED", "why": "official acceptance with submission id / explicit confirmation"}
-    if result == "accepted":
-        return {"state": "UPLOADED", "why": "accepted wording but no submission id / confirmation -> not enough evidence"}
-    if result == "rejected":
-        return {"state": "REJECTED", "why": "official rejection"}
+STAGES = ("file_uploaded", "server_validated", "submitted", "accepted", "rejected")
+
+
+def map_official_result(result: str, submission_id: str | None = None, official_confirmation: bool = False, *,
+                        stage: str | None = None, validation_result: str | None = None,
+                        history_entry: str | None = None) -> dict:
+    """Observed official UI (Issue #4): upload -> 檢核結果 -> 送出繳交 -> history -> existing internal states
+    (agent/submission/status.py). ACCEPTED only with official evidence: a submission id or the verbatim history
+    entry. `official_confirmation` (operator says the page looked successful) alone is NOT evidence."""
     if result == "ui_unavailable":
         return {"state": "SUBMISSION_UI_UNAVAILABLE", "why": "official page has no upload function (not an agent failure)"}
-    return {"state": "UPLOADED", "why": f"upload done, official status {result}"}
+    if result == "rejected" or stage == "rejected" or validation_result == "FAIL":
+        return {"state": "REJECTED", "why": "official rejection / 檢核結果 FAIL"}
+    if result == "accepted" and (submission_id or history_entry):
+        return {"state": "ACCEPTED", "why": "official acceptance evidence (submission id / history entry)"}
+    if result == "accepted" or stage in ("submitted", "accepted"):
+        return {"state": "SUBMITTED", "why": "送出繳交 done; no official acceptance evidence (id / history entry) yet"
+                + (" — operator confirmation alone is not evidence" if official_confirmation else "")}
+    if stage == "server_validated" and validation_result == "PASS":
+        return {"state": "SERVER_VALIDATED", "why": "official 檢核結果 PASS; not submitted yet"}
+    return {"state": "FILE_UPLOADED", "why": f"file uploaded; 檢核結果 {validation_result or 'not recorded'}"}
 
 
 def _local_checks(doc: dict) -> dict:
@@ -163,10 +171,16 @@ def _package_md(r: dict) -> str:
 def record_upload(trade_date: str, sha256: str, result: str, message: str, operator: str, *,
                   submission_id: str | None = None, filename: str | None = None, evidence: list[str] | None = None,
                   official_confirmation: bool = False, uploaded_at: str | None = None,
-                  ops_cfg: dict | None = None) -> dict:
+                  stage: str | None = None, validation_result: str | None = None, history_entry: str | None = None,
+                  server_validated_at: str | None = None, submitted_at: str | None = None,
+                  accepted_at: str | None = None, ops_cfg: dict | None = None) -> dict:
     if result not in RESULTS:
         raise ValueError(f"result must be one of {RESULTS}")
-    for txt in [message or "", submission_id or "", filename or ""] + list(evidence or []):
+    if stage is not None and stage not in STAGES:
+        raise ValueError(f"stage must be one of {STAGES}")
+    if validation_result not in (None, "PASS", "FAIL", "UNKNOWN"):
+        raise ValueError("validation_result must be PASS / FAIL / UNKNOWN")
+    for txt in [message or "", submission_id or "", filename or "", history_entry or ""] + list(evidence or []):
         if SECRET_PATTERNS.search(txt):
             raise ValueError("refused: the text looks like a cookie / token / password / session value — never store credentials")
     ops_cfg = ops_cfg or load_ops_config()
@@ -185,9 +199,12 @@ def record_upload(trade_date: str, sha256: str, result: str, message: str, opera
             kept.append({"file": str(dst), "sha256": sha256_file(dst)})
         else:
             kept.append({"file": e, "sha256": None, "note": "not found locally"})
-    m = map_official_result(result, submission_id, official_confirmation)
+    m = map_official_result(result, submission_id, official_confirmation, stage=stage,
+                            validation_result=validation_result, history_entry=history_entry)
     rec = {"trade_date": trade_date, "recorded_at": datetime.now(TPE).replace(microsecond=0).isoformat(),
            "uploaded_at": uploaded_at or datetime.now(TPE).replace(microsecond=0).isoformat(),
+           "server_validated_at": server_validated_at, "submitted_at": submitted_at, "accepted_at": accepted_at,
+           "stage": stage, "server_validation_result": validation_result, "history_entry": history_entry,
            "filename": filename, "sha256": sha256, "package_sha256": want,
            "sha256_matches_package": (want == sha256) if want else None, "official_result": result,
            "official_message": message, "submission_id": submission_id, "evidence": kept, "operator": operator,
@@ -238,10 +255,133 @@ def datapack(file: str, trade_date: str, team_id: str | None = None, ops_cfg: di
     return rec
 
 
+def target_trade_date(now: datetime | None = None) -> str:
+    """The trade date whose submission window is open now or opens next: today if it is a trading day and the
+    08:55 close has not passed, otherwise the next trading day (official TWSE calendar)."""
+    from datetime import date as _date, timedelta
+    from agent.ops.datapack import calendar_holidays
+    from agent.ops.scheduled_run import is_trading_day
+    from agent.ops.submission_window import official_times
+    now = now or datetime.now(TPE)
+    hol = calendar_holidays()
+    _, close_hm = official_times()
+    d = now.date()
+    if is_trading_day(d, hol) and (now.hour, now.minute) < close_hm:
+        return d.isoformat()
+    d = d + timedelta(days=1)
+    while not is_trading_day(d, hol):
+        d += timedelta(days=1)
+    return _date.isoformat(d)
+
+
+def full_local_validation(trade_date: str, team_id: str, final_file: Path, summary: dict | None, ops_cfg: dict,
+                          fin: dict | None = None) -> dict:
+    """§10 local validation of the sealed-test / competition D-Plan. Every item PASS -> READY_FOR_MANUAL_TEST_UPLOAD."""
+    from agent.config import load_official_rules
+    from agent.engine.rules import load_rulebook
+    c: dict[str, str] = {}
+    raw = final_file.read_bytes()
+    try:
+        doc = json.loads(raw.decode("utf-8"))
+        c["json_parse"] = "PASS"
+    except ValueError:
+        return {"checks": {"json_parse": "FAIL"}, "ok": False}
+    lc = _local_checks(doc)
+    c.update(schema=lc["schema"], ticker=lc["ticker"], numeric=lc["numeric"])
+    c["team_id"] = "PASS" if doc.get("team_id") == team_id else f"FAIL ({doc.get('team_id')})"
+    c["trade_date"] = "PASS" if doc.get("trade_date") == trade_date else f"FAIL ({doc.get('trade_date')})"
+    pattern = load_official_rules().raw["dplan"]["filename_pattern"].format(team_id=team_id, trade_date=trade_date)
+    c["filename"] = "PASS" if final_file.name == pattern else f"FAIL ({final_file.name} != {pattern})"
+    limit = int((ops_cfg.get("submission") or {}).get("max_upload_bytes") or 2 * 1024 * 1024)
+    c["file_size"] = "PASS" if len(raw) <= limit else f"FAIL ({len(raw)} > {limit} bytes)"
+    lot = int(load_rulebook().rules.lot_size)
+    c["whole_lot"] = "PASS" if all(int(o.get("shares", 0)) % lot == 0 for o in doc.get("orders", [])) else "FAIL"
+    cs = (summary or {}).get("compliance_summary") or {}
+    for key, label in (("holdings_20_30", "Holdings 20-30"), ("tsmc_le_25", "2330 <= 25%"),
+                       ("other_le_10", "Other stocks <= 10%"), ("cash_lt_25", "Cash < 25%"),
+                       ("active_share_ge_15", "Active Share official >= 15%")):
+        v = str(cs.get(label, "MISSING"))
+        c[key] = "PASS" if v.startswith("PASS") else f"FAIL ({v})"
+    fz = ops_cfg["freeze"]
+    h = sha256_file(ROOT / fz["strategy_config"])
+    h = h if h.startswith("sha256:") else "sha256:" + h
+    c["quant_fingerprint"] = "PASS" if h == fz["strategy_sha256"] else "FAIL"
+    c["dplan_order_consistency"] = "PASS" if (summary or {}).get("validation") == "PASS" else f"FAIL ({(summary or {}).get('validation')})"
+    sha = sha256_file(final_file)
+    c["no_manual_override"] = "PASS" if (fin is None or fin.get("sha256") == sha) and \
+        ((summary or {}).get("sha256") in (None, sha)) else "FAIL (file changed after generation)"
+    return {"checks": c, "ok": all(v == "PASS" for v in c.values()), "sha256": sha, "bytes": len(raw)}
+
+
+def isolated_ops(trade_date: str, ops_cfg: dict | None = None) -> dict:
+    """ops config whose runtime paths live under data/official_test_runs/<ymd>/ (never the paper-run folders)."""
+    import copy
+    c = copy.deepcopy(ops_cfg or load_ops_config())
+    base = ROOT / "data" / "official_test_runs" / ymd(trade_date)
+    for k, v in c["paths"].items():
+        c["paths"][k] = str(base / Path(v).name)
+    return c
+
+
+def prepare(trade_date: str | None = None, *, now: datetime | None = None, clock=None, ops_cfg: dict | None = None,
+            store=None, skip_refresh: bool = False, git: dict | None = None) -> dict:
+    """Generate the sealed-test D-Plan with the OFFICIAL Team ID (Quant v1 unchanged, template narrative, initial
+    capital — the official test account starts from the initial capital until a test DataPack says otherwise) in
+    isolated folders, then run the full §10 local validation and write TEST_SUBMISSION_PACKAGE.*"""
+    from agent.competition_day import run_competition_day
+    from agent.ops import submission_window as SW
+    from agent.ops.common import Clock
+    from agent.ops.team import resolve
+    ops_cfg = ops_cfg or load_ops_config()
+    now = now or (clock.now() if clock else datetime.now(TPE))
+    t = trade_date or target_trade_date(now)
+    out = {"trade_date": t, "prepared_at": now.replace(microsecond=0).isoformat(), "status": None, "reason": None}
+    team = resolve("COMPETITION", ops_cfg)
+    if team["status"] != "OK":
+        out.update(status="BLOCKED", reason="TEAM_ID_NOT_CONFIGURED")
+        return out
+    ph = SW.phase(t, now, ops_cfg)
+    if ph != "DECISION_OPEN":
+        tm = SW.times_for(t, ops_cfg)
+        out.update(status="BLOCKED", reason=f"{ph}: the sealed-test D-Plan for {t} can be generated only between "
+                                            f"{tm['opens']:%m-%d %H:%M} and {tm['decision_cutoff']:%m-%d %H:%M}")
+        return out
+    iso = isolated_ops(t, ops_cfg)
+    kw = {"store": store} if store is not None else {}
+    s = run_competition_day(t, team["team_id"], "dry-run", ops_cfg=iso, clock=clock or Clock(), initial=True,
+                            skip_refresh=skip_refresh, archive_readonly=False, write_report=False,
+                            **({"git": git} if git else {}), **kw)
+    if s.get("status") != "DRY_RUN_OK" or not s.get("final_file"):
+        out.update(status="BLOCKED", reason=f"generation {s.get('status')}: {str(s.get('reason'))[:300]}")
+        return out
+    pkg = package(t, ops_cfg=iso, now=now)
+    from agent.ops.package_submission import active_final
+    fin = active_final(t, iso)
+    f = Path(s["final_file"]) if Path(s["final_file"]).is_absolute() else ROOT / s["final_file"]
+    v = full_local_validation(t, team["team_id"], f, s, iso, fin)
+    pkg.update(local_validation=v["checks"], local_validation_ok=v["ok"], file_bytes=v.get("bytes"),
+               isolated_root=str(ROOT / "data" / "official_test_runs" / ymd(t)), generation_status=s["status"])
+    pkg["status"] = "READY_FOR_MANUAL_TEST_UPLOAD" if (v["ok"] and pkg.get("status") == "READY_FOR_MANUAL_TEST_UPLOAD") \
+        else ("BLOCKED" if pkg.get("status") != "BLOCKED_TEAM_ID_NOT_CONFIGURED" else pkg["status"])
+    d = dirs(t, iso)["reports"]
+    write_json(d / "TEST_SUBMISSION_PACKAGE.json", pkg)
+    (d / "TEST_SUBMISSION_PACKAGE.md").write_text(_package_md(pkg) + _validation_md(v), encoding="utf-8")
+    out.update(status=pkg["status"], package=pkg)
+    return out
+
+
+def _validation_md(v: dict) -> str:
+    rows = "\n".join(f"| {k} | {val} |" for k, val in v["checks"].items())
+    return f"\n## Local validation（§10）\n\n| check | result |\n|---|---|\n{rows}\n"
+
+
 def main(argv=None) -> int:
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")
     ap = argparse.ArgumentParser()
     sp = ap.add_subparsers(dest="cmd", required=True)
+    a0 = sp.add_parser("prepare", help="generate + validate the sealed-test D-Plan (official Team ID, isolated)")
+    a0.add_argument("--date", default=None, help="default: the trade date whose window is open now / opens next")
+    a0.add_argument("--skip-refresh", action="store_true")
     a1 = sp.add_parser("package")
     a1.add_argument("--date", required=True)
     a2 = sp.add_parser("record-upload")
@@ -256,17 +396,27 @@ def main(argv=None) -> int:
     a2.add_argument("--official-confirmation", action="store_true",
                     help="the portal explicitly shows the submission as accepted/successful")
     a2.add_argument("--uploaded-at", default=None)
+    a2.add_argument("--stage", default=None, choices=STAGES, help="furthest official UI stage reached")
+    a2.add_argument("--validation-result", default=None, choices=["PASS", "FAIL", "UNKNOWN"], help="official 檢核結果")
+    a2.add_argument("--history-entry", default=None, help="verbatim official history row (acceptance evidence)")
+    a2.add_argument("--server-validated-at", default=None)
+    a2.add_argument("--submitted-at", default=None)
+    a2.add_argument("--accepted-at", default=None)
     a3 = sp.add_parser("datapack")
     a3.add_argument("--file", required=True)
     a3.add_argument("--date", required=True)
     a3.add_argument("--team-id", default=None)
     a = ap.parse_args(argv)
-    if a.cmd == "package":
+    if a.cmd == "prepare":
+        r = prepare(a.date, skip_refresh=a.skip_refresh)
+    elif a.cmd == "package":
         r = package(a.date)
     elif a.cmd == "record-upload":
         r = record_upload(a.date, a.sha256, a.result, a.message, a.operator, submission_id=a.submission_id,
                           filename=a.filename, evidence=a.evidence, official_confirmation=a.official_confirmation,
-                          uploaded_at=a.uploaded_at)
+                          uploaded_at=a.uploaded_at, stage=a.stage, validation_result=a.validation_result,
+                          history_entry=a.history_entry, server_validated_at=a.server_validated_at,
+                          submitted_at=a.submitted_at, accepted_at=a.accepted_at)
     else:
         r = datapack(a.file, a.date, a.team_id)
     print(json.dumps(r, ensure_ascii=False, indent=1, default=str))
