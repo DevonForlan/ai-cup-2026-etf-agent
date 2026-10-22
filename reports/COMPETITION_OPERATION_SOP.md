@@ -144,7 +144,7 @@
 - 08:30 截止同時在排程（`scheduled_run.plan`）與 `agent\competition_day.py` 本身強制。人工執行也會回 `DECISION_WINDOW_CLOSED` / `SUBMISSION_WINDOW_CLOSED`，不會產生 D-Plan。
 - 跨日補跑**不降低任何 gate**，以下各項都照常檢查：
   - 交易日、Team ID、DataPack（COMPETITION）、行情 coverage、ETF benchmark / Active Share、凍結 fingerprint、乾淨工作樹（COMPETITION）。
-  - 今天已有 ACCEPTED / UPLOADED → `SUBMISSION_ALREADY_*`，不重新決策。
+  - 今天已有 ACCEPTED / FILE_UPLOADED / SERVER_VALIDATED / SUBMITTED → `SUBMISSION_ALREADY_*`，不重新決策。
   - 今天已有 FINAL → `FINAL_ALREADY_EXISTS`，不重複產出。`--safe-retry` 可再產 candidate，FINAL 仍凍結。
 - 實例：2026-10-19 19:30 的工作在 2026-10-20 08:54 才啟動 → 舊行為 `MISSED_PREVIOUS_DAY`；新行為 `DECISION_WINDOW_CLOSED`（08:54 > 08:30）。只回報既有 candidate，沒有 candidate 就不產生新決策。
 
@@ -156,13 +156,15 @@
 | GENERATED | `submissions\<T>\candidates\<run_id>\D-Plan_*.json` 存在 |
 | VALIDATED | candidate 的 `validation_report.json` ok（schema / ticker / numeric / compliance） |
 | READY_FOR_UPLOAD | active FINAL 存在且 sha256 驗證通過。只有 competition 模式的 FINAL 才 `uploadable=true`，PRECOMPETITION 的 paper FINAL 永遠不可上傳 |
-| UPLOADED | 人工記錄的 receipt：已上傳、尚無官方確認（`official_status pending/unknown`） |
-| ACCEPTED | receipt 有官方 receipt id 且 `official_status accepted`，sha256 與 FINAL 相同 |
+| FILE_UPLOADED | 已上傳到官方頁面（receipt `stage file_uploaded`） |
+| SERVER_VALIDATED | 官方「檢核結果」明確 PASS（`stage server_validated` + `server_validation_result PASS`） |
+| SUBMITTED | 已按「送出繳交」，尚無官方接受證據（`stage submitted`） |
+| ACCEPTED | `official_status accepted` 且有官方 receipt / submission id 或歷史紀錄原文；sha256 與 FINAL 相同 |
 | REJECTED | receipt `official_status rejected`（附 failure_reason） |
 | SUBMISSION_UI_UNAVAILABLE | READY_FOR_UPLOAD，但 `config/ops.yaml submission.ui_status: UNAVAILABLE`（官方後台無上傳功能；不算 Agent failure） |
-| SUBMISSION_WINDOW_CLOSED | 已過 08:55 且沒有 ACCEPTED / UPLOADED / REJECTED 證據 |
+| SUBMISSION_WINDOW_CLOSED | 已過 08:55 且沒有 ACCEPTED / SUBMITTED / REJECTED 證據 |
 
-- **READY_FOR_UPLOAD ≠ ACCEPTED**。UPLOADED / ACCEPTED 只能由 receipt 設定：
+- **READY_FOR_UPLOAD ≠ ACCEPTED**；FILE_UPLOADED / SERVER_VALIDATED / SUBMITTED 也都 ≠ ACCEPTED（Issue #4）。ACCEPTED 需要官方 submission id **或**歷史紀錄原文（`--history-entry`），只能由 receipt 設定：
 
   ```
   python -m agent.submission.receipt --date T --team-id ... --sha256 ... --official-status accepted --receipt-id ... --accepted-at ... --evidence <截圖> --confirmed-by "姓名"
