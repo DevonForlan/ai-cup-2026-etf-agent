@@ -77,14 +77,16 @@ class ManualSubmissionProvider(SubmissionProvider):
             out["reason"] = (f"later upload {receipt.get('official_status')} recorded; the accepted submission stays "
                              f"effective" + (f" ({'; '.join(reasons)})" if reasons else ""))
             return out
+        from agent.submission.receipt import has_acceptance_evidence
         if reasons:
             new = UNKNOWN
-        elif receipt.get("official_status") == "rejected":
-            new = REJECTED
-        elif receipt.get("official_status") == "accepted" and receipt.get("official_receipt_id"):
-            new = CONFIRMED
+        elif (receipt.get("official_status") == "rejected" or receipt.get("stage") == "rejected"
+              or receipt.get("server_validation_result") == "FAIL"):
+            new = REJECTED                           # official rejection or failed 檢核結果
+        elif has_acceptance_evidence(receipt):
+            new = CONFIRMED                          # receipt id or verbatim history entry: officially received
         else:
-            new = SUBMITTED_UNVERIFIED               # uploaded, but no official confirmation yet
+            new = SUBMITTED_UNVERIFIED               # uploaded / validated / submitted, no acceptance evidence yet
         if st == NOT_READY and not reasons:
             set_state(d, READY, reason="FINAL verified at receipt time", cfg=self.cfg)
         out = set_state(d, new, reason="; ".join(reasons) or f"receipt {receipt.get('official_status')}",

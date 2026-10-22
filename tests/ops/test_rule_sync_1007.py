@@ -100,8 +100,10 @@ def test_first_submission_window_opens_1026_1930():
 
 
 def _rcpt(t, status, sha="a"):
+    # Issue #4: an acceptance counts only with official evidence (receipt id or history entry)
     return {"trade_date": "2026-10-27", "team_id": "T", "dplan_sha256": f"sha256:{sha * 64}",
-            "submitted_at": f"2026-10-{t}+08:00", "official_status": status}
+            "submitted_at": f"2026-10-{t}+08:00", "official_status": status,
+            "official_receipt_id": f"R-{sha}" if status == "accepted" else None}
 
 
 def test_last_successful_submission_wins_not_last_upload():

@@ -196,7 +196,7 @@ def test_status_lifecycle_ready_uploaded_accepted(fixture_store, ops_cfg):
     record_receipt(Receipt(T1, "TEAM_TEST", s["sha256"], "2026-10-26T08:12:00+08:00", "manual_web", "op",
                            official_status="pending"), ops_cfg)
     r = ST.compute(T1, now=now, ops_cfg=ops_cfg)
-    assert r["state"] == "UPLOADED" and r["uploaded_at"].startswith("2026-10-26T08:12") and r["accepted_at"] is None
+    assert r["state"] == "FILE_UPLOADED" and r["uploaded_at"].startswith("2026-10-26T08:12") and r["accepted_at"] is None
     record_receipt(Receipt(T1, "TEAM_TEST", s["sha256"], "2026-10-26T08:14:00+08:00", "manual_web", "op",
                            official_receipt_id="R-1", official_status="accepted",
                            accepted_at="2026-10-26T08:14:30+08:00", evidence_files=["receipt.png"]), ops_cfg)
@@ -223,9 +223,10 @@ def test_status_ui_unavailable_and_dry_run_not_uploadable(fixture_store, ops_cfg
 
 # ---------------------------------------------------------------- portal: browser-open only
 def test_portal_url_not_configured(ops_cfg):
+    ops_cfg = dict(ops_cfg, submission=dict(ops_cfg.get("submission") or {}, portal_url=None))
     r = open_submission_portal(T1, ops_cfg=ops_cfg, now=at("2026-10-26T08:00:00"), opener=lambda u: 1 / 0)
     assert r["opened"] is False and r["result"] == "SUBMISSION_PORTAL_URL_NOT_CONFIGURED"
-    assert r["SUBMISSION_UI_STATUS"] in ("NOT_YET_VERIFIED", "LOGIN_REQUIRED") and r["auto_upload"].startswith("DISABLED")
+    assert r["SUBMISSION_UI_STATUS"] in ("NOT_YET_VERIFIED", "LOGIN_REQUIRED", "AVAILABLE") and r["auto_upload"].startswith("DISABLED")
 
 
 def test_portal_opens_only_for_a_competition_final(fixture_store, ops_cfg):
@@ -240,11 +241,16 @@ def test_portal_opens_only_for_a_competition_final(fixture_store, ops_cfg):
 
 def test_no_upload_login_or_credential_code():
     root = Path(__file__).resolve().parents[2] / "agent" / "submission"
-    src = "\n".join(p.read_text(encoding="utf-8") for p in root.glob("*.py"))
+    # Issue #4: normal browser automation is allowed ONLY in auto_upload.py (guarded, disabled by default)
+    src = "\n".join(p.read_text(encoding="utf-8") for p in root.glob("*.py") if p.name != "auto_upload.py")
     # network / browser-automation / cookie-store code (official_test.py only REFUSES credential-like text)
     for bad in ("import requests", "import urllib", "urlopen(", ".post(", "selenium", "playwright", "pyautogui",
                 "http.cookiejar", "browser_cookie", "import http.client", "sqlite3"):
         assert bad not in src.lower(), bad
+    au = (root / "auto_upload.py").read_text(encoding="utf-8").lower()
+    for bad in ("import requests", "import urllib", "urlopen(", "httpx", ".cookies(", "storage_state", "add_cookies",
+                "http.cookiejar", "browser_cookie", "sqlite3", "x-csrftoken", "/api/"):
+        assert bad not in au, bad
     from agent.submission.future_api import PORTAL_STATUS, OfficialPortalProvider
     assert PORTAL_STATUS == "DISABLED_PENDING_OFFICIAL_PORTAL_VALIDATION"
     with pytest.raises(NotImplementedError):

@@ -16,7 +16,8 @@ Date rules (submission window = calendar day before T, 19:30 -> T 08:55; config/
     CROSS_DAY_CATCHUP for T = today (never yesterday's trade date); 08:30..08:54 -> DECISION_WINDOW_CLOSED (no
     new decision, the submission state is reported); >= 08:55 -> SUBMISSION_WINDOW_CLOSED;
   * D already has a PASS -> SKIPPED (SKIP_ALREADY_PASSED); BLOCKED / FAILED -> may run again; T already ACCEPTED /
-    UPLOADED or with a FINAL -> SKIPPED (SUBMISSION_ALREADY_* / FINAL_ALREADY_EXISTS unless --safe-retry).
+    FILE_UPLOADED / SERVER_VALIDATED / SUBMITTED or with a FINAL -> SKIPPED (SUBMISSION_ALREADY_* /
+    FINAL_ALREADY_EXISTS unless --safe-retry).
 Statuses: PASS | BLOCKED | FAILED | SKIPPED.
 """
 from __future__ import annotations
@@ -319,7 +320,7 @@ def run(now: datetime | None = None, setup_test: bool = False, net_retries: int 
     if not setup_test and already_passed(p["scheduled_date"], read_history()):
         rec.update(status="SKIPPED", blocked_reason="SKIP_ALREADY_PASSED")
         return finish(rec, log)
-    if not setup_test and sub and sub["state"] in ("ACCEPTED", "UPLOADED"):
+    if not setup_test and sub and sub["state"] in ("ACCEPTED", "FILE_UPLOADED", "SERVER_VALIDATED", "SUBMITTED"):
         rec.update(status="SKIPPED", blocked_reason=f"SUBMISSION_ALREADY_{sub['state']}")
         return finish(rec, log)
     if not setup_test and not safe_retry and sub and sub["state"] in ("READY_FOR_UPLOAD", "SUBMISSION_UI_UNAVAILABLE"):
