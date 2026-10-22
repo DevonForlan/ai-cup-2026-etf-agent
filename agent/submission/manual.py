@@ -70,6 +70,13 @@ class ManualSubmissionProvider(SubmissionProvider):
             if d != rec["trade_date"]:
                 reasons.append("trade date mismatch")
         st = get_state(d, self.cfg)["state"]
+        if st == CONFIRMED and receipt.get("official_status") != "accepted":
+            # NC-10: the LAST SUCCESSFUL submission before the cutoff counts. A later rejected / pending / unknown
+            # upload is recorded (receipts.jsonl) but never overwrites an accepted one.
+            out = dict(get_state(d, self.cfg))
+            out["reason"] = (f"later upload {receipt.get('official_status')} recorded; the accepted submission stays "
+                             f"effective" + (f" ({'; '.join(reasons)})" if reasons else ""))
+            return out
         if reasons:
             new = UNKNOWN
         elif receipt.get("official_status") == "rejected":

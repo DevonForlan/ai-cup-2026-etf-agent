@@ -1,0 +1,65 @@
+{
+ "dates": [
+  "2024-07-01",
+  "2026-09-30"
+ ],
+ "n_dates": 547,
+ "periods": {
+  "DISCOVERY": [
+   "2024-07-01",
+   "2025-06-30",
+   241
+  ],
+  "VALIDATION": [
+   "2025-07-01",
+   "2026-01-30",
+   148
+  ],
+  "HOLDOUT": [
+   "2026-02-02",
+   "2026-09-30",
+   158
+  ]
+ },
+ "factors_tested": [
+  "rev_yoy",
+  "rev_mom",
+  "rev_yoy_accel",
+  "rev_mom_accel",
+  "rev_consec_yoy_pos",
+  "rev_yoy_slope6",
+  "rev_yoy_stab6",
+  "rev_3m_yoy",
+  "rev_ttm_yoy",
+  "rev_yoy_vs_trend",
+  "foreign_5",
+  "foreign_20",
+  "trust_5",
+  "trust_20",
+  "dealer_20",
+  "inst_total_20",
+  "foreign_accel",
+  "mom_20",
+  "mom_60",
+  "mom_60_skip5",
+  "reversal_5",
+  "dist_52w_high",
+  "ma60_dist",
+  "trend_consistency",
+  "lowvol_20",
+  "low_downside_vol",
+  "low_beta_60",
+  "low_idio_vol_60",
+  "low_mdd_60",
+  "size_value_20",
+  "illiquidity",
+  "abnormal_volume",
+  "earnings_yield",
+  "book_to_price",
+  "div_yield",
+  "roe_proxy",
+  "eps_ttm_growth",
+  "mops_count_5"
+ ],
+ "valuation_included": true
+}

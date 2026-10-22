@@ -1,0 +1,49 @@
+{
+ "families": {
+  "REV": [
+   "rev_3m_yoy",
+   "rev_ttm_yoy",
+   "rev_yoy_accel",
+   "rev_mom_accel",
+   "rev_yoy_stab6"
+  ],
+  "INST": [
+   "foreign_5",
+   "foreign_accel",
+   "trust_20"
+  ],
+  "TREND": [
+   "mom_20",
+   "dist_52w_high",
+   "trend_consistency"
+  ],
+  "LIQ": [
+   "illiquidity"
+  ]
+ },
+ "signs": {
+  "rev_yoy_accel": -1,
+  "dist_52w_high": 1,
+  "trust_20": -1,
+  "foreign_5": 1,
+  "foreign_accel": 1,
+  "illiquidity": 1,
+  "trend_consistency": 1,
+  "rev_mom_accel": -1,
+  "rev_3m_yoy": 1,
+  "rev_ttm_yoy": 1,
+  "rev_yoy_stab6": -1,
+  "mom_20": 1
+ },
+ "combos": [
+  "REV",
+  "INST",
+  "TREND",
+  "LIQ",
+  "REV+INST",
+  "REV+TREND",
+  "INST+TREND",
+  "REV+INST+TREND",
+  "REV+INST+TREND+LIQ"
+ ]
+}

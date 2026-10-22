@@ -137,18 +137,19 @@ def test_llm_ok_is_level0_and_orders_equal_template(fixture_store, ops_cfg, mock
     assert o1["orders"] == o2["orders"] and o1["decisions"] == o2["decisions"]
 
 
-def test_deadline_package_only_skips_llm_and_refresh(fixture_store, ops_cfg, mock_llm_cfg):
+def test_0847_is_past_the_decision_cutoff(fixture_store, ops_cfg, mock_llm_cfg):
+    """2026-10-20 policy: no NEW investment decision at/after T 08:30 (was: PACKAGE_ONLY run until 08:55)."""
     s = run(fixture_store, ops_cfg, T1, "2026-10-26T08:47:00+08:00", mode="dry-run", initial=True,
             llm_config=mock_llm_cfg, llm_provider=MockProvider("mock-rules-v1", "normal"), skip_refresh=False,
             refresh_fetchers=_fake())
-    assert s["deadline"]["phase"] == "PACKAGE_ONLY" and s["status"] == "DRY_RUN_OK"
-    assert s["llm"] == {"used": False, "mode": "template"}
-    assert any("refresh skipped" in n for n in s["notes"]) and any("LLM disabled" in n for n in s["notes"])
+    assert s["deadline"]["phase"] == "PACKAGE_ONLY" and s["status"] == "DECISION_WINDOW_CLOSED"
+    assert "final_file" not in s and "decisions" not in s
+    assert not (Path(ops_cfg["paths"]["submissions_dir"]) / "20261026" / "FINAL_CANDIDATE.txt").exists()
 
 
 def test_past_cutoff_never_promoted_to_final(fixture_store, ops_cfg):
     s = run(fixture_store, ops_cfg, T1, "2026-10-26T09:05:00+08:00", initial=True)
-    assert s["status"] == "LATE_PAST_CUTOFF" and "final_file" not in s
+    assert s["status"] == "SUBMISSION_WINDOW_CLOSED" and "final_file" not in s
     assert not (Path(ops_cfg["paths"]["submissions_dir"]) / "20261026" / "FINAL_CANDIDATE.txt").exists()
 
 

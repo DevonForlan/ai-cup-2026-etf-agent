@@ -1,0 +1,140 @@
+[
+ {
+  "wid": "R01",
+  "start": "2024-07-01",
+  "end": "2024-08-05",
+  "period": "DISCOVERY"
+ },
+ {
+  "wid": "R02",
+  "start": "2024-08-06",
+  "end": "2024-09-06",
+  "period": "DISCOVERY"
+ },
+ {
+  "wid": "R03",
+  "start": "2024-09-09",
+  "end": "2024-10-16",
+  "period": "DISCOVERY"
+ },
+ {
+  "wid": "R04",
+  "start": "2024-10-17",
+  "end": "2024-11-20",
+  "period": "DISCOVERY"
+ },
+ {
+  "wid": "R05",
+  "start": "2024-11-21",
+  "end": "2024-12-24",
+  "period": "DISCOVERY"
+ },
+ {
+  "wid": "R06",
+  "start": "2024-12-25",
+  "end": "2025-02-06",
+  "period": "DISCOVERY"
+ },
+ {
+  "wid": "R07",
+  "start": "2025-02-07",
+  "end": "2025-03-13",
+  "period": "DISCOVERY"
+ },
+ {
+  "wid": "R08",
+  "start": "2025-03-14",
+  "end": "2025-04-18",
+  "period": "DISCOVERY"
+ },
+ {
+  "wid": "R09",
+  "start": "2025-04-21",
+  "end": "2025-05-23",
+  "period": "DISCOVERY"
+ },
+ {
+  "wid": "R10",
+  "start": "2025-05-26",
+  "end": "2025-06-27",
+  "period": "DISCOVERY"
+ },
+ {
+  "wid": "R11",
+  "start": "2025-06-30",
+  "end": "2025-07-31",
+  "period": "DISCOVERY"
+ },
+ {
+  "wid": "R12",
+  "start": "2025-08-01",
+  "end": "2025-09-03",
+  "period": "VALIDATION"
+ },
+ {
+  "wid": "R13",
+  "start": "2025-09-04",
+  "end": "2025-10-09",
+  "period": "VALIDATION"
+ },
+ {
+  "wid": "R14",
+  "start": "2025-10-13",
+  "end": "2025-11-14",
+  "period": "VALIDATION"
+ },
+ {
+  "wid": "R15",
+  "start": "2025-11-17",
+  "end": "2025-12-18",
+  "period": "VALIDATION"
+ },
+ {
+  "wid": "R16",
+  "start": "2025-12-19",
+  "end": "2026-01-23",
+  "period": "VALIDATION"
+ },
+ {
+  "wid": "R17",
+  "start": "2026-01-26",
+  "end": "2026-03-10",
+  "period": "VALIDATION"
+ },
+ {
+  "wid": "R18",
+  "start": "2026-03-11",
+  "end": "2026-04-15",
+  "period": "HOLDOUT"
+ },
+ {
+  "wid": "R19",
+  "start": "2026-04-16",
+  "end": "2026-05-20",
+  "period": "HOLDOUT"
+ },
+ {
+  "wid": "R20",
+  "start": "2026-05-21",
+  "end": "2026-06-24",
+  "period": "HOLDOUT"
+ },
+ {
+  "wid": "R21",
+  "start": "2026-06-25",
+  "end": "2026-07-29",
+  "period": "HOLDOUT"
+ },
+ {
+  "wid": "R22",
+  "start": "2026-07-30",
+  "end": "2026-09-01",
+  "period": "HOLDOUT"
+ },
+ {
+  "wid": "R23",
+  "start": "2026-09-02",
+  "end": "2026-10-07",
+  "period": "HOLDOUT"
+ }
+]

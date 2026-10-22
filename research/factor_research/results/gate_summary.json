@@ -1,0 +1,39 @@
+{
+ "screened": [
+  "rev_yoy_accel",
+  "dist_52w_high",
+  "trust_20",
+  "foreign_5",
+  "foreign_accel",
+  "illiquidity",
+  "trend_consistency",
+  "rev_mom_accel",
+  "rev_3m_yoy",
+  "rev_ttm_yoy",
+  "rev_yoy_stab6",
+  "mom_20",
+  "earnings_yield",
+  "eps_ttm_growth",
+  "roe_proxy"
+ ],
+ "placebo_oos": {
+  "mean": 0.006981125996399072,
+  "sd": 0.0033071919863246484,
+  "max": 0.013856811935200759,
+  "p95": 0.01242145681390312,
+  "n": 10
+ },
+ "placebo2_oos": {
+  "mean": 0.005779451268567426,
+  "sd": 0.004109741764199967,
+  "max": 0.012232541165294979,
+  "p95": 0.012539976470676372,
+  "n": 5
+ },
+ "gate_pass": [
+  "F_foreign_5",
+  "F_rev_3m_yoy",
+  "A_REV3M+FOREIGN5"
+ ],
+ "gate_pass_and_beats_placebo": []
+}

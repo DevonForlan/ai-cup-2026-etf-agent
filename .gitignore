@@ -30,3 +30,24 @@ logs/wake_test/
 logs/evaluation/
 data/paper_ledger/
 data/official_datapack/*.json
+data/research/
+data/official_test_receipts/*
+!data/official_test_receipts/README.md
+data/official_test_datapack/*
+!data/official_test_datapack/README.md
+# local research / shadow outputs (regenerable; kept local)
+data/shadow_metrics/
+reports/shadow_metrics/
+research/*/results/*.log
+research/risk_overlay/results/probe.csv
+# credentials / sessions / browser artefacts must never be committed
+.env.*
+!.env.example
+*.pem
+*.key
+id_rsa*
+*cookie*
+*.har
+**/screenshots/
+**/browser-profile/
+**/browser_profiles/

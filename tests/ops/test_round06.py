@@ -414,7 +414,7 @@ def test_deadline_full_clock(ops_cfg, hhmm, phase, llm, refresh, final):
 
 def test_0856_never_produces_final(fixture_store, ops_cfg):
     s = run(fixture_store, ops_cfg, T1, "2026-10-26T08:56:00+08:00", initial=True)
-    assert s["status"] == "LATE_PAST_CUTOFF" and not (subdir(ops_cfg, T1) / "FINAL_CANDIDATE.txt").exists()
+    assert s["status"] == "SUBMISSION_WINDOW_CLOSED" and not (subdir(ops_cfg, T1) / "FINAL_CANDIDATE.txt").exists()
 
 
 def test_clock_skew_check():

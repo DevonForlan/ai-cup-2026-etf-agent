@@ -1,0 +1,87 @@
+# FAST PR CI (hosted runners; no market data, no credentials, no network calls to data sources).
+# Quant v1 W5 NAV / 24 decision hashes need the local data store -> scripts/ci/local_freeze_regression.py
+# (run locally, paste the output into the PR). See docs/COLLABORATION_WORKFLOW.md.
+name: ci
+
+on:
+  pull_request:
+  push:
+    branches: [master]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  secret-scan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Secret scan (tracked files)
+        run: python scripts/ci/secret_scan.py
+
+  quant-freeze-check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - run: python -m pip install PyYAML==6.0.3
+      - name: Strategy hash + forbidden frozen-path changes
+        env:
+          OWNER_APPROVED_INVESTMENT_CHANGE: ${{ contains(github.event.pull_request.labels.*.name, 'owner-approved-investment-change') }}
+        shell: bash
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            python scripts/ci/quant_freeze_check.py --base "origin/${{ github.base_ref }}"
+          else
+            python scripts/ci/quant_freeze_check.py --base HEAD~1
+          fi
+
+  validate:
+    runs-on: windows-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+          cache-dependency-path: requirements-lock.txt
+      - run: python -m pip install -r requirements-lock.txt
+      - name: Syntax check
+        run: python -m compileall -q agent tests scripts experiments research
+      - name: Import check (entry points)
+        run: python -c "import agent.competition_day, agent.run_sim, agent.pipeline, agent.ops.scheduled_run, agent.ops.daily_evaluation, agent.ops.competition_preflight, agent.submission.status, agent.submission.portal, agent.submission.official_test; print('imports OK')"
+      - name: Config / schema validation
+        run: python scripts/ci/validate_configs.py
+
+  tests:
+    runs-on: windows-latest
+    timeout-minutes: 45
+    env:
+      PYTHONIOENCODING: utf-8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+          cache-dependency-path: |
+            requirements-lock.txt
+            requirements-llm-sdk.txt
+      - run: python -m pip install -r requirements-lock.txt -r requirements-llm-sdk.txt
+      - name: pytest (unit + integration on synthetic fixtures)
+        run: python -m pytest -p no:cacheprovider -o addopts="" -q

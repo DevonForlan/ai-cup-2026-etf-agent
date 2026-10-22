@@ -151,7 +151,7 @@ def research_mock_cfg(tmp_path):
 
 def test_restricted_phase_allows_only_the_market_narrative(fixture_store, ops_cfg, research_mock_cfg):
     prov = MockProvider("mock-rules-v1", "normal")
-    s = run(fixture_store, ops_cfg, T1, "2026-10-26T08:35:00+08:00", mode="dry-run", initial=True,
+    s = run(fixture_store, ops_cfg, T1, "2026-10-26T08:26:00+08:00", mode="dry-run", initial=True,   # < 08:30 cutoff
             llm_config=research_mock_cfg, llm_provider=prov)
     assert s["deadline"]["phase"] == "RESTRICTED" and s["status"] == "DRY_RUN_OK"
     assert prov.calls == 1 and s["llm"]["calls"] == 1 and s["llm"]["research_inferences"] == 0

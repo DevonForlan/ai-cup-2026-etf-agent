@@ -10,11 +10,13 @@ and records the outcome in logs/scheduled/ (latest_status.json, history.jsonl, o
 
 Date rules (submission window = calendar day before T, 19:30 -> T 08:55; config/competition.yaml):
   * the run belongs to the scheduled date D = today if now >= 19:30, else yesterday (a catch-up after midnight);
-  * D is the run date only if now is still on D (same calendar day); a start after midnight for yesterday's
-    19:30 -> MISSED_PREVIOUS_DAY (recorded, never run: no stale-date / next-day-data mix-up);
   * T = D + 1 calendar day must be a trading day (weekends + config/ops.yaml market_holidays), otherwise no
-    window opens tonight -> SKIPPED (NO_SUBMISSION_WINDOW_TONIGHT);
-  * D already has a PASS -> SKIPPED (SKIP_ALREADY_PASSED); BLOCKED / FAILED -> may run again.
+    window opens tonight -> SKIPPED (NO_SUBMISSION_WINDOW_TONIGHT / NO_TRADING_DAY);
+  * 2026-10-20 policy (agent/ops/submission_window.py): a start on T between 00:00 and 08:29:59 is a
+    CROSS_DAY_CATCHUP for T = today (never yesterday's trade date); 08:30..08:54 -> DECISION_WINDOW_CLOSED (no
+    new decision, the submission state is reported); >= 08:55 -> SUBMISSION_WINDOW_CLOSED;
+  * D already has a PASS -> SKIPPED (SKIP_ALREADY_PASSED); BLOCKED / FAILED -> may run again; T already ACCEPTED /
+    UPLOADED or with a FINAL -> SKIPPED (SUBMISSION_ALREADY_* / FINAL_ALREADY_EXISTS unless --safe-retry).
 Statuses: PASS | BLOCKED | FAILED | SKIPPED.
 """
 from __future__ import annotations
@@ -42,7 +44,7 @@ STATUSES = ("PASS", "BLOCKED", "FAILED", "SKIPPED")
 NETWORK_TARGETS = [("DNS", "www.twse.com.tw"), ("HTTPS", "https://www.google.com/"),
                    ("ESUN", "https://esun-ai-challenge.tw/"),
                    ("TWSE", "https://www.twse.com.tw/zh/"), ("TPEX", "https://www.tpex.org.tw/")]
-LOG_KEYS = ["LABEL", "RUN_MODE", "DATAPACK_STATUS", "DATAPACK_DATE", "DATAPACK_FILE", "SETTLEMENT_SOURCE",
+LOG_KEYS = ["LABEL", "RUN_MODE", "RUN_KIND", "WINDOW_PHASE", "SUBMISSION_STATE", "DEADLINE_WARNINGS", "DATAPACK_STATUS", "DATAPACK_DATE", "DATAPACK_FILE", "SETTLEMENT_SOURCE",
             "PAPER_CHAIN", "SCHEDULED_TIME", "ACTUAL_START_TIME", "RUN_DELAY_MINUTES", "TRADE_DATE", "NETWORK", "NETWORK_RETRIES",
             "CLAUDE_VERSION", "CLAUDE_STATUS", "DATA_REFRESH", "ETF_FRESHNESS", "QUANT", "ACTIVE_SHARE", "GROUNDING",
             "DPLAN_VERSION", "DPLAN_VALIDATION", "FINAL_CANDIDATE", "OVERALL_STATUS", "BLOCKED_REASON",
@@ -64,8 +66,15 @@ def is_trading_day(d: date, hol: set[str]) -> bool:
     return d.weekday() < 5 and d.isoformat() not in hol
 
 
-def plan(now: datetime, hol: set[str], open_hm: tuple[int, int] = (19, 30)) -> dict:
-    """Which scheduled run this start belongs to and whether it may run. Pure function."""
+def plan(now: datetime, hol: set[str], open_hm: tuple[int, int] = (19, 30), ops_cfg: dict | None = None,
+         close_hm: tuple[int, int] = (8, 55)) -> dict:
+    """Which scheduled run this start belongs to and whether it may run. Pure function (window logic in
+    agent/ops/submission_window.py):
+      today >= 19:30            -> RUN for T = tomorrow (if a trading day; else NO_SUBMISSION_WINDOW_TONIGHT)
+      today 00:00 .. 08:29:59   -> CROSS_DAY_CATCHUP run for T = TODAY (never yesterday's trade date)
+      today 08:30 .. 08:54:59   -> NO_DECISION (DECISION_WINDOW_CLOSED): report the submission state only
+      today >= 08:55 (< 19:30)  -> SKIP SUBMISSION_WINDOW_CLOSED"""
+    from agent.ops import submission_window as SW
     today = now.date()
     today_open = datetime(today.year, today.month, today.day, *open_hm, tzinfo=TPE)
     sched_day = today if now >= today_open else today - timedelta(days=1)
@@ -74,11 +83,21 @@ def plan(now: datetime, hol: set[str], open_hm: tuple[int, int] = (19, 30)) -> d
     out = {"scheduled_date": sched_day.isoformat(), "scheduled_time": sched.isoformat(),
            "actual_start_time": now.replace(microsecond=0).isoformat(),
            "run_delay_minutes": int((now - sched).total_seconds() // 60), "trade_date": trade.isoformat(),
-           "action": "RUN", "reason": None}
-    if sched_day != today:
-        out.update(action="SKIP", reason="MISSED_PREVIOUS_DAY")
-    elif not is_trading_day(trade, hol):
-        out.update(action="SKIP", reason="NO_SUBMISSION_WINDOW_TONIGHT", trade_date=None)
+           "action": "RUN", "reason": None, "run_kind": "NORMAL", "window_phase": None, "deadline_warnings": []}
+    if not is_trading_day(trade, hol):
+        out.update(action="SKIP", reason="NO_SUBMISSION_WINDOW_TONIGHT" if sched_day == today else "NO_TRADING_DAY",
+                   trade_date=None)
+        return out
+    ph = SW.phase(trade.isoformat(), now, ops_cfg, open_hm, close_hm)
+    out["window_phase"] = ph
+    if sched_day != today:                        # after midnight: the window of TODAY's trade date is still open
+        out["run_kind"] = "CROSS_DAY_CATCHUP"
+    elif out["run_delay_minutes"] > 5:
+        out["run_kind"] = "SAME_DAY_CATCHUP"
+    if ph == "SUBMISSION_WINDOW_CLOSED":
+        out.update(action="SKIP", reason="SUBMISSION_WINDOW_CLOSED")
+    elif ph == "DECISION_WINDOW_CLOSED":
+        out.update(action="NO_DECISION", reason="DECISION_WINDOW_CLOSED")
     return out
 
 
@@ -205,10 +224,16 @@ def summarize(summary: dict | None, preflight: dict | None, rc: int) -> dict:
            "blocked_reason": None, "error_message": None}
     if st in ("DRY_RUN_OK", "READY_TO_SUBMIT", "HISTORICAL_OK"):
         out["status"] = "PASS"
+    elif st in ("DECISION_WINDOW_CLOSED", "SUBMISSION_WINDOW_CLOSED"):
+        out.update(status="BLOCKED", blocked_reason=st)
+        return out
     elif st in ("BLOCKED", "LATE_PAST_CUTOFF"):
         r = str(summary.get("reason") or "")
         out["status"] = "BLOCKED"
         dp_reason = next((x for x in ("DATAPACK_MISSING", "DATAPACK_STALE", "DATAPACK_INVALID") if r.startswith(x)), None)
+        dp_reason = dp_reason or next((x for x in ("TEAM_ID_NOT_CONFIGURED", "MARKET_DATA_INCOMPLETE",
+                                                   "MARKET_DATA_NOT_AVAILABLE", "ACTIVE_SHARE_DATA_MISSING",
+                                                   "ACTIVE_SHARE_DATA_STALE") if x in r), None)
         out["blocked_reason"] = (dp_reason if dp_reason else
                                  "ETF_HOLDINGS_STALE" if "etf_holdings_freshness" in r else
                                  "LATE_PAST_CUTOFF" if st == "LATE_PAST_CUTOFF" else
@@ -226,6 +251,9 @@ def finish(rec: dict, log: RunLog) -> dict:
     assert rec["status"] in STATUSES
     for k in LOG_KEYS:
         v = {"LABEL": rec.get("label") or "PRECOMPETITION_PAPER_RUN", "RUN_MODE": rec.get("run_mode"),
+             "RUN_KIND": rec.get("run_kind"), "WINDOW_PHASE": rec.get("window_phase"),
+             "SUBMISSION_STATE": rec.get("submission_state"),
+             "DEADLINE_WARNINGS": ",".join(rec.get("deadline_warnings") or []) or None,
              "DATAPACK_STATUS": rec.get("datapack_status"), "DATAPACK_DATE": rec.get("datapack_date"),
              "DATAPACK_FILE": rec.get("datapack_file"), "SETTLEMENT_SOURCE": rec.get("settlement_source"),
              "PAPER_CHAIN": rec.get("paper_chain"),
@@ -247,10 +275,28 @@ def finish(rec: dict, log: RunLog) -> dict:
     return rec
 
 
-def run(now: datetime | None = None, setup_test: bool = False, net_retries: int = 5, net_wait: float = 30.0) -> dict:
+def window_close_time() -> tuple[int, int]:
+    from agent.config import load_official_rules
+    hh, mm = map(int, load_official_rules().submission_close.split(":"))
+    return hh, mm
+
+
+def submission_snapshot(trade_date: str | None, now: datetime) -> dict | None:
+    """Evidence-based submission state + deadline warnings for T (read-only; agent/submission/status.py)."""
+    if not trade_date:
+        return None
+    try:
+        from agent.submission.status import compute
+        return compute(trade_date, now=now)
+    except Exception as e:  # noqa: BLE001
+        return {"state": f"UNKNOWN ({type(e).__name__})", "deadline_warnings": []}
+
+
+def run(now: datetime | None = None, setup_test: bool = False, net_retries: int = 5, net_wait: float = 30.0,
+        safe_retry: bool = False) -> dict:
     now = now or datetime.now(TPE)
     log = RunLog(now)
-    p = plan(now, holidays(), window_open_time())
+    p = plan(now, holidays(), window_open_time(), ops_cfg=load_ops_config(), close_hm=window_close_time())
     rec = {k: None for k in ("network", "network_retries", "claude", "claude_version", "claude_fallback",
                              "data_refresh", "etf_freshness", "quant", "active_share", "grounding", "dplan_version",
                              "dplan_validation", "final_candidate", "blocked_reason", "error_message",
@@ -260,11 +306,25 @@ def run(now: datetime | None = None, setup_test: bool = False, net_retries: int 
     rec.update({k: p[k] for k in ("scheduled_date", "scheduled_time", "actual_start_time", "run_delay_minutes",
                                   "trade_date")}, mode="SETUP_TEST_MODE" if setup_test else "PRECOMPETITION_REAL_DATA_DRY_RUN")
     log.w("MODE", rec["mode"])
+    rec.update(run_kind=p["run_kind"], window_phase=p["window_phase"])
+    sub = submission_snapshot(p["trade_date"], now)
+    if sub:
+        rec.update(submission_state=sub["state"], deadline_warnings=sub.get("deadline_warnings") or [])
     if p["action"] == "SKIP" and not setup_test:
         rec.update(status="SKIPPED", blocked_reason=p["reason"])
         return finish(rec, log)
+    if p["action"] == "NO_DECISION" and not setup_test:      # T 08:30..08:55: never a new decision, state only
+        rec.update(status="SKIPPED", blocked_reason="DECISION_WINDOW_CLOSED")
+        return finish(rec, log)
     if not setup_test and already_passed(p["scheduled_date"], read_history()):
         rec.update(status="SKIPPED", blocked_reason="SKIP_ALREADY_PASSED")
+        return finish(rec, log)
+    if not setup_test and sub and sub["state"] in ("ACCEPTED", "UPLOADED"):
+        rec.update(status="SKIPPED", blocked_reason=f"SUBMISSION_ALREADY_{sub['state']}")
+        return finish(rec, log)
+    if not setup_test and not safe_retry and sub and sub["state"] in ("READY_FOR_UPLOAD", "SUBMISSION_UI_UNAVAILABLE"):
+        rec.update(status="SKIPPED", blocked_reason="FINAL_ALREADY_EXISTS (use --safe-retry to produce a candidate; "
+                                                    "the FINAL stays frozen)")
         return finish(rec, log)
     net = network_check(net_retries, net_wait, log)
     rec.update(network="OK" if net["ok"] else "FAIL " + json.dumps(net["detail"]), network_retries=net["retries"])
@@ -278,10 +338,16 @@ def run(now: datetime | None = None, setup_test: bool = False, net_retries: int 
     if setup_test:                       # scheduler / logging / network / Claude context only — never a real PASS
         rec.update(status="SKIPPED", blocked_reason="SETUP_TEST_MODE (no dry-run executed)")
         return finish(rec, log)
-    from agent.config import load_strategy
-    team = load_strategy("config/strategy_quant_v1.yaml")["team_id"]
+    from agent.ops.team import resolve as resolve_team
     mode = run_mode()
     rec["run_mode"] = mode
+    tm = resolve_team(mode)                       # P-1: ops config, never the frozen strategy file
+    rec["team_id"], rec["team_id_source"] = tm["team_id"], tm["source"]
+    if tm["status"] != "OK":                      # COMPETITION without an official Team ID: never run
+        rec.update(status="BLOCKED", blocked_reason="TEAM_ID_NOT_CONFIGURED",
+                   error_message=f"{tm['source']} = {tm['configured_value']!r}")
+        return finish(rec, log)
+    team = tm["team_id"]
     rec["data_backfill"] = backfill_gaps(p["trade_date"], log)
     pre = competition_preparation(mode, p["trade_date"], team, log)
     rec.update({k: pre[k] for k in ("label", "datapack_status", "datapack_date", "datapack_source", "datapack_file",
@@ -323,6 +389,9 @@ def run(now: datetime | None = None, setup_test: bool = False, net_retries: int 
             rec["dplan_version"] = json.loads(fp.read_text(encoding="utf-8")).get("schema_version")
         except (OSError, ValueError):
             pass
+    after = submission_snapshot(p["trade_date"], datetime.now(TPE))
+    if after:
+        rec.update(submission_state=after["state"], deadline_warnings=after.get("deadline_warnings") or [])
     if rec.get("status") == "PASS" and mode == "PRECOMPETITION":
         try:
             from agent.ops.prediction_summary import build
@@ -377,7 +446,12 @@ def backfill_gaps(trade_date: str, log: RunLog) -> list[str]:
         from agent.data.loaders import HistoryStore
         from agent.ops.refresh_daily import refresh
         hol = holidays()
-        gaps = missing_trading_days(trade_date, set(HistoryStore().dates("daily_prices")), hol)
+        store = HistoryStore()
+        gaps = missing_trading_days(trade_date, set(store.dates("daily_prices")), hol)
+        # P-2: a stored but PARTIAL day (e.g. TWSE failed, TPEx stored) is re-fetched like a missing one
+        from agent.ops.market_coverage import incomplete_days
+        recent = [d for d in store.dates("daily_prices") if d < trade_date][-10:]
+        gaps = sorted(set(gaps) | set(incomplete_days(store, recent)))
         for g in gaps:
             refresh(next_trading_day(date.fromisoformat(g), hol).isoformat(),
                     only={"twse_prices", "tpex_prices", "twse_institutional", "tpex_institutional", "corporate_actions"})
@@ -429,11 +503,12 @@ def main(argv=None) -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--setup-test", action="store_true", help="scheduler/logging/network/Claude only; never PASS")
     ap.add_argument("--check", action="store_true")
+    ap.add_argument("--safe-retry", action="store_true", help="run even if a FINAL exists (it stays frozen)")
     a = ap.parse_args(argv)
     if a.check:
         print(json.dumps(check(), ensure_ascii=False))
         return 0
-    rec = run(setup_test=a.setup_test)
+    rec = run(setup_test=a.setup_test, safe_retry=a.safe_retry)
     print(f"SCHEDULED_RUN {rec['status']} {rec.get('blocked_reason') or ''} log={rec['log_file']}")
     return 0
 

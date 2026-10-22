@@ -1,0 +1,48 @@
+{
+ "trade_date": "2026-10-21",
+ "built_at": "2026-10-21T10:12:47+08:00",
+ "label": "TEST_SUBMISSION_PACKAGE",
+ "official_team_id": null,
+ "team_id_status": "TEAM_ID_NOT_CONFIGURED",
+ "quant_fingerprint": {
+  "strategy_sha256": "sha256:f34fa02e924011b20c52a4bd42e961169f97e1950e76e04b7e78dc43ac23d2e0",
+  "frozen": true
+ },
+ "official_receipt_format": "PENDING_PORTAL_VALIDATION",
+ "final": {
+  "file": "C:\\Users\\devon.tseng\\Desktop\\個人\\AI CUP 2026玉山人工智慧公開挑戰賽\\submissions\\20261021\\FINAL\\D-Plan_TEAM_TEST_2026-10-21.json",
+  "filename": "D-Plan_TEAM_TEST_2026-10-21.json",
+  "sha256": "sha256:8033d95516043abc901adf7e387bf3ec12359415646f0712c916da20fbafcb03",
+  "sha256_verified": true,
+  "team_id_in_file": "TEAM_TEST",
+  "trade_date_in_file": "2026-10-21",
+  "schema_version": "4.3",
+  "mode": "dry-run",
+  "generated_at": "2026-10-20T20:19:26.689978+08:00",
+  "run_id": "20261020_201926_git23f2428-dirty",
+  "orders": 24,
+  "decisions": 24,
+  "no_trade_decisions": 0
+ },
+ "local_checks": {
+  "schema": "PASS",
+  "schema_errors": [],
+  "ticker": "PASS",
+  "tickers_outside_universe": [],
+  "numeric": "PASS"
+ },
+ "validation_report": {
+  "path": "C:\\Users\\devon.tseng\\Desktop\\個人\\AI CUP 2026玉山人工智慧公開挑戰賽\\submissions\\20261021\\candidates\\20261020_201926_git23f2428-dirty\\validation_report.json",
+  "ok": true,
+  "summary": {
+   "PASS": 27,
+   "NOT_APPLICABLE": 1,
+   "NOT_IMPLEMENTED": 6
+  }
+ },
+ "submission_status": "SUBMISSION_WINDOW_CLOSED",
+ "status": "BLOCKED_TEAM_ID_NOT_CONFIGURED",
+ "problems": [
+  "TEAM_ID_NOT_CONFIGURED: official Team ID not set in config/ops.yaml team.competition_team_id"
+ ]
+}

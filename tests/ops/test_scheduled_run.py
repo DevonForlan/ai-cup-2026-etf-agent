@@ -22,9 +22,11 @@ def test_same_day_catch_up_records_delay():
     assert p["action"] == "RUN" and p["run_delay_minutes"] == 161 and p["actual_start_time"].startswith("2026-10-13T22:11")
 
 
-def test_after_midnight_is_missed_previous_day_never_run():
+def test_after_midnight_is_cross_day_catch_up_for_today():
+    """2026-10-20 policy (was MISSED_PREVIOUS_DAY): the window of TODAY's trade date is still open until 08:30."""
     p = S.plan(at("2026-10-14T00:20:00"), HOL)
-    assert p["action"] == "SKIP" and p["reason"] == "MISSED_PREVIOUS_DAY" and p["scheduled_date"] == "2026-10-13"
+    assert p["action"] == "RUN" and p["run_kind"] == "CROSS_DAY_CATCHUP" and p["scheduled_date"] == "2026-10-13"
+    assert p["trade_date"] == "2026-10-14"
 
 
 def test_no_window_when_next_day_is_not_a_trading_day():
@@ -94,5 +96,5 @@ def test_run_skips_without_side_effects_when_already_passed(monkeypatch, tmp_pat
     r = S.run(now=datetime(2026, 10, 13, 22, 0, tzinfo=TPE))
     assert r["status"] == "SKIPPED" and r["blocked_reason"] == "SKIP_ALREADY_PASSED"
     assert (tmp_path / "latest_status.json").exists() and "OVERALL_STATUS" in open(r["log_file"], encoding="utf-8").read()
-    r = S.run(now=datetime(2026, 10, 14, 0, 20, tzinfo=TPE))
-    assert r["status"] == "SKIPPED" and r["blocked_reason"] == "MISSED_PREVIOUS_DAY"
+    r = S.run(now=datetime(2026, 10, 14, 0, 20, tzinfo=TPE))           # catch-up for a date that already PASSED
+    assert r["status"] == "SKIPPED" and r["blocked_reason"] == "SKIP_ALREADY_PASSED"
