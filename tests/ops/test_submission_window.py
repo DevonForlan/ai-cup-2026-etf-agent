@@ -262,9 +262,10 @@ def test_code_only_scanner_sees_code_not_prose():
 
 def test_no_upload_login_or_credential_code():
     root = Path(__file__).resolve().parents[2] / "agent" / "submission"
-    # Issue #4: normal browser automation is allowed ONLY in portal_driver.py (UI driver) and auto_upload.py (guarded
+    # Issue #4: normal browser automation is allowed ONLY in portal_driver.py (UI driver), rehearsal.py (Owner-requested
+    # step-by-step rehearsal probe) and auto_upload.py (guarded
     # workflow, disabled by default); every other submission module stays free of network / browser code
-    automation = ("auto_upload.py", "portal_driver.py")
+    automation = ("auto_upload.py", "portal_driver.py", "rehearsal.py")
     src = "\n".join(p.read_text(encoding="utf-8") for p in root.glob("*.py") if p.name not in automation)
     # network / browser-automation / cookie-store code (official_test.py only REFUSES credential-like text)
     for bad in ("import requests", "import urllib", "urlopen(", ".post(", "selenium", "playwright", "pyautogui",
