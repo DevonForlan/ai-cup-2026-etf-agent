@@ -241,16 +241,20 @@ def test_portal_opens_only_for_a_competition_final(fixture_store, ops_cfg):
 
 def test_no_upload_login_or_credential_code():
     root = Path(__file__).resolve().parents[2] / "agent" / "submission"
-    # Issue #4: normal browser automation is allowed ONLY in auto_upload.py (guarded, disabled by default)
-    src = "\n".join(p.read_text(encoding="utf-8") for p in root.glob("*.py") if p.name != "auto_upload.py")
+    # Issue #4: normal browser automation is allowed ONLY in portal_driver.py (UI driver) and auto_upload.py (guarded
+    # workflow, disabled by default); every other submission module stays free of network / browser code
+    automation = ("auto_upload.py", "portal_driver.py")
+    src = "\n".join(p.read_text(encoding="utf-8") for p in root.glob("*.py") if p.name not in automation)
     # network / browser-automation / cookie-store code (official_test.py only REFUSES credential-like text)
     for bad in ("import requests", "import urllib", "urlopen(", ".post(", "selenium", "playwright", "pyautogui",
                 "http.cookiejar", "browser_cookie", "import http.client", "sqlite3"):
         assert bad not in src.lower(), bad
-    au = (root / "auto_upload.py").read_text(encoding="utf-8").lower()
-    for bad in ("import requests", "import urllib", "urlopen(", "httpx", ".cookies(", "storage_state", "add_cookies",
-                "http.cookiejar", "browser_cookie", "sqlite3", "x-csrftoken", "/api/"):
-        assert bad not in au, bad
+    for name in automation:
+        au = (root / name).read_text(encoding="utf-8").lower()
+        for bad in ("import requests", "import urllib", "urlopen(", "httpx", ".cookies(", "storage_state", "add_cookies",
+                    "http.cookiejar", "browser_cookie", "sqlite3", "x-csrftoken", "/api/", ".fill(", ".type(",
+                    "keyboard.", "password="):
+            assert bad not in au, (name, bad)
     from agent.submission.future_api import PORTAL_STATUS, OfficialPortalProvider
     assert PORTAL_STATUS == "DISABLED_PENDING_OFFICIAL_PORTAL_VALIDATION"
     with pytest.raises(NotImplementedError):
