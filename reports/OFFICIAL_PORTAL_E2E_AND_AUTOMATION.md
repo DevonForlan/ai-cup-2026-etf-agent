@@ -175,3 +175,25 @@ ACCEPTED 只來自歷史紀錄中**唯一一列**符合本檔且帶有官方接�
 2. 窗口內人工上傳 → 檢核 → 送出 → 歷史 → 唯讀擷取 → PENDING_WINDOW_ONLY 升級（只改 `portal_adapter.yaml`）。
 3. 記錄官方接受證據；結算後 DataPack 交接。
 4. 之後才可提出 `ENABLE_AUTO_UPLOAD_RECOMMENDATION`，由 Owner 核准開啟 `enabled`。
+
+## 8. 開賽前試繳 實測（2026-10-23 22:37–23:31，Owner 要求）
+
+工具：`python -m agent.submission.rehearsal scan | probe`（逐步執行，每次點擊前停下等指令；只允許少數按鈕名稱）。證據全部在本機 gitignored 的 `data/official_test_runs/20261027_rehearsal/` 與 `data/portal_discovery/*_domscan/`。
+
+**合法試繳檔不可能存在**：凍結的 `agent/pipeline.py` 以「現在」為提交時間檢查 C6（窗口 10/26 19:30 → 10/27 08:55），驗證失敗後改用全現金 fallback（持股 0 檔、現金 100% 也不合規）。試繳期間 10/23 20:30 → 10/26 00:00 與正式窗口不重疊。因此改用 Owner 核准的「最小測試 JSON」（team TEAM_11442、trade_date 2026-10-27、無委託；sha256 `132acad4…2ee2`、109 bytes）。
+
+| 階段 | 實際觀察 |
+|---|---|
+| 上傳前 DOM | 按鈕：登出、下載資料包、上傳說明文件、上傳試繳檔案（enabled）、**試繳期間不收件（`<button disabled>`）**；DOM 中沒有任何 送出繳交（含隱藏）；無 dialog / form / alert；兩個 file input 都是隱藏的（`.pdf`、`.json`）。 |
+| 選擇 JSON | 選檔即觸發官方「上傳即時檢查」，不需按 上傳試繳檔案。 |
+| 檢核結果 | 「文件檢查未通過」「缺少下列項目：文件類型、① 資料來源 sources、② 事實 observations、③ 市場觀點 market_view、④ 個股推論 inferences、⑤ 未交易決策 no_trade_decisions、⑦ Agent 執行資訊 agent_metadata」「請修正後重新上傳；本次未存檔，也不計入當日繳交次數。」＋逐項「✕ doc_type — 缺少必填欄位 文件類型」等。 |
+| 檢核後 | 試繳期間不收件 仍為 `disabled`；沒有新按鈕、沒有 modal；次數仍 0 / 25；歷史仍「賽程尚未開始，目前沒有繳交紀錄。」 |
+| 重新整理 | 檢核結果消失回到「待上傳」（未存檔）。 |
+| 正式 driver 路徑 | `upload_file → wait_for_server_validation → read_validation_result` 在真實頁面得到 FAIL；閒置面板 → UNKNOWN（不會誤判 PASS）。 |
+
+官方頁面文字：「上傳即時檢查要項 · 送出後回報收件檢核」「目前為開賽前試繳：只檢核、不收件，正式繳交窗口開啟後才能送出。」
+
+結論：
+- 試繳可以上傳、可以即時檢核；**技術上不能送出**（按鈕帶 HTML `disabled`，DOM 無其他送出控制項），不建立歷史、不扣次數。
+- 頁面是同一個元件（同一個 D-Plan 卡片、同一個檢核結果面板、同一個送出位置），依賽程狀態切換按鈕文字與 disabled 狀態 → `SAME_UI_STATE_SWITCH`（PASS 後是否仍 disabled 未能驗證，因為窗口前不可能有通過的檔案）。
+- 仍待正式窗口：檢核 PASS 字樣、送出按鈕在正式窗口的文字與狀態、確認 modal、送出成功字樣、收件檢核、歷史列與接受字樣。
