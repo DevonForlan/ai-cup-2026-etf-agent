@@ -7,8 +7,13 @@ config/portal_adapter.yaml; anything not confirmed there is unusable (UIUnexpect
 
     .venv\\Scripts\\python.exe -m agent.submission.portal_driver discover [--wait-login 300] [--headless]
         read-only: open the portal, wait for the Owner's manual login (optional), capture the page state
-        (url, title, visible buttons / headings / dialogs, which adapter selectors resolve, screenshot) into
-        data/portal_discovery/<timestamp>/ (local only, gitignored). Never uploads or clicks submit.
+        (url, title, visible elements by role with accessible name / id / data-* attributes, tables, alerts,
+        file inputs, which adapter selectors resolve, screenshot, page text) into data/portal_discovery/<timestamp>/
+        (local only, gitignored). Never uploads, never clicks.
+    .venv\\Scripts\\python.exe -m agent.submission.portal_driver readonly-test [--headless]
+        read-only real-portal test: open -> login -> Team ID -> trade date -> window -> attempts -> history ->
+        strategy document -> evidence. Prints PORTAL_READONLY_REAL_TEST = PASS | FAIL. Never uploads / submits.
+    .venv\\Scripts\\python.exe -m agent.submission.portal_driver inventory
 """
 from __future__ import annotations
 
@@ -27,7 +32,8 @@ from agent.ops.common import TPE, load_ops_config  # noqa: E402
 ACTION_OK_COMPETITION = {"CONFIRMED_REAL_E2E"}
 ACTION_OK_OFFICIAL_TEST = {"CONFIRMED_REAL_E2E", "OWNER_OBSERVED_LABEL", "GENERIC_CANDIDATE"}
 READ_OK = {"CONFIRMED_REAL_E2E", "CONFIRMED_PUBLIC_BUNDLE", "OWNER_OBSERVED_LABEL", "GENERIC_CANDIDATE"}
-PENDING = ("PENDING_REAL_E2E_SELECTOR", "PENDING_REAL_E2E_WORDING")
+PENDING = ("PENDING_WINDOW_ONLY", "PENDING_REAL_E2E_SELECTOR", "PENDING_REAL_E2E_WORDING")
+ALL_STATUSES = READ_OK | set(PENDING) | {"CONFIRMED_PUBLIC_BUNDLE"}
 
 
 class UIUnexpected(RuntimeError):
@@ -85,6 +91,31 @@ class PortalDriver:
     def verify_acceptance(self, file_name: str, sha256: str, trade_date: str, timeout_s: float, poll_s: float) -> list[dict]: ...
     def capture_evidence(self, tag: str) -> list[str]: ...
     def close(self): ...
+
+    # names used by the operations brief (aliases of the methods above; same behaviour)
+    def read_window_state(self) -> str:
+        return self.read_window_status()
+
+    def read_strategy_doc_status(self) -> str | None:
+        return self.read_strategy_document_status()
+
+    def detect_unexpected_modal(self) -> list[str]:
+        return list(self.read_page_state().get("unexpected_dialogs") or [])
+
+    def detect_error_banner(self) -> list[str]:
+        return []
+
+    def wait_upload_complete(self, timeout_s: float):
+        return None
+
+    def wait_server_validation(self, timeout_s: float):
+        return self.wait_for_server_validation(timeout_s)
+
+    def capture_screenshot(self, tag: str) -> str | None:
+        return next((x for x in self.capture_evidence(tag) if str(x).endswith(".png")), None)
+
+    def capture_page_text(self, tag: str) -> str | None:
+        return next((x for x in self.capture_evidence(tag) if str(x).endswith(".txt")), None)
 
 
 class PlaywrightPortalDriver(PortalDriver):
@@ -194,7 +225,38 @@ class PlaywrightPortalDriver(PortalDriver):
         dialogs = self._dialogs()
         unexpected = [d for d in dialogs if not any(k in d for k in known)]
         return {"url": self.safe_url(), "title": self.page.title(), "login": self.check_login(),
-                "window_status": self.read_window_status(), "dialogs": dialogs, "unexpected_dialogs": unexpected}
+                "window_status": self.read_window_status(), "dialogs": dialogs, "unexpected_dialogs": unexpected,
+                "error_banners": self.detect_error_banner()}
+
+    def detect_error_banner(self) -> list[str]:
+        """Visible alert / status texts that carry a CONFIRMED official error wording (verbatim)."""
+        try:
+            body = self.page.inner_text("body", timeout=10000)
+        except Exception:  # noqa: BLE001
+            return []
+        keys = ("window_closed", "rehearsal_closed", "attempt_limit", "auth_loop", "file_too_large")
+        return [m for k in keys for m in wording_markers(self.adapter, k) if m in body]
+
+    def wait_upload_complete(self, timeout_s: float):
+        """The upload is complete when the validation panel appears (the portal validates on upload)."""
+        return self.wait_for_server_validation(timeout_s)
+
+    def capture_screenshot(self, tag: str) -> str | None:
+        d = self._evidence_day()
+        shot = d / f"{datetime.now(TPE):%H%M%S}_{tag}.png"
+        self.page.screenshot(path=str(shot), full_page=True)
+        return str(shot)
+
+    def capture_page_text(self, tag: str) -> str | None:
+        d = self._evidence_day()
+        txt = d / f"{datetime.now(TPE):%H%M%S}_{tag}.txt"
+        txt.write_text(self.page.inner_text("body", timeout=10000), encoding="utf-8")
+        return str(txt)
+
+    def _evidence_day(self) -> Path:
+        d = self.evidence_dir / datetime.now(TPE).strftime("%Y%m%d")
+        d.mkdir(parents=True, exist_ok=True)
+        return d
 
     def read_team_id(self) -> str | None:
         return self._text("team_id")
@@ -290,16 +352,13 @@ class PlaywrightPortalDriver(PortalDriver):
             self.page.reload(wait_until="networkidle")
 
     def capture_evidence(self, tag: str) -> list[str]:
-        d = self.evidence_dir / datetime.now(TPE).strftime("%Y%m%d")
-        d.mkdir(parents=True, exist_ok=True)
-        stem = f"{datetime.now(TPE):%H%M%S}_{tag}"
-        shot, txt = d / f"{stem}.png", d / f"{stem}.txt"
-        try:
-            self.page.screenshot(path=str(shot), full_page=True)
-            txt.write_text(self.page.inner_text("body", timeout=10000), encoding="utf-8")
-        except Exception:  # noqa: BLE001
-            return []
-        return [str(shot), str(txt)]
+        out = []
+        for f in (self.capture_screenshot, self.capture_page_text):
+            try:
+                out.append(f(tag))
+            except Exception:  # noqa: BLE001 - evidence capture never changes the outcome
+                pass
+        return [x for x in out if x]
 
     def close(self):
         try:
@@ -309,6 +368,57 @@ class PlaywrightPortalDriver(PortalDriver):
 
 
 # ----------------------------------------------------------------------------- read-only discovery
+_ATTRS_JS = """e => ({tag: e.tagName.toLowerCase(), id: e.id || null, name: e.getAttribute('name'),
+  type: e.getAttribute('type'), accept: e.getAttribute('accept'), role: e.getAttribute('role'),
+  aria_label: e.getAttribute('aria-label'), disabled: !!e.disabled,
+  data: Object.fromEntries([...e.attributes].filter(a => a.name.startsWith('data-')).map(a => [a.name, a.value])),
+  text: (e.innerText || '').trim().slice(0, 120)})"""   # never e.value: no form values are read
+
+
+def _attrs(loc) -> dict:
+    """Structural attributes of one element (tag / id / name / aria / data-* / visible text). Read-only DOM
+    inspection: never reads cookies, storage, tokens or form values of credential fields."""
+    try:
+        return loc.evaluate(_ATTRS_JS, timeout=2000)
+    except Exception:  # noqa: BLE001
+        return {}
+
+
+def readonly_test(*, headless: bool = False, ops_cfg: dict | None = None, team_id: str | None = None) -> dict:
+    """§6 read-only real-portal test. PASS = logged in, Team ID read and equal to the configured one, every read step
+    ran without an exception and evidence was captured. Never uploads, never clicks submit."""
+    ops_cfg = ops_cfg or load_ops_config()
+    team_id = team_id or (ops_cfg.get("team") or {}).get("competition_team_id")
+    out_dir = ROOT / "data" / "portal_discovery" / (datetime.now(TPE).strftime("%Y%m%d_%H%M%S") + "_readonly")
+    out_dir.mkdir(parents=True, exist_ok=True)
+    drv = PlaywrightPortalDriver(ops_cfg, headless=headless, evidence_dir=out_dir)
+    steps: dict = {}
+    try:
+        for name, fn in (("open", drv.open_portal), ("login", drv.check_login), ("team_id", drv.read_team_id),
+                         ("trade_date", drv.read_trade_date), ("window", drv.read_window_state),
+                         ("attempts", drv.read_attempts), ("history", lambda: len(drv.read_history())),
+                         ("strategy_document", drv.read_strategy_doc_status),
+                         ("modals", drv.detect_unexpected_modal), ("error_banners", drv.detect_error_banner),
+                         ("evidence", lambda: drv.capture_evidence("readonly_test"))):
+            try:
+                steps[name] = {"ok": True, "value": fn()}
+            except Exception as e:  # noqa: BLE001
+                steps[name] = {"ok": False, "error": f"{type(e).__name__}: {str(e)[:200]}"}
+            if name == "login" and steps[name].get("value") != "LOGGED_IN":
+                break
+    finally:
+        drv.close()
+    logged_in = (steps.get("login") or {}).get("value") == "LOGGED_IN"
+    ok = logged_in and all(v["ok"] for v in steps.values()) and (steps.get("team_id") or {}).get("value") == team_id \
+        and bool((steps.get("evidence") or {}).get("value"))
+    res = {"PORTAL_READONLY_REAL_TEST": "PASS" if ok else "FAIL", "login": (steps.get("login") or {}).get("value"),
+           "expected_team_id": team_id, "steps": steps, "out_dir": str(out_dir),
+           "note": "READ-ONLY: nothing uploaded or submitted; evidence local only (gitignored)"}
+    (out_dir / "readonly_test.json").write_text(json.dumps(res, ensure_ascii=False, indent=1, default=str),
+                                                encoding="utf-8")
+    return res
+
+
 def discover(*, wait_login_s: int = 0, headless: bool = False, ops_cfg: dict | None = None) -> dict:
     out_dir = ROOT / "data" / "portal_discovery" / datetime.now(TPE).strftime("%Y%m%d_%H%M%S")
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -334,10 +444,31 @@ def discover(*, wait_login_s: int = 0, headless: bool = False, ops_cfg: dict | N
                 visible[role] = []
         try:
             file_inputs = page.locator("input[type=\"file\"]")
-            inputs = [{"accept": file_inputs.nth(i).get_attribute("accept"), "name": file_inputs.nth(i).get_attribute("name")}
-                      for i in range(file_inputs.count())]
+            inputs = [_attrs(file_inputs.nth(i)) for i in range(file_inputs.count())]
         except Exception:  # noqa: BLE001
             inputs = []
+        elements = {}
+        for role in ("button", "link", "tab", "heading", "alert", "status", "dialog", "table", "row", "textbox",
+                     "combobox", "checkbox"):
+            try:
+                loc = page.get_by_role(role)
+                elements[role] = [_attrs(loc.nth(i)) for i in range(min(loc.count(), 80))]
+            except Exception:  # noqa: BLE001
+                elements[role] = []
+        try:
+            tables = page.locator("table")
+            table_info = [{"headers": [(h or "").strip() for h in tables.nth(i).locator("th").all_inner_texts()][:20],
+                           "rows": tables.nth(i).locator("tbody tr").count(),
+                           "first_rows": [(r or "").strip()[:300] for r in
+                                          tables.nth(i).locator("tbody tr").all_inner_texts()[:5]]}
+                          for i in range(tables.count())]
+        except Exception:  # noqa: BLE001
+            table_info = []
+        try:
+            stable = page.locator("[data-testid], [data-test], [data-cy], [id]")
+            stable_attrs = [_attrs(stable.nth(i)) for i in range(min(stable.count(), 150))]
+        except Exception:  # noqa: BLE001
+            stable_attrs = []
         resolves = {}
         for name in (drv.adapter.get("selectors") or {}):
             try:
@@ -345,7 +476,8 @@ def discover(*, wait_login_s: int = 0, headless: bool = False, ops_cfg: dict | N
             except UIUnexpected as e:
                 resolves[name] = str(e).split(":")[0]
         res = {"captured_at": datetime.now(TPE).isoformat(), "login": login, "page_state": state,
-               "visible_by_role": visible, "file_inputs": inputs, "adapter_resolution": resolves,
+               "visible_by_role": visible, "elements": elements, "tables": table_info,
+               "stable_attributes": stable_attrs, "file_inputs": inputs, "adapter_resolution": resolves,
                "read": {"team_id": drv.read_team_id(), "trade_date": drv.read_trade_date(),
                         "attempts": drv.read_attempts(), "history_rows": len(drv.read_history()),
                         "strategy_document_status": drv.read_strategy_document_status()},
@@ -365,10 +497,19 @@ def main(argv=None) -> int:
     d.add_argument("--wait-login", type=int, default=0, help="seconds to wait for the Owner's manual login")
     d.add_argument("--headless", action="store_true")
     sp.add_parser("inventory")
+    r_ = sp.add_parser("readonly-test")
+    r_.add_argument("--headless", action="store_true")
     a = ap.parse_args(argv)
     if a.cmd == "inventory":
         print(json.dumps(selector_inventory(load_adapter()), ensure_ascii=False, indent=1))
         return 0
+    if a.cmd == "readonly-test":
+        try:
+            r = readonly_test(headless=a.headless)
+        except UIUnexpected as e:
+            r = {"PORTAL_READONLY_REAL_TEST": "FAIL", "reason": str(e)}
+        print(json.dumps(r, ensure_ascii=False, indent=1, default=str))
+        return 0 if r["PORTAL_READONLY_REAL_TEST"] == "PASS" else 2
     try:
         r = discover(wait_login_s=a.wait_login, headless=a.headless)
     except UIUnexpected as e:
