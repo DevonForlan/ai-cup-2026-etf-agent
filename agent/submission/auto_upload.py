@@ -29,6 +29,10 @@ from agent.submission.portal_driver import UIUnexpected  # noqa: E402,F401  (re-
 OFFICIAL_DAILY_LIMIT = 25
 UPLOADABLE = ("READY_FOR_UPLOAD", "FILE_UPLOADED", "SERVER_VALIDATED")
 SUCCESS = ("ACCEPTED", "ALREADY_ACCEPTED")
+# §10 local validation (official_test.full_local_validation): every item must be present AND PASS; missing = UNKNOWN
+REQUIRED_CHECKS = ("json_parse", "schema", "ticker", "numeric", "team_id", "trade_date", "filename", "file_size",
+                   "whole_lot", "holdings_20_30", "tsmc_le_25", "other_le_10", "cash_lt_25", "active_share_ge_15",
+                   "quant_fingerprint", "dplan_order_consistency", "no_manual_override")
 
 
 @dataclass
@@ -42,6 +46,8 @@ class Candidate:
     source: str                    # "competition_final" | "official_test_package"
     final_mode: str | None = None
     validation_checks: dict = field(default_factory=dict)
+    generated_at: str | None = None
+    validated_at: str | None = None
 
 
 @dataclass
@@ -96,6 +102,9 @@ def gate(c: Candidate, *, now: datetime, ops_cfg: dict, run_mode: str, official_
     if not c.local_validation_ok:
         bad = [k for k, v in (c.validation_checks or {}).items() if v != "PASS"]
         f.append("LOCAL_VALIDATION_FAIL" + (f" {bad}" if bad else ""))
+    missing = [k for k in REQUIRED_CHECKS if k not in (c.validation_checks or {})]
+    if missing:
+        f.append(f"LOCAL_VALIDATION_UNKNOWN {missing}")
     if any(s and s != c.sha256 for s in prior_shas):
         f.append("DIFFERENT_SHA_RETRY_BLOCKED (retries only for the same FINAL sha256)")
     fz = ops_cfg["freeze"]
@@ -133,8 +142,10 @@ def gate(c: Candidate, *, now: datetime, ops_cfg: dict, run_mode: str, official_
 
 # ----------------------------------------------------------------------------- runner
 def run(c: Candidate, driver, *, now_fn, ops_cfg: dict, run_mode: str, official_test: bool, attempts_used: int,
-        manual_e2e_done: bool, record, check_config: bool = True, prior_shas: tuple = ()) -> Outcome:
-    """`driver` implements portal_driver.PortalDriver. `record(stage, **fields)` persists official-stage evidence."""
+        manual_e2e_done: bool, record, check_config: bool = True, prior_shas: tuple = (),
+        portal: dict | None = None) -> Outcome:
+    """`driver` implements portal_driver.PortalDriver. `record(stage, **fields)` persists official-stage evidence.
+    `portal` (optional) is filled with what the page showed (shared with the recorder for the audit rows)."""
     from agent.ops import submission_window as SW
     a = cfg_auto(ops_cfg)
     fails = gate(c, now=now_fn(), ops_cfg=ops_cfg, run_mode=run_mode, official_test=official_test,
@@ -146,7 +157,7 @@ def run(c: Candidate, driver, *, now_fn, ops_cfg: dict, run_mode: str, official_
         if any(x.startswith("SUBMISSION_WINDOW_CLOSED") for x in fails):
             return Outcome("WINDOW_CLOSED", "; ".join(fails))
         return Outcome("FAIL_CLOSED", "; ".join(fails))
-    o = Outcome("FAIL_CLOSED", "")
+    o = Outcome("FAIL_CLOSED", "", portal=portal if portal is not None else {})
 
     def ev(tag):
         try:
@@ -197,9 +208,13 @@ def run(c: Candidate, driver, *, now_fn, ops_cfg: dict, run_mode: str, official_
         if remaining <= 0:
             raise UIUnexpected("OFFICIAL_ATTEMPT_LIMIT_REACHED")
         validated_on_page = False
-        if c.state == "SERVER_VALIDATED":
+        if c.state in ("FILE_UPLOADED", "SERVER_VALIDATED"):          # resume: the page may still hold the result
             res, text = driver.read_validation_result()
             validated_on_page = res == "PASS"
+            if validated_on_page and c.state == "FILE_UPLOADED":
+                record("server_validated", official_status="pending", validation_result="PASS", message=text,
+                       evidence=ev("server_validated_resume"))
+            o.steps.append(f"RESUME {c.state} page={res}")
         if not validated_on_page:
             if not open_window():
                 o.status, o.reason = "WINDOW_CLOSED", "submission window closed before upload"
@@ -207,7 +222,15 @@ def run(c: Candidate, driver, *, now_fn, ops_cfg: dict, run_mode: str, official_
             driver.upload_file(c.file)
             record("file_uploaded", official_status="pending", message="file uploaded", evidence=ev("file_uploaded"))
             o.steps.append("FILE_UPLOADED")
-            driver.wait_for_server_validation(float(a["validation_timeout_s"]))
+            try:
+                driver.wait_for_server_validation(float(a["validation_timeout_s"]))
+            except UIUnexpected:
+                raise
+            except Exception as e:  # noqa: BLE001 - no result in time: uploaded but unknown -> a human checks
+                ev("validation_timeout")
+                o.status = "FAIL_CLOSED"
+                o.reason = f"MANUAL_CHECK_REQUIRED: VALIDATION_TIMEOUT ({type(e).__name__}: {str(e)[:120]})"
+                return o
             res, text = driver.read_validation_result()
             if res == "FAIL":
                 record("rejected", official_status="rejected", validation_result="FAIL", message=text,
@@ -221,12 +244,23 @@ def run(c: Candidate, driver, *, now_fn, ops_cfg: dict, run_mode: str, official_
             record("server_validated", official_status="pending", validation_result="PASS", message=text,
                    evidence=ev("server_validated"))
             o.steps.append("SERVER_VALIDATED")
-        if SW.phase(c.trade_date, now_fn(), ops_cfg) == "SUBMISSION_WINDOW_CLOSED":
-            o.status, o.reason = "WINDOW_CLOSED", "08:55 reached before submit (stopped)"
+        # pre-submit re-check: session, page identity, same FINAL bytes, validation still PASS, no modal, < 08:55
+        if driver.check_login() != "LOGGED_IN":
+            o.portal["login_state"] = "LOGIN_REQUIRED"
+            o.status, o.reason = "LOGIN_REQUIRED", "LOGIN_EXPIRED_MID_RUN (session lost before submit; nothing submitted)"
             return o
+        if driver.read_team_id() != c.team_id or driver.read_trade_date() != c.trade_date:
+            raise UIUnexpected("PAGE_IDENTITY_CHANGED_BEFORE_SUBMIT")
+        if sha256_file(c.file) != c.sha256:
+            raise UIUnexpected("FINAL_SHA_CHANGED_BEFORE_SUBMIT")
+        if driver.read_validation_result()[0] != "PASS":
+            raise UIUnexpected("VALIDATION_NOT_PASS_BEFORE_SUBMIT")
         page = driver.read_page_state()
         if page.get("unexpected_dialogs"):
             raise UIUnexpected(f"UNEXPECTED_MODAL {page['unexpected_dialogs'][:1]}")
+        if SW.phase(c.trade_date, now_fn(), ops_cfg) == "SUBMISSION_WINDOW_CLOSED":
+            o.status, o.reason = "WINDOW_CLOSED", "08:55 reached before submit (stopped)"
+            return o
         driver.submit()
         sres, stext = driver.read_submit_result()
         if sres == "FAIL":
@@ -275,7 +309,7 @@ def candidate_from_official_test(trade_date: str, ops_cfg: dict) -> Candidate | 
     return Candidate(trade_date, f.get("team_id_in_file") or "", Path(f["file"]), f.get("sha256") or "",
                      _official_test_state(trade_date, ops_cfg, f.get("sha256")),
                      bool(pkg.get("local_validation_ok")) and pkg.get("status") == "READY_FOR_MANUAL_TEST_UPLOAD",
-                     "official_test_package", f.get("mode"), lv)
+                     "official_test_package", f.get("mode"), lv, _mtime(Path(f["file"])), pkg.get("prepared_at"))
 
 
 def candidate_from_competition(trade_date: str, ops_cfg: dict) -> Candidate | None:
@@ -292,7 +326,15 @@ def candidate_from_competition(trade_date: str, ops_cfg: dict) -> Candidate | No
     v = full_local_validation(trade_date, st.get("team_id") or "", Path(st["file"]), summary, ops_cfg,
                               active_final(trade_date, ops_cfg))
     return Candidate(trade_date, st.get("team_id") or "", Path(st["file"]), st.get("sha256") or "", st["state"],
-                     v["ok"], "competition_final", st.get("mode"), v["checks"])
+                     v["ok"], "competition_final", st.get("mode"), v["checks"], _mtime(Path(st["file"])),
+                     datetime.now(TPE).replace(microsecond=0).isoformat())
+
+
+def _mtime(p: Path) -> str | None:
+    try:
+        return datetime.fromtimestamp(p.stat().st_mtime, TPE).replace(microsecond=0).isoformat()
+    except OSError:
+        return None
 
 
 def _official_records(trade_date: str, ops_cfg: dict) -> list[dict]:
@@ -342,12 +384,20 @@ def prior_automation_shas(trade_date: str, ops_cfg: dict, official_test: bool) -
 def evidence_dir(trade_date: str, ops_cfg: dict | None = None) -> Path:
     from agent.ops.common import ops_path
     cfg = ops_cfg or load_ops_config()
-    base = ops_path(cfg, "submission_evidence_dir") if "submission_evidence_dir" in cfg.get("paths", {})         else ROOT / "data" / "submission_evidence"
+    base = ops_path(cfg, "submission_evidence_dir") if "submission_evidence_dir" in cfg.get("paths", {}) \
+        else ROOT / "data" / "submission_evidence"
     return base / ymd(trade_date)
 
 
-def recorder(c: Candidate, ops_cfg: dict, official_test: bool, audit_dir: Path | None = None):
-    """Persist each official stage: official-test records / competition receipts + the local daily audit trail."""
+STAGE_SIGNAL = {"file_uploaded": "FILE_UPLOADED", "server_validated": "SERVER_VALIDATED", "submitted": "SUBMITTED",
+                "rejected": "REJECTED"}
+
+
+def recorder(c: Candidate, ops_cfg: dict, official_test: bool, audit_dir: Path | None = None,
+             portal: dict | None = None):
+    """Persist each official stage: official-test records / competition receipts + the local daily audit trail +
+    the stage signal. `portal` (the runner's live portal dict) is copied into every audit row."""
+    from agent.ops import signals
     audit_dir = audit_dir or evidence_dir(c.trade_date, ops_cfg)
     attempt = automated_attempts(c.trade_date, ops_cfg, official_test) + 1
 
@@ -372,14 +422,20 @@ def recorder(c: Candidate, ops_cfg: dict, official_test: bool, audit_dir: Path |
                                    failure_reason=failure_reason, evidence_files=list(evidence or []),
                                    server_validated_at=now if stage == "server_validated" else None), ops_cfg)
         audit_dir.mkdir(parents=True, exist_ok=True)
-        row = {"at": now, "trade_date": c.trade_date, "team_id": c.team_id, "filename": c.file.name, "sha256": c.sha256,
+        refs = [str(x) for x in (evidence or [])]
+        row = {"at": now, f"{stage}_at": now, "generated_at": c.generated_at, "validated_at": c.validated_at,
+               "trade_date": c.trade_date, "team_id": c.team_id, "filename": c.file.name, "sha256": c.sha256,
                "attempt_number": attempt, "stage": stage, "official_status": official_status,
                "validation_result": validation_result, "submit_result": message if stage == "submitted" else None,
                "history_entry": history_entry, "submission_id": submission_id, "receipt_text": message,
-               "failure_reason": failure_reason, "screenshot_references": list(evidence or []),
+               "failure_reason": failure_reason, "portal_state": dict(portal or {}),
+               "screenshot_references": [x for x in refs if not x.endswith(".txt")],
+               "page_text_references": [x for x in refs if x.endswith(".txt")],
                "environment": "OFFICIAL_TEST" if official_test else "COMPETITION"}
         with open(audit_dir / "audit.jsonl", "a", encoding="utf-8") as fh:
             fh.write(json.dumps(row, ensure_ascii=False) + "\n")
+        if stage in STAGE_SIGNAL:
+            signals.emit(STAGE_SIGNAL[stage], c.trade_date, f"{c.file.name} {message or stage}"[:300], ops_cfg=ops_cfg)
     return rec
 
 
@@ -401,6 +457,8 @@ def manual_fallback(c: Candidate | None, outcome: Outcome, *, ops_cfg: dict, now
             "max_automated_attempts": a["max_automated_attempts"],
             "portal_attempts_used": outcome.portal.get("attempts_used"),
             "portal_attempts_remaining": outcome.portal.get("attempts_remaining"),
+            "portal_state": outcome.portal.get("window_status"), "login_state": outcome.portal.get("login_state"),
+            "window_closes_at": tm["closes"].isoformat() if tm else None,
             "window_minutes_left": None if left is None else round(left, 1),
             "portal_url": (ops_cfg.get("submission") or {}).get("portal_url"),
             "manual_steps": [
@@ -409,8 +467,14 @@ def manual_fallback(c: Candidate | None, outcome: Outcome, *, ops_cfg: dict, now
                 f"Upload ONLY {c.file if c else '<FINAL>'} (verify sha256 with: certutil -hashfile <file> SHA256).",
                 "Read 檢核結果; only if it is PASS press 送出繳交; never edit the D-Plan content.",
                 "Copy the history row verbatim and screenshot it.",
-                "Record: python -m agent.submission.receipt ... --stage submitted|accepted --history-entry \"<row>\" "
-                "(competition) or python -m agent.submission.official_test record-upload ... (sealed test)."]}
+                f"Record (competition): python -m agent.submission.receipt --date {t} --team-id "
+                f"{c.team_id if c else '<TEAM>'} --sha256 {c.sha256 if c else '<sha256>'} --method manual_web "
+                "--official-status accepted --stage accepted --history-entry \"<verbatim row>\" "
+                "--evidence <screenshot.png> --confirmed-by \"<name>\" (use --official-status pending --stage "
+                "submitted when no history row is visible yet).",
+                f"Record (sealed test): python -m agent.submission.official_test record-upload --date {t} --sha256 "
+                f"{c.sha256 if c else '<sha256>'} --result accepted --stage accepted --history-entry \"<row>\" "
+                "--message \"<verbatim>\" --operator \"<name>\"."]}
     d = evidence_dir(t, ops_cfg) if t else evidence_dir("1970-01-01", ops_cfg).parent
     d.mkdir(parents=True, exist_ok=True)
     write_json(d / "MANUAL_UPLOAD_REQUIRED.json", info)
@@ -442,8 +506,10 @@ def execute(trade_date: str, *, official_test: bool, ops_cfg: dict | None = None
     else:
         drv = None
         try:
+            signals.emit("AUTO_UPLOAD_RUNNING", trade_date, f"{c.file.name} state {c.state}", ops_cfg=ops_cfg)
             drv = (driver_factory or _default_driver)(ops_cfg, official_test)
-            o = run(c, drv, record=recorder(c, ops_cfg, official_test), **kw)
+            live: dict = {}
+            o = run(c, drv, record=recorder(c, ops_cfg, official_test, portal=live), portal=live, **kw)
         except UIUnexpected as e:
             o = Outcome("FAIL_CLOSED", str(e))
         finally:
@@ -455,10 +521,9 @@ def execute(trade_date: str, *, official_test: bool, ops_cfg: dict | None = None
     out = {"outcome": o.__dict__, "candidate": {"file": str(c.file), "sha256": c.sha256, "state": c.state}}
     if o.status in SUCCESS:
         signals.emit("SUBMISSION_ACCEPTED", trade_date, o.reason, ops_cfg=ops_cfg)
-    elif o.status == "LOGIN_REQUIRED":
-        signals.emit("LOGIN_REQUIRED", trade_date, o.reason, ops_cfg=ops_cfg)
-        out["manual"] = manual_fallback(c, o, ops_cfg=ops_cfg, now=now_fn(), attempts_used=used)
     else:
+        if o.status in ("LOGIN_REQUIRED", "WINDOW_CLOSED"):
+            signals.emit(o.status, trade_date, o.reason, ops_cfg=ops_cfg)
         out["manual"] = manual_fallback(c, o, ops_cfg=ops_cfg, now=now_fn(), attempts_used=used)
     d = evidence_dir(trade_date, ops_cfg)
     d.mkdir(parents=True, exist_ok=True)

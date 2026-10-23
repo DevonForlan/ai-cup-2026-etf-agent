@@ -150,10 +150,15 @@ def main(argv=None) -> int:
     ap.add_argument("--evidence", action="append", default=[], help="evidence file (repeatable)")
     ap.add_argument("--filename", default=None, help="file name as shown by the portal")
     ap.add_argument("--receipt-text", default=None, help="verbatim official response text")
+    ap.add_argument("--stage", default=None, choices=list(STAGES), help="furthest official UI stage reached")
+    ap.add_argument("--server-validation-result", default=None, choices=["PASS", "FAIL", "UNKNOWN"],
+                    help="official 檢核結果")
+    ap.add_argument("--history-entry", default=None, help="verbatim official history row (acceptance evidence)")
     a = ap.parse_args(argv)
     r = Receipt(a.date, a.team_id, a.sha256, a.submitted_at or datetime.now(TPE).isoformat(), a.method,
                 a.confirmed_by, a.receipt_id, a.official_status, a.screenshot, a.notes, a.accepted_at,
-                a.failure_reason, list(a.evidence), a.filename, a.receipt_text)
+                a.failure_reason, list(a.evidence), a.filename, a.receipt_text, stage=a.stage,
+                server_validation_result=a.server_validation_result, history_entry=a.history_entry)
     st = record_receipt(r)
     print(f"SUBMISSION STATE {a.date}: {st['state']}  ({st.get('reason', '')})")
     return 0 if st["state"] in ("SUBMISSION_CONFIRMED", "SUBMITTED_UNVERIFIED") else 2

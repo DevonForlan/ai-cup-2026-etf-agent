@@ -56,8 +56,21 @@ def datapack_handoff(trade_date: str, *, ops_cfg: dict | None = None, now: datet
                datapack_as_of=g.get("settlement_date"), datapack_schema=g.get("schema_version"),
                datapack_freshness=g.get("freshness"), problems=g.get("problems"))
     if g["status"] == "PASS" and g.get("file"):
-        out.update(datapack_status="DATAPACK_READY", datapack_sha256=sha256_file(Path(g["file"])),
-                   start_source_next="OFFICIAL_DATAPACK")
+        off = g.get("official") or {}
+        sha = sha256_file(Path(g["file"]))
+        checks = {"team_id": "PASS",                                   # validate_official_datapack checks team_id
+                  "as_of_date": "PASS" if g.get("settlement_date") == trade_date else f"FAIL ({g.get('settlement_date')})",
+                  "schema": "PASS" if g.get("schema_version") else "FAIL",
+                  "nav": "PASS" if off.get("nav") not in (None, "") else "FAIL",
+                  "cash": "PASS" if off.get("cash") not in (None, "") else "FAIL",
+                  "holdings": "PASS" if isinstance(off.get("holdings"), dict) else "FAIL",
+                  "freshness": "PASS" if g.get("freshness") == "FRESH" else f"FAIL ({g.get('freshness')})",
+                  "sha256": "PASS" if sha else "FAIL"}
+        ok = all(v == "PASS" for v in checks.values())
+        out.update(datapack_status="DATAPACK_READY" if ok else "DATAPACK_INVALID", datapack_sha256=sha,
+                   datapack_checks=checks, start_source_next="OFFICIAL_DATAPACK" if ok else None,
+                   archive_command=f"python -m agent.ops.datapack --file {g['file']} --team-id {team['team_id']} "
+                                   f"--trade-date {nxt} --operator <name>")
     elif g.get("reason") in ("DATAPACK_MISSING", "DATAPACK_STALE"):
         out.update(datapack_status="DATAPACK_REQUIRED", start_source_next=None)
         if emit and out["accepted"]:
