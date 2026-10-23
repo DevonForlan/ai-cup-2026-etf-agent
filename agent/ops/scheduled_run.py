@@ -46,7 +46,7 @@ NETWORK_TARGETS = [("DNS", "www.twse.com.tw"), ("HTTPS", "https://www.google.com
                    ("ESUN", "https://esun-ai-challenge.tw/"),
                    ("TWSE", "https://www.twse.com.tw/zh/"), ("TPEX", "https://www.tpex.org.tw/")]
 LOG_KEYS = ["LABEL", "RUN_MODE", "RUN_KIND", "WINDOW_PHASE", "SUBMISSION_STATE", "DEADLINE_WARNINGS",
-            "AUTO_UPLOAD_STATUS", "LOGIN_STATE", "ATTEMPTS", "MANUAL_ACTION_REQUIRED", "ACCEPTED", "DATAPACK_STATUS", "DATAPACK_DATE", "DATAPACK_FILE", "SETTLEMENT_SOURCE",
+            "AUTO_UPLOAD_STATUS", "LOGIN_STATE", "ATTEMPTS", "MANUAL_ACTION_REQUIRED", "ACCEPTED", "NEXT_ACTION", "DATAPACK_STATUS", "DATAPACK_DATE", "DATAPACK_FILE", "SETTLEMENT_SOURCE",
             "PAPER_CHAIN", "SCHEDULED_TIME", "ACTUAL_START_TIME", "RUN_DELAY_MINUTES", "TRADE_DATE", "NETWORK", "NETWORK_RETRIES",
             "CLAUDE_VERSION", "CLAUDE_STATUS", "DATA_REFRESH", "ETF_FRESHNESS", "QUANT", "ACTIVE_SHARE", "GROUNDING",
             "DPLAN_VERSION", "DPLAN_VALIDATION", "FINAL_CANDIDATE", "OVERALL_STATUS", "BLOCKED_REASON",
@@ -260,6 +260,7 @@ def finish(rec: dict, log: RunLog) -> dict:
              "ATTEMPTS": None if rec.get("attempts_used") is None else
              f"{rec.get('attempts_used')} used / {rec.get('attempts_remaining')} remaining",
              "MANUAL_ACTION_REQUIRED": rec.get("manual_action_required"), "ACCEPTED": rec.get("accepted"),
+             "NEXT_ACTION": rec.get("next_action"),
              "DATAPACK_STATUS": rec.get("datapack_status"), "DATAPACK_DATE": rec.get("datapack_date"),
              "DATAPACK_FILE": rec.get("datapack_file"), "SETTLEMENT_SOURCE": rec.get("settlement_source"),
              "PAPER_CHAIN": rec.get("paper_chain"),
@@ -343,9 +344,29 @@ def ops_status_fields(rec: dict, sub: dict | None) -> dict:
                                            "ACCEPTED") else "NONE"),
                submission_state=st, accepted=st == "ACCEPTED")
     for k in ("portal_state", "login_state", "attempts_used", "attempts_remaining", "auto_upload_status",
-              "last_error", "manual_action_required"):
+              "last_error", "manual_action_required", "datapack_status"):
         rec.setdefault(k, None)
+    rec["next_action"] = next_action(rec, st)
     return rec
+
+
+def next_action(rec: dict, state: str | None) -> str:
+    """One operator instruction derived from the run record (shown in latest_status.json)."""
+    if state == "ACCEPTED":
+        return "WAIT_FOR_OFFICIAL_DATAPACK (then: python -m agent.submission.handoff --date T)"
+    if rec.get("blocked_reason") in ("DATAPACK_MISSING", "DATAPACK_STALE"):
+        return "DOWNLOAD_OFFICIAL_DATAPACK into data/official_datapack/ and re-run"
+    if state == "SUBMISSION_WINDOW_CLOSED":
+        return "WINDOW_CLOSED: record what the portal history shows; no further submission for this trade date"
+    if rec.get("login_state") == "LOGIN_REQUIRED" or rec.get("auto_upload_status") == "LOGIN_REQUIRED":
+        return "LOGIN_REQUIRED: log in to the portal in the automation browser profile, or upload manually"
+    if state == "SUBMITTED" or rec.get("auto_upload_status") == "SUBMITTED_UNVERIFIED":
+        return "MANUAL_CHECK_REQUIRED: confirm the portal history row and record it"
+    if rec.get("manual_action_required"):
+        return "MANUAL_UPLOAD_REQUIRED: see data/submission_evidence/<T>/MANUAL_UPLOAD_REQUIRED.json"
+    if rec.get("run_mode") != "COMPETITION":
+        return "NONE (PRECOMPETITION paper run)"
+    return "NONE" if rec.get("status") in ("PASS", "SKIPPED") else "INVESTIGATE: see blocked_reason / error_message"
 
 
 def emit_signals(rec: dict, sub: dict | None) -> None:
@@ -356,8 +377,30 @@ def emit_signals(rec: dict, sub: dict | None) -> None:
             signals.emit(w, t, f"submission state {(sub or {}).get('state')}")
         if rec.get("run_mode") == "COMPETITION" and rec.get("blocked_reason") in ("DATAPACK_MISSING", "DATAPACK_STALE"):
             signals.emit("DATAPACK_REQUIRED", t, rec["blocked_reason"])
+        st = (sub or {}).get("state")
+        if rec.get("run_mode") == "COMPETITION" and st == "READY_FOR_UPLOAD":
+            signals.emit("READY_FOR_UPLOAD", t, f"FINAL ready; auto_upload {rec.get('auto_upload_status')}")
+        if rec.get("run_mode") == "COMPETITION" and st == "SUBMISSION_WINDOW_CLOSED":
+            signals.emit("WINDOW_CLOSED", t, "submission window closed without acceptance evidence")
     except Exception:  # noqa: BLE001 - signals never break the scheduled run
         pass
+
+
+def resume_existing_final(trade_date: str, rec: dict, sub: dict, log) -> dict:
+    """Catch-up with an existing FINAL (no new decision): COMPETITION resumes the submission stage (upload / resume /
+    verify the SAME FINAL; ACCEPTED is never touched). PRECOMPETITION: status only."""
+    if rec.get("run_mode") == "COMPETITION" and sub["state"] in ("READY_FOR_UPLOAD", "FILE_UPLOADED",
+                                                                 "SERVER_VALIDATED", "SUBMITTED"):
+        try:
+            submission_stage(trade_date, "COMPETITION", rec)
+        except Exception as e:  # noqa: BLE001
+            rec.update(auto_upload_status="FAIL_CLOSED", manual_action_required=True,
+                       last_error=f"{type(e).__name__}: {str(e)[:200]}")
+        sub = submission_snapshot(trade_date, datetime.now(TPE)) or sub
+        rec.update(submission_state=sub["state"])
+    ops_status_fields(rec, sub)
+    emit_signals(rec, sub)
+    return finish(rec, log)
 
 
 def run(now: datetime | None = None, setup_test: bool = False, net_retries: int = 5, net_wait: float = 30.0,
@@ -395,11 +438,11 @@ def run(now: datetime | None = None, setup_test: bool = False, net_retries: int 
         return finish(rec, log)
     if not setup_test and sub and sub["state"] in ("ACCEPTED", "FILE_UPLOADED", "SERVER_VALIDATED", "SUBMITTED"):
         rec.update(status="SKIPPED", blocked_reason=f"SUBMISSION_ALREADY_{sub['state']}")
-        return finish(rec, log)
+        return resume_existing_final(p["trade_date"], rec, sub, log)
     if not setup_test and not safe_retry and sub and sub["state"] in ("READY_FOR_UPLOAD", "SUBMISSION_UI_UNAVAILABLE"):
         rec.update(status="SKIPPED", blocked_reason="FINAL_ALREADY_EXISTS (use --safe-retry to produce a candidate; "
                                                     "the FINAL stays frozen)")
-        return finish(rec, log)
+        return resume_existing_final(p["trade_date"], rec, sub, log)
     net = network_check(net_retries, net_wait, log)
     rec.update(network="OK" if net["ok"] else "FAIL " + json.dumps(net["detail"]), network_retries=net["retries"])
     cl = claude_check()
