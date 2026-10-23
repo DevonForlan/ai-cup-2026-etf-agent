@@ -11,7 +11,12 @@ Closes #
 <!-- what changed (files / modules) -->
 
 ## Tests
-<!-- exact commands and results, e.g. `pytest -q` -> 560 passed, 0 failed. "tests passed" alone is not enough -->
+<!-- exact commands and results, e.g. `pytest -q` -> 560 passed, 0 failed. "tests passed" alone is not enough.
+     Mark every check PASS / FAIL / NOT_RUN: targeted, full pytest, secret scan, config validation, quant freeze check,
+     local freeze regression. -->
+
+## CI
+<!-- workflow · check · PASS / FAIL / PENDING · failure reason -->
 
 ## Regression
 <!-- regressions found / none; behaviour before vs after -->
@@ -28,6 +33,14 @@ Closes #
 
 ## Known Limitations
 
+## Blockers
+<!-- NONE, or the blocker (docs/COLLABORATION_WORKFLOW.md §7.5) -->
+
+## Next Step
+
+## Decision Required
+<!-- NONE / Owner Decision Required (add owner:decision) / ChatGPT Review Required -->
+
 ## Risks
 
 ## Follow-up Work
@@ -40,4 +53,6 @@ Closes #
 ## Recommendations
 - Implementation (Claude Code): READY_FOR_REVIEW / NOT_READY / BLOCKED
 - Review (ChatGPT): APPROVE / APPROVE_WITH_FOLLOW_UP / REQUEST_CHANGES / DO_NOT_MERGE
+  (recorded as a PR comment `CHATGPT_REVIEW_RECOMMENDATION = …` when GitHub blocks self-review)
 - Decision (Owner only): MERGE / DO_NOT_MERGE
+- Handoff: status comment posted (docs/COLLABORATION_WORKFLOW.md §7.2) · label `agent:review` / `agent:merge-ready`
