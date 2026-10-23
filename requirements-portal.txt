@@ -1,0 +1,6 @@
+# Optional: browser automation of the official portal UI (Issue #4, agent/submission/portal_driver.py).
+# Uses the system Microsoft Edge (channel "msedge") -> no browser download needed. Not required by the core
+# pipeline or by CI (all portal tests use a fake driver). Install: pip install -r requirements-portal.txt
+playwright==1.55.0
+greenlet==3.5.6
+pyee==13.0.1

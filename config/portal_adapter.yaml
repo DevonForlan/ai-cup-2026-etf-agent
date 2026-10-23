@@ -1,0 +1,58 @@
+# Official portal UI adapter (Issue #4) — the ONLY place for selectors and official wording.
+# Core workflow code never hard-codes portal DOM or text. After the REAL_E2E only this file is updated.
+#
+# status values:
+#   CONFIRMED_REAL_E2E          observed on the real logged-in page during a real E2E (usable for actions)
+#   CONFIRMED_PUBLIC_BUNDLE     present in the portal's public frontend code (route labels / error texts)
+#   OWNER_OBSERVED_LABEL        visible label the Owner saw on the logged-in page; DOM structure unconfirmed
+#   GENERIC_CANDIDATE           standard element (e.g. input[type=file]); identity must be confirmed
+#   PENDING_REAL_E2E_SELECTOR   not visible yet -> no strategy, never guessed
+#   PENDING_REAL_E2E_WORDING    official wording not seen yet -> never matched
+# Strategy order (portal_driver tries in this order): role -> label -> text -> attr -> css. No absolute XPath, no
+# nth-child-only selectors, no pixel/layout dependency.
+# Action policy: upload / submit need CONFIRMED_REAL_E2E in COMPETITION; in --official-test (sealed test) they may use
+# OWNER_OBSERVED_LABEL / GENERIC_CANDIDATE. PENDING entries can never be used for any action -> fail closed.
+
+version: 1
+portal_url: "https://fundaiagent.esun-ai-challenge.tw/docs"
+login_path_fragment: "/login"            # CONFIRMED_PUBLIC_BUNDLE: router path of 參賽者登入
+login_url_markers: ["/login", "/sso"]    # CONFIRMED_REAL_E2E (2026-10-23 read-only discovery): unauthenticated
+                                         # /docs -> esun-ai-challenge.tw/sso -> /login (Email / 密碼 form, never filled)
+
+selectors:
+  nav_docs_link:            {status: CONFIRMED_PUBLIC_BUNDLE, strategies: [{by: role, role: link, name: "文件繳交"}, {by: text, text: "文件繳交"}]}
+  login_required_marker:    {status: CONFIRMED_PUBLIC_BUNDLE, strategies: [{by: text, text: "參賽者登入"}]}
+  dplan_file_input:         {status: GENERIC_CANDIDATE, strategies: [{by: css, css: "input[type=\"file\"][accept*=\"json\"]"}],
+                             note: "the page may also have a PDF input (strategy document); confirm which input takes the D-Plan"}
+  upload_area:              {status: PENDING_REAL_E2E_SELECTOR, strategies: []}
+  upload_button:            {status: PENDING_REAL_E2E_SELECTOR, strategies: []}
+  validation_result_panel:  {status: OWNER_OBSERVED_LABEL, strategies: [{by: text, text: "檢核結果"}]}
+  server_validation_pass_marker: {status: PENDING_REAL_E2E_SELECTOR, strategies: []}
+  server_validation_fail_marker: {status: PENDING_REAL_E2E_SELECTOR, strategies: []}
+  submit_button:            {status: OWNER_OBSERVED_LABEL, strategies: [{by: role, role: button, name: "送出繳交"}]}
+  submit_confirmation_modal: {status: PENDING_REAL_E2E_SELECTOR, strategies: []}
+  submit_confirm_button:    {status: PENDING_REAL_E2E_SELECTOR, strategies: []}
+  submission_history_table: {status: OWNER_OBSERVED_LABEL, strategies: [{by: text, text: "歷史繳交紀錄"}]}
+  history_rows:             {status: PENDING_REAL_E2E_SELECTOR, strategies: []}
+  trade_date:               {status: PENDING_REAL_E2E_SELECTOR, strategies: []}
+  team_id:                  {status: PENDING_REAL_E2E_SELECTOR, strategies: []}
+  attempt_count:            {status: PENDING_REAL_E2E_SELECTOR, strategies: []}
+  accepted_history_marker:  {status: PENDING_REAL_E2E_SELECTOR, strategies: []}
+  rejected_marker:          {status: PENDING_REAL_E2E_SELECTOR, strategies: []}
+  no_window_marker:         {status: CONFIRMED_PUBLIC_BUNDLE, strategies: [{by: text, text: "目前不在繳交時間內"}]}
+  strategy_document_status: {status: PENDING_REAL_E2E_SELECTOR, strategies: []}
+  datapack_download:        {status: OWNER_OBSERVED_LABEL, strategies: [{by: role, role: button, name: "下載資料包"}, {by: text, text: "下載資料包"}]}
+
+wording:
+  # official texts; markers are matched verbatim (substring), never fuzzily
+  window_closed:            {status: CONFIRMED_PUBLIC_BUNDLE, markers: ["目前不在繳交時間內，本次未送出。"]}
+  rehearsal_closed:         {status: CONFIRMED_PUBLIC_BUNDLE, markers: ["目前不在開賽前試繳期間內，檢核未執行。"]}
+  attempt_limit:            {status: CONFIRMED_PUBLIC_BUNDLE, markers: ["今日繳交次數已用盡，已收件的版本不受影響。"]}
+  auth_loop:                {status: CONFIRMED_PUBLIC_BUNDLE, markers: ["登入後仍無法通過驗證，請聯繫主辦單位。"]}
+  file_too_large:           {status: CONFIRMED_PUBLIC_BUNDLE, markers: ["檔案超過大小上限，請縮小後重新上傳。"]}
+  validation_pass:          {status: PENDING_REAL_E2E_WORDING, markers: []}
+  validation_fail:          {status: PENDING_REAL_E2E_WORDING, markers: []}
+  submit_success:           {status: PENDING_REAL_E2E_WORDING, markers: []}
+  history_accepted:         {status: PENDING_REAL_E2E_WORDING, markers: []}
+  history_rejected:         {status: PENDING_REAL_E2E_WORDING, markers: []}
+  known_modals:             {status: PENDING_REAL_E2E_WORDING, markers: []}   # any other modal -> UNEXPECTED_MODAL

@@ -52,3 +52,7 @@ id_rsa*
 **/browser-profile/
 **/browser_profiles/
 data/official_test_runs/
+data/portal_discovery/
+data/submission_evidence/
+data/browser_profiles/
+logs/notifications/
