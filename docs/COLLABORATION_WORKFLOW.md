@@ -210,5 +210,57 @@ Private repo + GitHub Free：branch protection / rulesets API 回 HTTP 403（需
 | 等 review 但 GitHub evidence 不足 | `NOT_READY_FOR_REVIEW` |
 | 需要 Owner 決策但只在 Claude session 問過 | `OWNER_DECISION_NOT_FORMALIZED` |
 | 技術完成但缺 tests / CI / Quant freeze / known limitations / next step 紀錄 | `IMPLEMENTATION_HANDOFF_INCOMPLETE` |
+| 重大節點沒有逐字 handoff 檔（§7.10） | `HANDOFF_INCOMPLETE` |
+
+### 7.10 Exact Claude Session Handoff（Owner 要求，2026-10-23，PR #10）
+
+目的：ChatGPT 只讀 GitHub 就能回答「CC 最新完整回應是什麼？」，而且看到的是 Owner 在本機看到的**同一段文字**，
+不是摘要。
+
+**何時寫**（不是每個 tool call、也不是每段內部思考）：
+
+- 重大工作完成
+- 工作變成 BLOCKED
+- 需要 Owner Decision
+- 送 ChatGPT review
+- session 即將暫停 / 交接
+- 比賽 / runtime 狀態有重大變化
+
+**檔案**：`handoff/claude_sessions/YYYY-MM-DD_<session-id>_turnNNN.md`（日期為 +08:00；格式見
+`handoff/claude_sessions/README.md`）。內容：
+
+| 區塊 | 內容 |
+|---|---|
+| Header | session id、project、repository、timestamp（+08:00 與 UTC）、turn number（無法取得時寫 `UNKNOWN`）、trigger |
+| References | branch / HEAD / PR / Issue |
+| State | tests、CI、Quant freeze、blockers、pending decisions（各寫 PASS / FAIL / NOT_RUN / NONE） |
+| Tool / action log | 足以重建進度的**詳細但已遮蔽**的動作紀錄（指令、結果、commit、comment 連結）；不貼 raw log |
+| `Claude:` | Owner 看到的最終回應，**逐字** |
+
+**逐字規則**：
+
+- `Claude:` 區塊夾在 `<!-- BEGIN VERBATIM CLAUDE RESPONSE -->` 與 `<!-- END VERBATIM CLAUDE RESPONSE -->`
+  之間，與 Owner 在 session 看到的文字相同，不得改寫或縮短。Header 記錄這段文字的 `sha256`（UTF-8、LF，不含兩個
+  marker 所在行）作為完整性檢查。
+- 無法自動保證一致時：**先寫好 handoff 檔，再把同一段文字當作 session 的最終回應**。回應中不能出現該檔所在
+  commit 的 SHA（尚未產生）；commit SHA 寫在 PR / Issue comment。
+- 回顧補寫（backfill）時，從本機 session transcript 取出原文，不憑記憶重打；檔案中註明 `BACKFILL` 與來源。
+
+**遮蔽**：
+
+- Tool / action log 可以遮蔽敏感值。
+- `Claude:` 回應維持逐字；只有回應本身含 secret 時，才把那個值換成 `[REDACTED]`，而且 session 回應與 handoff
+  檔同樣處理。
+- 一律不上傳：password、API key、token、cookie、browser storage、CSRF、credential 檔、非必要的帳號 email /
+  個人識別資料、含敏感資訊的原始截圖（§7.6）。
+- 每個 handoff 檔都要經過 `scripts/ci/secret_scan.py`（CI 會掃）。
+
+**GitHub 可發現性**：在相關 PR / Issue 的 status comment 寫：
+
+```
+LATEST_CLAUDE_HANDOFF = handoff/claude_sessions/<file>.md @ <commit sha>
+```
+
+沒有逐字 handoff 的重大節點 = `HANDOFF_INCOMPLETE`。
 
 Owner 決策與 merge 邊界的正式規則：`docs/CODE_CHANGE_GOVERNANCE.md` §6。

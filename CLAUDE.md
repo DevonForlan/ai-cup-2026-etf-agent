@@ -43,7 +43,7 @@ ready-for-review PR. Verify locally: `.venv\Scripts\python.exe scripts\ci\local_
 
 ## 4. Git / GitHub workflow
 
-**Mandatory for every Claude Code session:** follow `docs/COLLABORATION_WORKFLOW.md` (§7 GitHub = Shared State: status comment after every substantive step, `agent:*` labels, blocker write-back, ChatGPT review handoff, redacted evidence) and `docs/CODE_CHANGE_GOVERNANCE.md` (§6 Owner Decision Required → `owner:decision`, merge boundary, no scope expansion). State that exists only in the session is `HANDOFF_INCOMPLETE`; a decision asked only in the session is `OWNER_DECISION_NOT_FORMALIZED`.
+**Mandatory for every Claude Code session:** follow `docs/COLLABORATION_WORKFLOW.md` (§7 GitHub = Shared State: status comment after every substantive step, `agent:*` labels, blocker write-back, ChatGPT review handoff, redacted evidence) and `docs/CODE_CHANGE_GOVERNANCE.md` (§6 Owner Decision Required → `owner:decision`, merge boundary, no scope expansion). State that exists only in the session is `HANDOFF_INCOMPLETE`; a decision asked only in the session is `OWNER_DECISION_NOT_FORMALIZED`. At every major Owner-facing point, write the **exact** final response to `handoff/claude_sessions/` first and present that same text (§7.10); link it as `LATEST_CLAUDE_HANDOFF`.
 
 - Repo: `DevonForlan/ai-cup-2026-etf-agent` (private), default branch `master`.
 - **Issue → feature branch → implementation → tests → PR → ChatGPT review → Owner merge** (squash preferred;
