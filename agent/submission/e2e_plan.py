@@ -67,7 +67,16 @@ def build_plan(now: datetime | None = None, ops_cfg: dict | None = None) -> dict
         "auto_upload_enabled": bool(a.get("enabled")),
         "upload_path": "MANUAL (auto_upload disabled pending REAL_E2E; the Owner uploads in the portal)"
         if not a.get("enabled") else "AUTOMATED (guarded) with manual fallback",
+        "rehearsal_window": (ops.get("submission") or {}).get("rehearsal_window"),
+        "strategy_document_deadline": (ops.get("submission") or {}).get("strategy_document_deadline"),
         "owner_prerequisites": [
+            f"ETF 投資策略說明文件 (PDF) must be uploaded by the Owner before "
+            f"{(ops.get('submission') or {}).get('strategy_document_deadline')} (portal showed 未繳交 on 2026-10-23).",
+            "Optional (Owner decision): the 開賽前試繳 rehearsal "
+            f"{((ops.get('submission') or {}).get('rehearsal_window') or {}).get('opens')} -> "
+            f"{((ops.get('submission') or {}).get('rehearsal_window') or {}).get('closes')} validates an uploaded D-Plan "
+            "for the first trade date without collecting or counting it; a manual trial upload there shows the real "
+            "檢核結果 wording (PENDING_WINDOW_ONLY validation markers) before the real window.",
             "Log in to the portal ONCE in the automation profile (data/browser_profiles/fundaiagent) the normal way; "
             "the agent never types credentials and never reads cookies / tokens.",
             f"{PY} -m agent.submission.portal_driver readonly-test  ->  PORTAL_READONLY_REAL_TEST = PASS",
