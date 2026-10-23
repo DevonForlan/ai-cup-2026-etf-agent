@@ -128,29 +128,50 @@ ACCEPTED 只來自歷史紀錄中**唯一一列**符合本檔且帶有官方接�
 
 ## 5. Selector inventory（`config/portal_adapter.yaml`）
 
-- 所有 selector 與官方字樣只在此檔。順序 role → label → text → stable attribute → CSS；不用絕對 XPath、nth-child、像素位置。
-- 狀態：CONFIRMED_REAL_E2E / CONFIRMED_PUBLIC_BUNDLE / OWNER_OBSERVED_LABEL / GENERIC_CANDIDATE / PENDING_REAL_E2E_SELECTOR / PENDING_REAL_E2E_WORDING。
-- 動作政策：COMPETITION 的上傳 / 送出只能用 CONFIRMED_REAL_E2E；`--official-test` 可用 OWNER_OBSERVED_LABEL / GENERIC_CANDIDATE；PENDING 一律不可用於任何動作。
+- 所有 selector 與官方字樣只在此檔。順序 role → label → accessible name → stable visible text → stable data-* / id → CSS；不用絕對 XPath、nth-child、像素 / 螢幕座標。
+- 每個項目都有 primary（第一個 strategy）、fallback（其餘）、`source`（證據）、`confidence`。
+- 狀態：CONFIRMED_REAL_E2E / CONFIRMED_PUBLIC_BUNDLE / OWNER_OBSERVED_LABEL / GENERIC_CANDIDATE / PENDING_WINDOW_ONLY / PENDING_REAL_E2E_SELECTOR / PENDING_REAL_E2E_WORDING。
+- 動作政策：COMPETITION 的上傳 / 送出只能用 CONFIRMED_REAL_E2E；`--official-test` 可用 OWNER_OBSERVED_LABEL / GENERIC_CANDIDATE；PENDING_* 一律不可用。
 - 字樣比對為逐字子字串；PASS 與 FAIL 同時或都沒出現 → UNKNOWN。
-- 目前：upload_button、驗證 PASS / FAIL marker、確認 modal、歷史列、頁面交易日 / Team / 次數、accepted / rejected marker 都是 PENDING。
-- 唯讀探索：`python -m agent.submission.portal_driver discover [--wait-login N]`，輸出 `data/portal_discovery/<ts>/page_state.json`（gitignored，網址去除 query string）。2026-10-23 實測：未登入 → `LOGIN_REQUIRED`（/docs → /sso → /login）。
+- 目前狀態：
+
+| 類別 | 項目 |
+|---|---|
+| CONFIRMED_PUBLIC_BUNDLE | 文件繳交 nav、參賽者登入、目前不在繳交時間內；5 個官方錯誤字樣 |
+| OWNER_OBSERVED_LABEL | 檢核結果、送出繳交、歷史繳交紀錄、下載資料包 |
+| GENERIC_CANDIDATE | JSON file input |
+| PENDING_REAL_E2E_SELECTOR（登入後即可確認） | upload area / button、歷史列、頁面交易日、Team ID、次數、ETF 策略文件狀態 |
+| PENDING_WINDOW_ONLY（只有窗口內 / 上傳或送出後才出現） | 檢核 PASS / FAIL marker 與字樣、送出確認 modal 與按鈕、送出成功字樣、accepted / rejected 歷史 marker 與字樣 |
+
+- 唯讀探索：`python -m agent.submission.portal_driver discover [--wait-login N]` → `data/portal_discovery/<ts>/page_state.json`（gitignored，網址去除 query string；擷取 role / accessible name / id / data-* / 表格 / alert，不讀表單值）。
+- 唯讀實測：`python -m agent.submission.portal_driver readonly-test` → `PORTAL_READONLY_REAL_TEST = PASS | FAIL`。
+- 2026-10-23 實測：19:07 開啟 profile 等待 Owner 登入 30 分鐘，未登入 → `LOGIN_REQUIRED`；19:38 readonly-test → FAIL（LOGIN_REQUIRED，fail closed，未上傳 / 未送出）。
 
 ## 6. 營運流程（全部預設關閉）
 
 | 項目 | 實作 |
 |---|---|
-| 排程 | 沿用 19:30 工作（不新增高頻排程）。COMPETITION FINAL PASS 後進 `submission_stage`；PRECOMPETITION → `NOT_APPLICABLE_PRECOMPETITION`；auto-upload 關閉 → `MANUAL_UPLOAD_REQUIRED`。追趕執行在 08:30 後只上傳 / 驗證既有 FINAL。 |
-| 重試 | 同 trade_date / 檔名 / SHA 才可重試；SHA 不同 → `DIFFERENT_SHA_RETRY_BLOCKED`。自動上限 3、官方 25；SUBMITTED 只驗證不重送；SERVER_VALIDATED 且頁面仍 PASS → 直接送出不重傳。 |
-| 人工備援 | `data/submission_evidence/<T>/MANUAL_UPLOAD_REQUIRED.json`：trade_date、Team、路徑、檔名、SHA、大小、本機驗證、狀態、失敗原因、自動 / 官方次數、剩餘分鐘、人工步驟。 |
-| 證據 / 稽核 | 每階段截圖 + 頁面文字（本機，gitignored）；`audit.jsonl` 記 attempt、stage、validation / submit 結果、歷史列、submission id、失敗原因、截圖路徑、環境。 |
-| 訊號 | `logs/notifications/signals.jsonl`：LOGIN_REQUIRED、MANUAL_UPLOAD_REQUIRED、SUBMISSION_WARNING_0800 / HIGH_0815 / CRITICAL_0845、SUBMISSION_ACCEPTED、DATAPACK_REQUIRED。 |
-| DataPack 交接 | `python -m agent.submission.handoff --date T`：COMPETITION 只接受官方 DataPack（as_of T）→ `DATAPACK_READY`；缺 / 過期 → `DATAPACK_REQUIRED`，**不退回紙上帳本**。 |
-| latest_status | 增加 decision / validation / final / submission_state、portal / login、attempts、auto_upload_status、last_error、manual_action_required、accepted。 |
+| 排程 | 沿用 19:30 工作（不新增高頻排程，StartWhenAvailable）。COMPETITION FINAL PASS 後進 `submission_stage`；追趕執行若已有 FINAL（READY_FOR_UPLOAD / FILE_UPLOADED / SERVER_VALIDATED / SUBMITTED）→ 只上傳 / 續傳 / 驗證同一 FINAL；ACCEPTED 不碰。PRECOMPETITION → `NOT_APPLICABLE_PRECOMPETITION`；auto-upload 關閉 → `MANUAL_UPLOAD_REQUIRED`。 |
+| Gate | 本機驗證 17 項（json / schema / ticker / numeric / team / date / 檔名 / 大小 / 整張 / 檔數 / 2330 / 其他 / 現金 / Active Share / Quant / 委託一致 / 未手改）全部存在且 PASS；缺任一項 → `LOCAL_VALIDATION_UNKNOWN` fail closed。 |
+| 送出前複查 | 登入仍有效、頁面 Team / 日期、FINAL SHA 未變、檢核仍 PASS、無非預期 modal、< 08:55。 |
+| 檢核 | PASS → 送出；FAIL → REJECTED；UNKNOWN → FAIL_CLOSED；逾時 → `MANUAL_CHECK_REQUIRED: VALIDATION_TIMEOUT`。 |
+| 重試 | 同 trade_date / 檔名 / SHA 才可重試；SHA 不同 → `DIFFERENT_SHA_RETRY_BLOCKED`。自動上限 3、官方 25；FILE_UPLOADED / SERVER_VALIDATED 頁面仍 PASS → 不重傳；SUBMITTED 只驗證。 |
+| 人工備援 | `MANUAL_UPLOAD_REQUIRED.json`：trade_date、Team、完整路徑、檔名、SHA、大小、本機驗證、狀態、portal / login 狀態、自動 / 官方次數、截止時間與剩餘分鐘、可直接複製的記錄指令。 |
+| 證據 / 稽核 | 截圖 + 頁面文字（本機，gitignored）；`audit.jsonl` 含 generated / validated / uploaded / server_validated / submitted / accepted 時間、attempt、結果、歷史列、submission id、原文、portal 狀態、截圖與文字路徑。 |
+| 訊號 | 14 個：LOGIN_REQUIRED、READY_FOR_UPLOAD、AUTO_UPLOAD_RUNNING、FILE_UPLOADED、SERVER_VALIDATED、SUBMITTED、SUBMISSION_ACCEPTED、REJECTED、MANUAL_UPLOAD_REQUIRED、WARNING 0800 / 0815 / 0845、DATAPACK_REQUIRED、WINDOW_CLOSED。 |
+| DataPack 交接 | `handoff --date T`：team_id、as_of、schema、NAV、cash、holdings、freshness、SHA256 全 PASS → `DATAPACK_READY`；缺 / 過期 → `DATAPACK_REQUIRED`；不符 → `DATAPACK_INVALID`。**不退回紙上帳本**。 |
+| latest_status | 再加 datapack_status、next_action。 |
 
-## 7. 只能在 REAL_E2E 完成的項目
+## 7. 下一個有效窗口與 REAL_E2E
 
-1. Owner 在 browser profile 登入，`discover` 擷取已登入頁面。
-2. 依實際 DOM 把 PENDING selector / 字樣改為 CONFIRMED_REAL_E2E（只改 `portal_adapter.yaml`）。
-3. 人工 E2E（下一個有效窗口：2026-10-26 19:30 → T = 2026-10-27）→ 記錄官方接受證據。
-4. `auto_upload --official-test --run` 封測自動執行並取得接受證據。
-5. 之後才可提出 `ENABLE_AUTO_UPLOAD_RECOMMENDATION`，由 Owner 核准開啟 `enabled`。
+- `python -m agent.submission.e2e_plan` → `reports/REAL_E2E_PLAN.json`、`docs/REAL_E2E_RUNBOOK.md`。
+- T = **2026-10-27**（比賽第一個交易日；10/26 休市）；窗口 2026-10-26 19:30 → 2026-10-27 08:55；檔名 `D-Plan_TEAM_11442_2026-10-27.json`。
+- `E2E_PREPARATION_STATUS = WAITING_FOR_DECISION_WINDOW`：窗口未開，不可合法產生該日決策，**不預先偽造**。
+- T 是比賽日：`run_mode` 需由 Owner 切成 COMPETITION（Owner 決定，Claude Code 不切）。
+
+只能由 Owner / 窗口內完成：
+
+1. Owner 在 `data/browser_profiles/fundaiagent` 正常登入 → `discover` + `readonly-test`（PASS）→ PENDING_REAL_E2E_SELECTOR 升級。
+2. 窗口內人工上傳 → 檢核 → 送出 → 歷史 → 唯讀擷取 → PENDING_WINDOW_ONLY 升級（只改 `portal_adapter.yaml`）。
+3. 記錄官方接受證據；結算後 DataPack 交接。
+4. 之後才可提出 `ENABLE_AUTO_UPLOAD_RECOMMENDATION`，由 Owner 核准開啟 `enabled`。

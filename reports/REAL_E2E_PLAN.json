@@ -1,0 +1,55 @@
+{
+ "generated_at": "2026-10-23T19:41:18+08:00",
+ "target_trade_date": "2026-10-27",
+ "is_first_competition_trade_date": true,
+ "window_opens": "2026-10-26T19:30:00+08:00",
+ "decision_cutoff": "2026-10-27T08:30:00+08:00",
+ "window_closes": "2026-10-27T08:55:00+08:00",
+ "deadline_warnings": [
+  "08:00 SUBMISSION_WARNING_0800",
+  "08:15 SUBMISSION_HIGH_WARNING_0815",
+  "08:45 SUBMISSION_CRITICAL_WARNING_0845"
+ ],
+ "team_id": "TEAM_11442",
+ "expected_filename": "D-Plan_TEAM_11442_2026-10-27.json",
+ "max_upload_bytes": 2097152,
+ "portal_url": "https://fundaiagent.esun-ai-challenge.tw/docs",
+ "E2E_PREPARATION_STATUS": "WAITING_FOR_DECISION_WINDOW",
+ "submission_state_now": "NOT_GENERATED",
+ "window_phase_now": "WINDOW_NOT_OPEN",
+ "run_mode_now": "PRECOMPETITION",
+ "run_mode_required": "COMPETITION",
+ "run_mode_note": "T is a competition trade date: the Owner switches config/ops.yaml run_mode to COMPETITION before the window opens (Owner decision; Claude Code never switches it).",
+ "auto_upload_enabled": false,
+ "upload_path": "MANUAL (auto_upload disabled pending REAL_E2E; the Owner uploads in the portal)",
+ "owner_prerequisites": [
+  "Log in to the portal ONCE in the automation profile (data/browser_profiles/fundaiagent) the normal way; the agent never types credentials and never reads cookies / tokens.",
+  ".venv\\Scripts\\python.exe -m agent.submission.portal_driver readonly-test  ->  PORTAL_READONLY_REAL_TEST = PASS",
+  "Machine on, network up, the 19:30 Task Scheduler task enabled (StartWhenAvailable)."
+ ],
+ "commands": {
+  "plan": ".venv\\Scripts\\python.exe -m agent.submission.e2e_plan",
+  "preflight": ".venv\\Scripts\\python.exe agent\\ops\\preflight.py --date 2026-10-27 --mode competition --competition-profile prod --initial",
+  "prepare_scheduled": "Task Scheduler 19:30 task (agent/ops/scheduled_run.py) -> FINAL + validation + submission stage",
+  "prepare_manual": ".venv\\Scripts\\python.exe agent\\competition_day.py --date 2026-10-27 --team-id TEAM_11442 --mode competition --competition-profile prod --initial",
+  "status": ".venv\\Scripts\\python.exe -m agent.submission.status --date 2026-10-27",
+  "portal_discovery": ".venv\\Scripts\\python.exe -m agent.submission.portal_driver discover --wait-login 600",
+  "portal_readonly_test": ".venv\\Scripts\\python.exe -m agent.submission.portal_driver readonly-test",
+  "auto_upload_gate_check": ".venv\\Scripts\\python.exe -m agent.submission.auto_upload --date 2026-10-27 --check",
+  "real_upload_manual": "Portal 文件繳交: upload ONLY D-Plan_TEAM_11442_2026-10-27.json (sha256 from status) -> 檢核結果 PASS -> 送出繳交 -> 歷史繳交紀錄 (screenshot + verbatim row)",
+  "real_upload_automated": ".venv\\Scripts\\python.exe -m agent.submission.auto_upload --date 2026-10-27 --run   (only after ENABLE_AUTO_UPLOAD_RECOMMENDATION is approved by the Owner)",
+  "verification_record": ".venv\\Scripts\\python.exe -m agent.submission.receipt --date 2026-10-27 --team-id TEAM_11442 --sha256 <sha256> --method manual_web --official-status accepted --stage accepted --history-entry \"<verbatim row>\" --evidence <screenshot.png> --confirmed-by \"<name>\"",
+  "datapack": ".venv\\Scripts\\python.exe -m agent.submission.handoff --date 2026-10-27",
+  "datapack_import": ".venv\\Scripts\\python.exe -m agent.ops.datapack --file <downloaded DataPack.json> --team-id TEAM_11442 --trade-date <next trade date> --operator \"<name>\""
+ },
+ "during_window_read_only_capture": [
+  "After upload (before 送出繳交) and after submit: run portal_driver discover (read-only) so the PENDING_WINDOW_ONLY selectors / wording can be confirmed from the real page.",
+  "Update ONLY config/portal_adapter.yaml (PENDING -> CONFIRMED_REAL_E2E) in a PR; never guess."
+ ],
+ "fallback": [
+  "Any automation failure -> data/submission_evidence/<T>/MANUAL_UPLOAD_REQUIRED.json (file, sha256, steps); upload manually.",
+  "08:30: no new decision; only the existing FINAL. 08:55: no submit.",
+  "Never upload a different SHA for the same trade date via automation; never use all 25 official attempts.",
+  "Rollback = nothing to roll back (auto_upload stays disabled); the FINAL file is never edited."
+ ]
+}
