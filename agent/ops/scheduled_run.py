@@ -45,7 +45,8 @@ STATUSES = ("PASS", "BLOCKED", "FAILED", "SKIPPED")
 NETWORK_TARGETS = [("DNS", "www.twse.com.tw"), ("HTTPS", "https://www.google.com/"),
                    ("ESUN", "https://esun-ai-challenge.tw/"),
                    ("TWSE", "https://www.twse.com.tw/zh/"), ("TPEX", "https://www.tpex.org.tw/")]
-LOG_KEYS = ["LABEL", "RUN_MODE", "RUN_KIND", "WINDOW_PHASE", "SUBMISSION_STATE", "DEADLINE_WARNINGS", "DATAPACK_STATUS", "DATAPACK_DATE", "DATAPACK_FILE", "SETTLEMENT_SOURCE",
+LOG_KEYS = ["LABEL", "RUN_MODE", "RUN_KIND", "WINDOW_PHASE", "SUBMISSION_STATE", "DEADLINE_WARNINGS",
+            "AUTO_UPLOAD_STATUS", "LOGIN_STATE", "ATTEMPTS", "MANUAL_ACTION_REQUIRED", "ACCEPTED", "DATAPACK_STATUS", "DATAPACK_DATE", "DATAPACK_FILE", "SETTLEMENT_SOURCE",
             "PAPER_CHAIN", "SCHEDULED_TIME", "ACTUAL_START_TIME", "RUN_DELAY_MINUTES", "TRADE_DATE", "NETWORK", "NETWORK_RETRIES",
             "CLAUDE_VERSION", "CLAUDE_STATUS", "DATA_REFRESH", "ETF_FRESHNESS", "QUANT", "ACTIVE_SHARE", "GROUNDING",
             "DPLAN_VERSION", "DPLAN_VALIDATION", "FINAL_CANDIDATE", "OVERALL_STATUS", "BLOCKED_REASON",
@@ -255,6 +256,10 @@ def finish(rec: dict, log: RunLog) -> dict:
              "RUN_KIND": rec.get("run_kind"), "WINDOW_PHASE": rec.get("window_phase"),
              "SUBMISSION_STATE": rec.get("submission_state"),
              "DEADLINE_WARNINGS": ",".join(rec.get("deadline_warnings") or []) or None,
+             "AUTO_UPLOAD_STATUS": rec.get("auto_upload_status"), "LOGIN_STATE": rec.get("login_state"),
+             "ATTEMPTS": None if rec.get("attempts_used") is None else
+             f"{rec.get('attempts_used')} used / {rec.get('attempts_remaining')} remaining",
+             "MANUAL_ACTION_REQUIRED": rec.get("manual_action_required"), "ACCEPTED": rec.get("accepted"),
              "DATAPACK_STATUS": rec.get("datapack_status"), "DATAPACK_DATE": rec.get("datapack_date"),
              "DATAPACK_FILE": rec.get("datapack_file"), "SETTLEMENT_SOURCE": rec.get("settlement_source"),
              "PAPER_CHAIN": rec.get("paper_chain"),
@@ -293,6 +298,68 @@ def submission_snapshot(trade_date: str | None, now: datetime) -> dict | None:
         return {"state": f"UNKNOWN ({type(e).__name__})", "deadline_warnings": []}
 
 
+def write_progress(rec: dict) -> None:
+    """Intermediate latest_status.json (e.g. AUTO_UPLOAD_RUNNING); history.jsonl is only written by finish()."""
+    LOG_DIR.mkdir(parents=True, exist_ok=True)
+    LATEST.write_text(json.dumps(dict(rec, status=rec.get("status") or "RUNNING"), ensure_ascii=False, indent=1),
+                      encoding="utf-8")
+
+
+def submission_stage(trade_date: str, mode: str, rec: dict, *, executor=None, ops_cfg: dict | None = None) -> dict:
+    """Issue #4 submission step after a FINAL exists. COMPETITION: guarded auto-upload when enabled, otherwise
+    MANUAL_UPLOAD_REQUIRED with full manual instructions. PRECOMPETITION: not applicable (paper run)."""
+    from datetime import datetime as _dt
+    from agent.submission import auto_upload as AU
+    ops = ops_cfg or load_ops_config()
+    if mode != "COMPETITION":
+        rec.update(auto_upload_status="NOT_APPLICABLE_PRECOMPETITION", manual_action_required=False)
+        return rec
+    a = AU.cfg_auto(ops)
+    if not (a["enabled"] and a["method"] == "browser"):
+        c = AU.candidate_from_competition(trade_date, ops)
+        o = AU.Outcome("DISABLED", "auto_upload disabled (pending REAL_E2E / Owner approval) -> manual upload")
+        AU.manual_fallback(c, o, ops_cfg=ops, now=_dt.now(TPE), attempts_used=0, trade_date=trade_date)
+        rec.update(auto_upload_status="DISABLED", manual_action_required=True, last_error=None)
+        return rec
+    write_progress(dict(rec, auto_upload_status="AUTO_UPLOAD_RUNNING"))
+    r = (executor or AU.execute)(trade_date, official_test=False, ops_cfg=ops)
+    o = r["outcome"]
+    portal = o.get("portal") or {}
+    ok = o["status"] in AU.SUCCESS
+    rec.update(auto_upload_status=o["status"], login_state=portal.get("login_state"),
+               portal_state=portal.get("window_status"), attempts_used=portal.get("attempts_used"),
+               attempts_remaining=portal.get("attempts_remaining"), manual_action_required=not ok,
+               last_error=None if ok else o.get("reason"))
+    return rec
+
+
+def ops_status_fields(rec: dict, sub: dict | None) -> dict:
+    """§18 latest_status fields derived from the run record + evidence-based submission status."""
+    st = (sub or {}).get("state")
+    rec.update(decision_status=rec.get("quant") or ("DECISION_WINDOW_CLOSED" if rec.get("blocked_reason") ==
+                                                     "DECISION_WINDOW_CLOSED" else "NOT_RUN"),
+               validation_status=rec.get("dplan_validation"), final_status="FINAL" if rec.get("final_candidate") else
+               ("EXISTING_FINAL" if st in ("READY_FOR_UPLOAD", "FILE_UPLOADED", "SERVER_VALIDATED", "SUBMITTED",
+                                           "ACCEPTED") else "NONE"),
+               submission_state=st, accepted=st == "ACCEPTED")
+    for k in ("portal_state", "login_state", "attempts_used", "attempts_remaining", "auto_upload_status",
+              "last_error", "manual_action_required"):
+        rec.setdefault(k, None)
+    return rec
+
+
+def emit_signals(rec: dict, sub: dict | None) -> None:
+    try:
+        from agent.ops import signals
+        t = rec.get("trade_date")
+        for w in (sub or {}).get("deadline_warnings") or []:
+            signals.emit(w, t, f"submission state {(sub or {}).get('state')}")
+        if rec.get("run_mode") == "COMPETITION" and rec.get("blocked_reason") in ("DATAPACK_MISSING", "DATAPACK_STALE"):
+            signals.emit("DATAPACK_REQUIRED", t, rec["blocked_reason"])
+    except Exception:  # noqa: BLE001 - signals never break the scheduled run
+        pass
+
+
 def run(now: datetime | None = None, setup_test: bool = False, net_retries: int = 5, net_wait: float = 30.0,
         safe_retry: bool = False) -> dict:
     now = now or datetime.now(TPE)
@@ -316,6 +383,12 @@ def run(now: datetime | None = None, setup_test: bool = False, net_retries: int 
         return finish(rec, log)
     if p["action"] == "NO_DECISION" and not setup_test:      # T 08:30..08:55: never a new decision, state only
         rec.update(status="SKIPPED", blocked_reason="DECISION_WINDOW_CLOSED")
+        if rec["run_mode"] == "COMPETITION" and sub and sub["state"] in ("READY_FOR_UPLOAD", "FILE_UPLOADED",
+                                                                        "SERVER_VALIDATED", "SUBMITTED"):
+            submission_stage(p["trade_date"], "COMPETITION", rec)    # upload / verify the EXISTING FINAL only
+            sub = submission_snapshot(p["trade_date"], datetime.now(TPE))
+        ops_status_fields(rec, sub)
+        emit_signals(rec, sub)
         return finish(rec, log)
     if not setup_test and already_passed(p["scheduled_date"], read_history()):
         rec.update(status="SKIPPED", blocked_reason="SKIP_ALREADY_PASSED")
@@ -390,9 +463,17 @@ def run(now: datetime | None = None, setup_test: bool = False, net_retries: int 
             rec["dplan_version"] = json.loads(fp.read_text(encoding="utf-8")).get("schema_version")
         except (OSError, ValueError):
             pass
+    if rec.get("status") == "PASS":
+        try:
+            submission_stage(p["trade_date"], mode, rec)
+        except Exception as e:  # noqa: BLE001 - submission problems never hide the decision result
+            rec.update(auto_upload_status="FAIL_CLOSED", manual_action_required=True,
+                       last_error=f"{type(e).__name__}: {str(e)[:200]}")
     after = submission_snapshot(p["trade_date"], datetime.now(TPE))
     if after:
         rec.update(submission_state=after["state"], deadline_warnings=after.get("deadline_warnings") or [])
+    ops_status_fields(rec, after)
+    emit_signals(rec, after)
     if rec.get("status") == "PASS" and mode == "PRECOMPETITION":
         try:
             from agent.ops.prediction_summary import build
