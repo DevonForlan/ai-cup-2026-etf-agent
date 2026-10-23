@@ -48,6 +48,7 @@ paths:
   first_seen_ledger: data/observations/mops_revenue_first_seen.parquet
   ops_reports_dir: reports/ops_daily
   official_datapack_dir: data/official_datapack   # ONLY organiser DataPacks (docs/OFFICIAL_DATAPACK_INTEGRATION.md)
+  submission_evidence_dir: data/submission_evidence   # auto-upload audit / screenshots / manual fallback (local only)
 
 freeze:                  # docs/STRATEGY_FREEZE_RECORD.md; preflight/healthcheck BLOCK on mismatch in competition mode
   strategy_config: config/strategy_quant_v1.yaml
