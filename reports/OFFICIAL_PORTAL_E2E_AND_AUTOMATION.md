@@ -116,26 +116,41 @@ NOT_GENERATED → GENERATED → VALIDATED → READY_FOR_UPLOAD
 - 任何 UI 例外。
 - 送出後歷史紀錄出現多筆相符（歧義）。
 
-ACCEPTED 只來自歷史紀錄中帶有**設定好的官方接受字樣**（`auto_upload.accepted_markers`）的那一列。目前字樣清單為空，所以自動化永遠無法自稱 ACCEPTED。
+ACCEPTED 只來自歷史紀錄中**唯一一列**符合本檔且帶有官方接受字樣（`config/portal_adapter.yaml` 的 `history_accepted`，狀態須為 CONFIRMED_REAL_E2E）。目前字樣仍是 `PENDING_REAL_E2E_WORDING`，所以自動化永遠無法自稱 ACCEPTED；逾時或歧義 → `SUBMITTED_UNVERIFIED` + `MANUAL_CHECK_REQUIRED`。
 
-### 4.3 Playwright driver
+### 4.3 Playwright driver（`agent/submission/portal_driver.py`）
 
-- 只建立介面。selector 必須在人工 E2E 觀察真實 DOM 後填入 `auto_upload.selectors`。
-- 未填或未安裝 Playwright → `SELECTORS_NOT_CONFIGURED` / `PLAYWRIGHT_NOT_INSTALLED` → fail closed。
+- 依賴：`requirements-portal.txt`（playwright 1.55.0，可選安裝，CI 不需要）。使用系統 Microsoft Edge（`channel="msedge"`），不下載瀏覽器。
+- Profile：`data/browser_profiles/fundaiagent`（gitignored）。Owner 用一般方式在此 profile 登入；程式**不填帳密、不讀 cookie / storage / token、不呼叫 /api、不繞 SSO / MFA / CAPTCHA**。
+- 未登入（網址在 `/login`、`/sso`，或出現「參賽者登入」）→ `LOGIN_REQUIRED`，fail closed。
+- 介面 `PortalDriver`：open_portal / check_login / read_page_state / read_team_id / read_trade_date / read_window_status / read_attempts / read_history / read_strategy_document_status / upload_file / wait_for_server_validation / read_validation_result / submit / read_submit_result / verify_acceptance / capture_evidence / close。
 - 正式比賽前必須完成一次封測自動執行，並取得官方接受證據，Owner 才可開啟 `enabled`。
 
-## 5. 待辦（依序）
+## 5. Selector inventory（`config/portal_adapter.yaml`）
 
-1. 10/22 19:30 後：`official_test prepare`（目標 2026-10-23）→ 人工 E2E → 記錄。
-2. 由 E2E 觀察：
-   - 檢核 PASS / FAIL 原文
-   - 送出後訊息
-   - 歷史紀錄「已收件」等字樣
-   - 是否有 submission id
-   → 填 `receipt_format`、`accepted_markers`。
-3. 若要自動化：
-   - 安裝 Playwright（新依賴，需 PR）。
-   - Owner 在 `data/browser_profiles/fundaiagent` 互動登入。
-   - 依觀察的 DOM 填 selectors、實作 driver 方法。
-   - 封測自動執行，取得官方接受證據。
-   - Owner 開啟 `enabled`。
+- 所有 selector 與官方字樣只在此檔。順序 role → label → text → stable attribute → CSS；不用絕對 XPath、nth-child、像素位置。
+- 狀態：CONFIRMED_REAL_E2E / CONFIRMED_PUBLIC_BUNDLE / OWNER_OBSERVED_LABEL / GENERIC_CANDIDATE / PENDING_REAL_E2E_SELECTOR / PENDING_REAL_E2E_WORDING。
+- 動作政策：COMPETITION 的上傳 / 送出只能用 CONFIRMED_REAL_E2E；`--official-test` 可用 OWNER_OBSERVED_LABEL / GENERIC_CANDIDATE；PENDING 一律不可用於任何動作。
+- 字樣比對為逐字子字串；PASS 與 FAIL 同時或都沒出現 → UNKNOWN。
+- 目前：upload_button、驗證 PASS / FAIL marker、確認 modal、歷史列、頁面交易日 / Team / 次數、accepted / rejected marker 都是 PENDING。
+- 唯讀探索：`python -m agent.submission.portal_driver discover [--wait-login N]`，輸出 `data/portal_discovery/<ts>/page_state.json`（gitignored，網址去除 query string）。2026-10-23 實測：未登入 → `LOGIN_REQUIRED`（/docs → /sso → /login）。
+
+## 6. 營運流程（全部預設關閉）
+
+| 項目 | 實作 |
+|---|---|
+| 排程 | 沿用 19:30 工作（不新增高頻排程）。COMPETITION FINAL PASS 後進 `submission_stage`；PRECOMPETITION → `NOT_APPLICABLE_PRECOMPETITION`；auto-upload 關閉 → `MANUAL_UPLOAD_REQUIRED`。追趕執行在 08:30 後只上傳 / 驗證既有 FINAL。 |
+| 重試 | 同 trade_date / 檔名 / SHA 才可重試；SHA 不同 → `DIFFERENT_SHA_RETRY_BLOCKED`。自動上限 3、官方 25；SUBMITTED 只驗證不重送；SERVER_VALIDATED 且頁面仍 PASS → 直接送出不重傳。 |
+| 人工備援 | `data/submission_evidence/<T>/MANUAL_UPLOAD_REQUIRED.json`：trade_date、Team、路徑、檔名、SHA、大小、本機驗證、狀態、失敗原因、自動 / 官方次數、剩餘分鐘、人工步驟。 |
+| 證據 / 稽核 | 每階段截圖 + 頁面文字（本機，gitignored）；`audit.jsonl` 記 attempt、stage、validation / submit 結果、歷史列、submission id、失敗原因、截圖路徑、環境。 |
+| 訊號 | `logs/notifications/signals.jsonl`：LOGIN_REQUIRED、MANUAL_UPLOAD_REQUIRED、SUBMISSION_WARNING_0800 / HIGH_0815 / CRITICAL_0845、SUBMISSION_ACCEPTED、DATAPACK_REQUIRED。 |
+| DataPack 交接 | `python -m agent.submission.handoff --date T`：COMPETITION 只接受官方 DataPack（as_of T）→ `DATAPACK_READY`；缺 / 過期 → `DATAPACK_REQUIRED`，**不退回紙上帳本**。 |
+| latest_status | 增加 decision / validation / final / submission_state、portal / login、attempts、auto_upload_status、last_error、manual_action_required、accepted。 |
+
+## 7. 只能在 REAL_E2E 完成的項目
+
+1. Owner 在 browser profile 登入，`discover` 擷取已登入頁面。
+2. 依實際 DOM 把 PENDING selector / 字樣改為 CONFIRMED_REAL_E2E（只改 `portal_adapter.yaml`）。
+3. 人工 E2E（下一個有效窗口：2026-10-26 19:30 → T = 2026-10-27）→ 記錄官方接受證據。
+4. `auto_upload --official-test --run` 封測自動執行並取得接受證據。
+5. 之後才可提出 `ENABLE_AUTO_UPLOAD_RECOMMENDATION`，由 Owner 核准開啟 `enabled`。
