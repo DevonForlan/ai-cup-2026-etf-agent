@@ -69,3 +69,67 @@
   freeze 比較 → PR → ChatGPT Review → Owner 決策）。負面結果必須保留。
 - **Merge**：只有 Owner 能決定 merge（squash 優先）。不 auto-merge、不 force push、不 rewrite 歷史。
 - 比賽期間的 D-Plan、DataPack、receipt、log 等原始證據留在本機。Git 只保留 metadata（hash、時間、路徑、版本）。
+
+## 6. Owner Decision、Merge 邊界、Scope（2026-10-23 起；GitHub Shared State 見 `docs/COLLABORATION_WORKFLOW.md` §7）
+
+### 6.1 必須由 Owner 在 GitHub 決定的事項
+
+Quant / 投資行為、strategy config、`run_mode` 切換、auto-upload 啟用、送件政策、排程行為、DataPack 來源 / fallback、
+架構、schema、API、credential 模型、security 邊界、browser automation 政策、外部服務、付費相依、資料源、部署模式、
+breaking behaviour、merge 順序、互斥的實作選項。
+
+這些不能只在 Claude Code session 裡問。流程：
+
+1. 在相關 Issue / PR 留 `## Owner Decision Required` comment（6.2）。
+2. 加 label `owner:decision`。
+3. 停止依賴該決策的工作；不相關且安全的工作可以繼續。
+
+### 6.2 Owner Decision Required（固定格式）
+
+```
+## Owner Decision Required
+### Context
+### Why a decision is required        (why Claude Code cannot decide)
+### Option A                          (implementation · benefits · drawbacks · risks · competition impact · downstream impact)
+### Option B
+### Option C                          (only if a real third option exists)
+### Recommendation
+DO NOT IMPLEMENT THE RECOMMENDATION UNTIL OWNER APPROVES.
+### Impact if deferred                (blocked work / PRs / competition operations)
+### Owner Action                      (reply: Choose A / B / C — or Decision 1: A/B, Decision 2: A/B)
+```
+
+### 6.3 Owner Decision（決定後、繼續實作前寫回）
+
+```
+## Owner Decision
+Chosen option:
+Decision date:
+Approved scope:
+Competition impact:
+Quant impact:
+Submission impact:
+Consequence:
+Follow-up work:
+Superseded options:
+Owner approval source:              (e.g. "Owner reply in Claude Code session 2026-10-23 23:40", or the comment link)
+```
+
+寫回後移除 `owner:decision`。沒有這筆紀錄就繼續實作 = `OWNER_DECISION_NOT_FORMALIZED`。
+
+### 6.4 Merge 邊界
+
+Claude Code、ChatGPT、任何 agent / worker 都不 merge；只有 Owner merge。PR 技術上可 merge 時加 `agent:merge-ready`，
+並留下：
+
+```
+IMPLEMENTATION_STATUS = COMPLETE
+CHATGPT_REVIEW_STATUS = APPROVED | APPROVED_WITH_FOLLOW_UP
+OWNER_MERGE_DECISION = PENDING
+```
+
+### 6.5 不得自行擴張重大 scope
+
+完成一項工作後可以：修 CI、處理 review、補測試、文件、不改行為的整理、分析、提案、整理證據。不得自行開始（需要
+Issue + Owner 核准）：新的 Quant 研究、新策略、架構替換、breaking schema、新部署模式、security 模型變更、新資料供應者、
+啟用比賽 auto-upload、切換 COMPETITION `run_mode`。協作工具與治理文件的變更不得改變投資行為。
