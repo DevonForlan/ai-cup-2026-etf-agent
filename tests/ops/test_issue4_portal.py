@@ -132,19 +132,19 @@ def test_team_portal_bound_and_auto_upload_disabled():
 def test_adapter_unconfirmed_entries_are_pending_and_never_guessed():
     inv = {r["element"]: r for r in PD.selector_inventory(PD.load_adapter())}
     # window-only elements (not visible on 2026-10-23, no window open): no strategy, never guessed
-    for name in ("upload_button", "server_validation_pass_marker", "server_validation_fail_marker",
+    for name in ("upload_button", "server_validation_pass_marker",
                  "submit_confirmation_modal", "submit_confirm_button", "accepted_history_marker", "rejected_marker"):
         assert inv[name]["status"] == "PENDING_WINDOW_ONLY" and inv[name]["strategies"] == [], name
     # confirmed on the real logged-in page (read-only discovery 2026-10-23)
     for name in ("team_id", "trade_date", "attempt_count", "dplan_file_input", "upload_area", "validation_result_panel",
                  "submission_history_table", "history_rows", "strategy_document_status", "datapack_download",
-                 "nav_docs_link", "no_window_marker"):
+                 "nav_docs_link", "no_window_marker", "server_validation_fail_marker"):
         assert inv[name]["status"] == "CONFIRMED_REAL_E2E" and inv[name]["usable_for_read"], name
     # the submit action is still unconfirmed -> COMPETITION can never submit through the adapter yet
     assert not inv["submit_button"]["usable_for_action_competition"]
     assert not inv["submit_confirm_button"]["usable_for_action_competition"]
     a = PD.load_adapter()
-    for w in ("validation_pass", "validation_fail", "history_accepted", "submit_success"):
+    for w in ("validation_pass", "history_accepted", "submit_success"):           # validation_fail: confirmed 10-23
         assert a["wording"][w]["status"] in PD.PENDING and PD.wording_markers(a, w) == []
     for st in a["selectors"].values():                                                 # no xpath / nth-child selectors
         for s in st.get("strategies") or []:
@@ -658,5 +658,21 @@ def test_observed_page_texts_parse_exactly():
     assert PD.parse_doc_status("ETF 投資策略說明文件\n處理中", a) is None                      # unseen status: not guessed
     assert PD.wording_markers(a, "no_open_window") == ["目前沒有開放中的繳交窗口"]
     assert "目前沒有繳交紀錄" in PD.wording_markers(a, "history_empty")
-    for w in ("validation_pass", "validation_fail", "submit_success", "history_accepted", "history_rejected"):
+    for w in ("validation_pass", "submit_success", "history_accepted", "history_rejected"):
         assert a["wording"][w]["status"] == "PENDING_WINDOW_ONLY" and PD.wording_markers(a, w) == []
+
+
+def test_real_rehearsal_validation_texts_classify_safely():
+    """Verbatim panel texts from the real rehearsal upload (2026-10-23 23:28 / 23:31)."""
+    a = PD.load_adapter()
+    fail = ("檢核結果\n文件檢查未通過\n上傳即時檢查要項 · 送出後回報收件檢核\n目前為開賽前試繳：只檢核、不收件，"
+            "正式繳交窗口開啟後才能送出。\n文件檢查未通過\n缺少下列項目：文件類型、① 資料來源 sources\n"
+            "請修正後重新上傳；本次未存檔，也不計入當日繳交次數。")
+    idle = "檢核結果\n待上傳\n上傳即時檢查要項 · 送出後回報收件檢核\n尚未上傳 · 上傳後於此顯示檢核結果\n試繳期間不收件"
+    assert PD.classify(fail, a, "validation_pass", "validation_fail") == "FAIL"
+    assert PD.classify(idle, a, "validation_pass", "validation_fail") == "UNKNOWN"   # idle panel is never a PASS
+    assert PD.wording_markers(a, "validation_fail") == ["文件檢查未通過"]
+    assert any(m in fail for m in PD.wording_markers(a, "rehearsal_not_collected"))
+    assert any(m in idle for m in PD.wording_markers(a, "validation_pending"))
+    assert a["selectors"]["validation_result_panel"]["strategies"][0] == {"by": "anchor_ancestor", "text": "檢核結果",
+                                                                          "levels": 2}

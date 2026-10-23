@@ -363,10 +363,18 @@ class PlaywrightPortalDriver(PortalDriver):
             btn.click()
 
     def wait_for_server_validation(self, timeout_s: float):
-        panel = self._locate("validation_result_panel")
-        if panel is None:
+        """The 檢核結果 panel is always on the page (「待上傳」 before any upload; observed 2026-10-23), so visibility
+        proves nothing: wait until its text carries a CONFIRMED pass or fail marker. Pass wording still pending ->
+        a passing file times out -> MANUAL_CHECK_REQUIRED (fail closed, never a guessed PASS)."""
+        if self._locate("validation_result_panel") is None:
             raise UIUnexpected("VALIDATION_PANEL_NOT_FOUND")
-        panel.wait_for(state="visible", timeout=int(timeout_s * 1000))
+        end = time.monotonic() + timeout_s
+        while True:
+            if self.read_validation_result()[0] in ("PASS", "FAIL"):
+                return
+            if time.monotonic() >= end:
+                raise TimeoutError(f"no confirmed validation result within {timeout_s:.0f}s")
+            time.sleep(1.0)
 
     def read_validation_result(self) -> tuple[str, str]:
         text = self._text("validation_result_panel") or ""
