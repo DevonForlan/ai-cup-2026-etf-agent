@@ -52,7 +52,11 @@ def cand(tmp_path, *, team=TEAM, date=T1, name=None, pad=0, state="READY_FOR_UPL
     doc = {"schema_version": "4.3", "team_id": team, "trade_date": date, "orders": [], "decisions": [], "pad": "x" * pad}
     f = tmp_path / (name or f"D-Plan_{team}_{date}.json")
     f.write_text(json.dumps(doc), encoding="utf-8")
-    return AU.Candidate(date, team, f, sha256_file(f), state, ok, source, mode, {"schema": "PASS" if ok else "FAIL"})
+    checks = {k: "PASS" for k in AU.REQUIRED_CHECKS}
+    if not ok:
+        checks["schema"] = "FAIL"
+    return AU.Candidate(date, team, f, sha256_file(f), state, ok, source, mode, checks, "2026-10-26T19:40:00+08:00",
+                        "2026-10-26T19:41:00+08:00")
 
 
 ACC = {"text": f"10-26 08:06 {FNAME} 已收件", "accepted": True, "rejected": False}
@@ -70,9 +74,13 @@ class FakePortal(PD.PortalDriver):
         self.validation_timeout, self.calls, self.closed = validation_timeout, [], False
 
     def open_portal(self): self.calls.append("open")
-    def check_login(self): return self.login
+    def check_login(self):                     # a list = successive answers (e.g. session expiring mid-run)
+        if isinstance(self.login, list):
+            return self.login.pop(0) if len(self.login) > 1 else self.login[0]
+        return self.login
     def read_page_state(self): return {"url": "https://portal/docs", "window_status": self.window, "dialogs": self.dialogs,
                                        "unexpected_dialogs": self.dialogs}
+    def read_window_status(self): return self.window
     def read_team_id(self): return self.team
     def read_trade_date(self): return self.date
     def read_attempts(self): return self.attempts
@@ -125,11 +133,11 @@ def test_adapter_unconfirmed_entries_are_pending_and_never_guessed():
     inv = {r["element"]: r for r in PD.selector_inventory(PD.load_adapter())}
     for name in ("upload_button", "server_validation_pass_marker", "submit_confirmation_modal", "history_rows",
                  "trade_date", "team_id", "attempt_count", "accepted_history_marker"):
-        assert inv[name]["status"] == "PENDING_REAL_E2E_SELECTOR" and inv[name]["strategies"] == []
+        assert inv[name]["status"] in PD.PENDING and inv[name]["strategies"] == []
     assert not any(r["usable_for_action_competition"] for r in inv.values())          # nothing CONFIRMED_REAL_E2E yet
     a = PD.load_adapter()
     for w in ("validation_pass", "validation_fail", "history_accepted", "submit_success"):
-        assert a["wording"][w]["status"] == "PENDING_REAL_E2E_WORDING" and PD.wording_markers(a, w) == []
+        assert a["wording"][w]["status"] in PD.PENDING and PD.wording_markers(a, w) == []
     for st in a["selectors"].values():                                                 # no xpath / nth-child selectors
         for s in st.get("strategies") or []:
             assert "xpath" not in json.dumps(s).lower() and "nth-child" not in json.dumps(s)
@@ -148,12 +156,12 @@ def test_validation_classification_is_verbatim_only():
 def test_driver_refuses_pending_selectors_for_actions():
     d = object.__new__(PD.PlaywrightPortalDriver)
     d.adapter, d.official_test = PD.load_adapter(), False
-    with pytest.raises(PD.UIUnexpected, match="PENDING_REAL_E2E_SELECTOR"):
+    with pytest.raises(PD.UIUnexpected, match="PENDING_"):
         d._locate("upload_button", action=True)
     with pytest.raises(PD.UIUnexpected, match="OWNER_OBSERVED_LABEL"):
         d._locate("submit_button", action=True)                  # COMPETITION needs CONFIRMED_REAL_E2E
     d.official_test = True
-    with pytest.raises(PD.UIUnexpected, match="PENDING_REAL_E2E_SELECTOR"):
+    with pytest.raises(PD.UIUnexpected, match="PENDING_"):
         d._locate("submit_confirm_button", action=True)
 
 
@@ -208,7 +216,9 @@ def test_happy_path_logged_in_window_open_attempts_remaining(cfg, tmp_path):
     (FakePortal(attempts=(25, 0)), "FAIL_CLOSED", "OFFICIAL_ATTEMPT_LIMIT_REACHED"),
     (FakePortal(upload_raises=TimeoutError("input missing")), "FAIL_CLOSED", "TimeoutError"),      # upload failure
     (FakePortal(validation=("UNKNOWN", "???")), "FAIL_CLOSED", "VALIDATION_RESULT_UNKNOWN"),
-    (FakePortal(validation_timeout=TimeoutError("no panel")), "FAIL_CLOSED", "TimeoutError"),      # timeout
+    (FakePortal(validation_timeout=TimeoutError("no panel")), "FAIL_CLOSED",                       # timeout
+     "MANUAL_CHECK_REQUIRED: VALIDATION_TIMEOUT"),
+    (FakePortal(login=["LOGGED_IN", "LOGIN_REQUIRED"]), "LOGIN_REQUIRED", "LOGIN_EXPIRED_MID_RUN"),  # expiry mid-run
     (FakePortal(dialogs=["系統公告：請稍候"]), "FAIL_CLOSED", "UNEXPECTED_MODAL"),
     (FakePortal(submit_raises=RuntimeError("button disabled")), "FAIL_CLOSED", "button disabled"), # submit failure
 ])
@@ -374,7 +384,9 @@ def test_datapack_handoff(cfg, fixture_store, monkeypatch):
     dp.mkdir(parents=True, exist_ok=True)
     f = dp / f"DataPack_{TEAM}_{comp['next_trade_date']}.json"
     f.write_text("{}", encoding="utf-8")
-    monkeypatch.setattr(DP, "datapack_gate", lambda *a, **k: {"status": "PASS", "file": str(f), "settlement_date": T1})
+    monkeypatch.setattr(DP, "datapack_gate", lambda *a, **k: {"status": "PASS", "file": str(f),
+                        "settlement_date": T1, "schema_version": "3.0", "freshness": "FRESH",
+                        "official": {"nav": 1.0, "cash": 1.0, "holdings": {}}})
     ready = H.datapack_handoff(T1, ops_cfg=cfg, run_mode="COMPETITION", now=at("2026-10-26T20:00:00"))
     assert ready["datapack_status"] == "DATAPACK_READY" and ready["start_source_next"] == "OFFICIAL_DATAPACK"
     assert ready["datapack_sha256"] == sha256_file(f)
@@ -439,3 +451,174 @@ def test_manual_e2e_flag_requires_human_accepted_record(cfg):
     OT.record_upload(T1, "sha256:" + "a" * 64, "accepted", "已收件", "Owner", stage="submitted",
                      history_entry=ACC["text"], ops_cfg=cfg)
     assert AU.manual_e2e_completed(cfg)
+
+
+# ---------------------------------------------------------------- pre-E2E finalization (gate, resume, audit, signals)
+def test_gate_unknown_local_check_fails_closed(cfg, tmp_path):
+    c = cand(tmp_path)
+    del c.validation_checks["active_share_ge_15"]
+    drv = FakePortal()
+    o, _ = go(c, drv, cfg)
+    assert o.status == "FAIL_CLOSED" and "LOCAL_VALIDATION_UNKNOWN" in o.reason and drv.calls == []
+    for k in ("json_parse", "schema", "ticker", "numeric", "whole_lot", "holdings_20_30", "tsmc_le_25", "other_le_10",
+              "cash_lt_25", "active_share_ge_15", "dplan_order_consistency", "quant_fingerprint"):
+        assert k in AU.REQUIRED_CHECKS
+
+
+def test_file_uploaded_state_resumes_without_reupload(cfg, tmp_path):
+    drv = FakePortal(after_submit=[ACC])
+    o, rec = go(cand(tmp_path, state="FILE_UPLOADED"), drv, cfg)
+    assert o.status == "ACCEPTED" and "upload" not in drv.calls
+    assert [r[0] for r in rec] == ["server_validated", "submitted", "accepted"]
+    drv2 = FakePortal(after_submit=[ACC], validation=("UNKNOWN", ""))       # page lost the result -> upload again
+    o2, _ = go(cand(tmp_path, state="FILE_UPLOADED"), drv2, cfg)
+    assert "upload" in drv2.calls and o2.status == "FAIL_CLOSED"
+
+
+def test_page_identity_change_before_submit_fails_closed(cfg, tmp_path):
+    class Flip(FakePortal):
+        def read_trade_date(self):
+            return T1 if "upload" not in self.calls else "2026-10-28"
+    drv = Flip()
+    o, _ = go(cand(tmp_path), drv, cfg)
+    assert o.status == "FAIL_CLOSED" and "PAGE_IDENTITY_CHANGED_BEFORE_SUBMIT" in o.reason and "submit" not in drv.calls
+
+
+def test_final_sha_change_before_submit_fails_closed(cfg, tmp_path):
+    c = cand(tmp_path)
+
+    class Tamper(FakePortal):
+        def upload_file(self, path):
+            super().upload_file(path)
+            Path(path).write_text("{}", encoding="utf-8")
+    drv = Tamper()
+    o, _ = go(c, drv, cfg)
+    assert "FINAL_SHA_CHANGED_BEFORE_SUBMIT" in o.reason and "submit" not in drv.calls
+
+
+def test_execute_stage_signals_audit_and_fallback_fields(cfg, tmp_path, monkeypatch):
+    from agent.ops import signals
+    c = cand(tmp_path)
+    monkeypatch.setattr(AU, "candidate_from_official_test", lambda t, o: c)
+    monkeypatch.setattr(AU, "manual_e2e_completed", lambda o: True)
+    drv = FakePortal(after_submit=[])
+    r = AU.execute(T1, official_test=True, ops_cfg=cfg, now_fn=lambda: at("2026-10-26T08:20:00"),
+                   driver_factory=lambda o, t: drv)
+    assert r["outcome"]["status"] == "SUBMITTED_UNVERIFIED"
+    names = [s["signal"] for s in signals.read(T1, cfg)]
+    for sig in ("AUTO_UPLOAD_RUNNING", "FILE_UPLOADED", "SERVER_VALIDATED", "SUBMITTED", "MANUAL_UPLOAD_REQUIRED"):
+        assert sig in names, sig
+    rows = [json.loads(x) for x in (AU.evidence_dir(T1, cfg) / "audit.jsonl").read_text(encoding="utf-8").splitlines()]
+    assert rows[0]["file_uploaded_at"] and rows[1]["server_validated_at"] and rows[2]["submitted_at"]
+    assert rows[0]["generated_at"] and rows[0]["validated_at"] and rows[0]["portal_state"]["team_id"] == TEAM
+    assert rows[0]["screenshot_references"] == ["evidence/file_uploaded.png"] and "page_text_references" in rows[0]
+    m = r["manual"]
+    assert m["login_state"] == "LOGGED_IN" and m["window_closes_at"].startswith("2026-10-26T08:55")
+    assert m["portal_attempts_remaining"] == 25 and "portal_state" in m and m["window_minutes_left"] == 35.0
+    assert any(c.sha256 in step for step in m["manual_steps"])
+
+
+def test_execute_rejected_and_window_closed_signals(cfg, tmp_path, monkeypatch):
+    from agent.ops import signals
+    c = cand(tmp_path)
+    monkeypatch.setattr(AU, "candidate_from_official_test", lambda t, o: c)
+    monkeypatch.setattr(AU, "manual_e2e_completed", lambda o: True)
+    AU.execute(T1, official_test=True, ops_cfg=cfg, now_fn=lambda: at("2026-10-26T07:00:00"),
+               driver_factory=lambda o, t: FakePortal(validation=("FAIL", "C3 權重超限")))
+    assert "REJECTED" in [s["signal"] for s in signals.read(T1, cfg)]
+    AU.execute(T1, official_test=True, ops_cfg=cfg, now_fn=lambda: at("2026-10-26T07:00:00"),
+               driver_factory=lambda o, t: FakePortal(window="CLOSED"))
+    assert "WINDOW_CLOSED" in [s["signal"] for s in signals.read(T1, cfg)]
+
+
+def test_datapack_stale_and_ready_checks(cfg, monkeypatch):
+    import agent.ops.datapack as DP
+    from agent.submission import handoff as H
+    monkeypatch.setattr(ST, "compute", lambda *a, **k: {"state": "ACCEPTED"})
+    monkeypatch.setattr(DP, "datapack_gate", lambda *a, **k: {"status": "BLOCKED", "reason": "DATAPACK_STALE"})
+    st = H.datapack_handoff(T1, ops_cfg=cfg, run_mode="COMPETITION", now=at("2026-10-26T20:00:00"))
+    assert st["datapack_status"] == "DATAPACK_REQUIRED" and st["start_source_next"] is None
+    d = Path(cfg["paths"]["official_datapack_dir"])
+    d.mkdir(parents=True, exist_ok=True)
+    f = d / "dp.json"
+    f.write_text("{}", encoding="utf-8")
+    good = {"status": "PASS", "file": str(f), "settlement_date": T1, "schema_version": "3.0", "freshness": "FRESH",
+            "official": {"nav": 1.0, "cash": 1.0, "holdings": {}}}
+    monkeypatch.setattr(DP, "datapack_gate", lambda *a, **k: good)
+    ok = H.datapack_handoff(T1, ops_cfg=cfg, run_mode="COMPETITION", now=at("2026-10-26T20:00:00"))
+    assert ok["datapack_status"] == "DATAPACK_READY" and set(ok["datapack_checks"]) == {
+        "team_id", "as_of_date", "schema", "nav", "cash", "holdings", "freshness", "sha256"}
+    monkeypatch.setattr(DP, "datapack_gate", lambda *a, **k: dict(good, settlement_date="2026-10-21"))
+    bad = H.datapack_handoff(T1, ops_cfg=cfg, run_mode="COMPETITION", now=at("2026-10-26T20:00:00"))
+    assert bad["datapack_status"] == "DATAPACK_INVALID" and bad["start_source_next"] is None
+
+
+def test_next_action_and_latest_status_fields():
+    from agent.ops import scheduled_run as S
+    base = {"run_mode": "COMPETITION", "status": "PASS"}
+    assert S.next_action(dict(base), "ACCEPTED").startswith("WAIT_FOR_OFFICIAL_DATAPACK")
+    assert S.next_action(dict(base, login_state="LOGIN_REQUIRED"), "READY_FOR_UPLOAD").startswith("LOGIN_REQUIRED")
+    assert S.next_action(dict(base, manual_action_required=True), "READY_FOR_UPLOAD").startswith("MANUAL_UPLOAD")
+    assert S.next_action(dict(base), "SUBMITTED").startswith("MANUAL_CHECK_REQUIRED")
+    assert S.next_action(dict(base, blocked_reason="DATAPACK_MISSING"), None).startswith("DOWNLOAD_OFFICIAL_DATAPACK")
+    st = S.ops_status_fields(dict(base, trade_date=T1), {"state": "READY_FOR_UPLOAD"})
+    assert "datapack_status" in st and st["next_action"] and "NEXT_ACTION" in S.LOG_KEYS
+
+
+def test_all_operational_signals_supported(cfg):
+    from agent.ops import signals
+    want = {"LOGIN_REQUIRED", "READY_FOR_UPLOAD", "AUTO_UPLOAD_RUNNING", "FILE_UPLOADED", "SERVER_VALIDATED",
+            "SUBMITTED", "SUBMISSION_ACCEPTED", "REJECTED", "MANUAL_UPLOAD_REQUIRED", "SUBMISSION_WARNING_0800",
+            "SUBMISSION_HIGH_WARNING_0815", "SUBMISSION_CRITICAL_WARNING_0845", "DATAPACK_REQUIRED", "WINDOW_CLOSED"}
+    assert want <= set(signals.SIGNALS)
+    with pytest.raises(ValueError):
+        signals.emit("MADE_UP", T1, ops_cfg=cfg)
+
+
+def test_driver_interface_aliases_and_window_only_status():
+    drv = FakePortal(dialogs=["彈窗"], window="CLOSED")
+    assert drv.read_window_state() == "CLOSED" and drv.detect_unexpected_modal() == ["彈窗"]
+    for m in ("open_portal", "check_login", "read_team_id", "read_trade_date", "read_window_state", "read_attempts",
+              "read_history", "read_strategy_doc_status", "detect_unexpected_modal", "detect_error_banner",
+              "upload_file", "wait_upload_complete", "wait_server_validation", "read_validation_result", "submit",
+              "read_submit_result", "verify_acceptance", "capture_screenshot", "capture_page_text", "close"):
+        assert callable(getattr(PD.PlaywrightPortalDriver, m)), m
+    a = PD.load_adapter()
+    a = dict(a, wording=dict(a["wording"], x={"status": "PENDING_WINDOW_ONLY", "markers": ["送出成功"]}),
+             selectors=dict(a["selectors"], y={"status": "PENDING_WINDOW_ONLY", "strategies": [{"by": "text", "text": "y"}]}))
+    assert PD.wording_markers(a, "x") == []
+    d = object.__new__(PD.PlaywrightPortalDriver)
+    d.adapter, d.official_test = a, True
+    with pytest.raises(PD.UIUnexpected, match="PENDING_WINDOW_ONLY"):
+        d._locate("y", action=True)
+    with pytest.raises(PD.UIUnexpected, match="PENDING_WINDOW_ONLY"):
+        d._locate("y")
+
+
+def test_adapter_entries_carry_source_and_confidence():
+    for name, s in PD.load_adapter()["selectors"].items():
+        assert s.get("status") in PD.ALL_STATUSES, name
+        assert s.get("source") and s.get("confidence"), name
+        if s["status"] not in PD.PENDING:
+            assert s.get("strategies"), name
+    for name, w in PD.load_adapter()["wording"].items():
+        assert w.get("status") in PD.ALL_STATUSES, name
+
+
+def test_e2e_plan_next_window(cfg, tmp_path):
+    from agent.submission import e2e_plan as E
+    plan = E.build_plan(at("2026-10-23T19:00:00"), cfg)
+    assert plan["target_trade_date"] == "2026-10-27" and plan["is_first_competition_trade_date"]
+    assert plan["window_opens"] == "2026-10-26T19:30:00+08:00" and plan["window_closes"] == "2026-10-27T08:55:00+08:00"
+    assert plan["expected_filename"] == "D-Plan_TEAM_11442_2026-10-27.json"
+    assert plan["E2E_PREPARATION_STATUS"] == "WAITING_FOR_DECISION_WINDOW"
+    for k in ("preflight", "prepare_manual", "portal_discovery", "portal_readonly_test", "real_upload_manual",
+              "verification_record", "datapack"):
+        assert plan["commands"][k], k
+    assert "--initial" in plan["commands"]["prepare_manual"]
+    assert E.build_plan(at("2026-10-26T20:00:00"), cfg)["E2E_PREPARATION_STATUS"] == "DECISION_WINDOW_OPEN"
+    assert E.build_plan(at("2026-10-27T08:40:00"), cfg)["E2E_PREPARATION_STATUS"] == "DECISION_WINDOW_CLOSED"
+    pp, rp = E.write(plan, tmp_path / "plan.json", tmp_path / "runbook.md")
+    md = rp.read_text(encoding="utf-8")
+    assert "2026-10-27" in md and "readonly-test" in md and "MANUAL_UPLOAD_REQUIRED" in md
+    assert json.loads(pp.read_text(encoding="utf-8"))["team_id"] == TEAM

@@ -239,6 +239,27 @@ def test_portal_opens_only_for_a_competition_final(fixture_store, ops_cfg):
     assert r["opened"] and opened == ["https://example.invalid/backoffice"]
 
 
+def _code_only(src: str) -> str:
+    """Python source without comments and docstrings (string literals that are code stay), lower-cased."""
+    import ast
+    import io
+    import tokenize
+    doc_lines = set()
+    for n in ast.walk(ast.parse(src)):
+        if isinstance(n, (ast.Module, ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)) and n.body \
+                and isinstance(n.body[0], ast.Expr) and isinstance(getattr(n.body[0], "value", None), ast.Constant) \
+                and isinstance(n.body[0].value.value, str):
+            doc_lines.update(range(n.body[0].lineno, n.body[0].end_lineno + 1))
+    return " ".join(t.string for t in tokenize.generate_tokens(io.StringIO(src).readline)
+                    if t.type != tokenize.COMMENT and t.start[0] not in doc_lines).lower()
+
+
+def test_code_only_scanner_sees_code_not_prose():
+    src = '"""never reads cookies"""\n# no token here\nx = page.context.cookies()\n'
+    assert "cookie" in _code_only(src) and "token" not in _code_only(src)
+    assert "cookie" not in _code_only('"""never reads cookies"""\n')
+
+
 def test_no_upload_login_or_credential_code():
     root = Path(__file__).resolve().parents[2] / "agent" / "submission"
     # Issue #4: normal browser automation is allowed ONLY in portal_driver.py (UI driver) and auto_upload.py (guarded
@@ -249,12 +270,14 @@ def test_no_upload_login_or_credential_code():
     for bad in ("import requests", "import urllib", "urlopen(", ".post(", "selenium", "playwright", "pyautogui",
                 "http.cookiejar", "browser_cookie", "import http.client", "sqlite3"):
         assert bad not in src.lower(), bad
+    # automation code only (comments / docstrings stripped, so the prose that explains the rules cannot hide or fake a
+    # hit): no cookies / storage / passwords / tokens / CSRF, no private /api, no typing into forms, no MFA / CAPTCHA
     for name in automation:
-        au = (root / name).read_text(encoding="utf-8").lower()
-        for bad in ("import requests", "import urllib", "urlopen(", "httpx", ".cookies(", "storage_state", "add_cookies",
-                    "http.cookiejar", "browser_cookie", "sqlite3", "x-csrftoken", "/api/", ".fill(", ".type(",
-                    "keyboard.", "password="):
-            assert bad not in au, (name, bad)
+        code = _code_only((root / name).read_text(encoding="utf-8"))
+        for bad in ("requests", "httpx", "urllib.request", "urlopen", "http.client", "cookie", "storage_state",
+                    "localstorage", "sessionstorage", "indexeddb", "password", "passwd", "token", "csrf", "/api/",
+                    ".fill(", ".type(", ".press(", "keyboard.", "captcha", "mfa", "otp", "sqlite3", "e.value"):
+            assert bad not in code, (name, bad)
     from agent.submission.future_api import PORTAL_STATUS, OfficialPortalProvider
     assert PORTAL_STATUS == "DISABLED_PENDING_OFFICIAL_PORTAL_VALIDATION"
     with pytest.raises(NotImplementedError):
