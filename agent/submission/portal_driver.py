@@ -71,6 +71,54 @@ def selector_inventory(adapter: dict) -> list[dict]:
     return out
 
 
+def classify_login(url: str, portal_host: str, *, nav_visible: bool, login_marker_visible: bool,
+                   adapter: dict) -> str:
+    """LOGGED_IN: on the portal host with the portal navigation and no login marker. LOGIN_REQUIRED: the login FORM
+    (login_url_markers, e.g. /login) or the portal's login marker. IN_TRANSIT: an SSO hop (sso_hop_markers, e.g.
+    /sso) or another page while redirects settle -- a logged-in session also passes through the SSO hop, so the hop
+    alone never means logged out (observed 2026-10-23)."""
+    from urllib.parse import urlparse
+    u = urlparse(url or "")
+    forms = adapter.get("login_url_markers") or [adapter.get("login_path_fragment") or "/login"]
+    hops = adapter.get("sso_hop_markers") or []
+    if any(u.path.rstrip("/").endswith(f.rstrip("/")) for f in forms):
+        return "LOGIN_REQUIRED"
+    if u.netloc == portal_host:
+        if login_marker_visible:
+            return "LOGIN_REQUIRED"
+        if nav_visible:
+            return "LOGGED_IN"
+        return "IN_TRANSIT"
+    if any(h in u.path for h in hops):
+        return "IN_TRANSIT"
+    return "IN_TRANSIT"
+
+
+def parse_attempts(text: str | None) -> tuple[int | None, int | None]:
+    """'今日已繳交 0 / 25 次' (observed 2026-10-23) -> (used 0, remaining 25). Anything else -> (None, None)."""
+    import re
+    m = re.search(r"已繳交\s*(\d+)\s*/\s*(\d+)\s*次", text or "")
+    if not m:
+        return None, None
+    used, limit = int(m.group(1)), int(m.group(2))
+    return used, max(limit - used, 0)
+
+
+def parse_trade_date(text: str | None) -> str | None:
+    """'本次繳交對應交易日 2026-10-27 · ...' -> '2026-10-27'; '本次繳交對應交易日 — · 目前沒有開放中的繳交窗口' -> None."""
+    import re
+    m = re.search(r"對應交易日\s*(20\d{2})[-/.](\d{1,2})[-/.](\d{1,2})", text or "")
+    return f"{m.group(1)}-{int(m.group(2)):02d}-{int(m.group(3)):02d}" if m else None
+
+
+def parse_doc_status(text: str | None, adapter: dict) -> str | None:
+    """Strategy-document section text -> the verbatim status marker found (e.g. 未繳交), else None."""
+    for m in wording_markers(adapter, "strategy_doc_status_values"):
+        if m in (text or ""):
+            return m
+    return None
+
+
 # ----------------------------------------------------------------------------- driver interface
 class PortalDriver:
     """Interface used by agent/submission/auto_upload.py (tests use a fake implementation)."""
@@ -158,7 +206,14 @@ class PlaywrightPortalDriver(PortalDriver):
             elif by == "label":
                 loc = self.page.get_by_label(st["label"])
             elif by == "text":
-                loc = self.page.get_by_text(st["text"])
+                loc = self.page.get_by_text(st["text"], exact=bool(st.get("exact")))
+            elif by == "text_regex":
+                import re
+                loc = self.page.get_by_text(re.compile(st["pattern"]))
+            elif by == "anchor_ancestor":                 # section around a stable visible heading text
+                loc = self.page.get_by_text(st["text"], exact=True)
+                for _ in range(int(st.get("levels", 1))):
+                    loc = loc.locator("..")
             elif by in ("attr", "css"):
                 loc = self.page.locator(st.get("css") or f"[{st['attr']}]")
             else:
@@ -181,25 +236,27 @@ class PlaywrightPortalDriver(PortalDriver):
     def open_portal(self):
         self.page.goto(self.url, wait_until="networkidle", timeout=60000)
 
-    def check_login(self, settle_s: float = 20.0) -> str:
-        """LOGGED_IN: on the portal host with the 文件繳交 navigation visible. LOGIN_REQUIRED: redirected off the portal
-        host (SSO hand-off / main-site login form) or a login path / marker. Waits for the SPA to settle; the login
-        form is never filled (the Owner logs in manually)."""
+    def check_login(self, settle_s: float = 30.0) -> str:
+        """Waits for redirects to settle (SSO hop -> portal), then classify_login(). The login form is never filled
+        (the Owner logs in manually). Still in transit after `settle_s` -> UNKNOWN (fail closed)."""
         from urllib.parse import urlparse
         portal_host = urlparse(self.url).netloc
-        frags = self.adapter.get("login_url_markers") or [self.adapter.get("login_path_fragment") or "/login"]
         end = time.monotonic() + settle_s
         while True:
-            u = urlparse(self.page.url)
-            if u.netloc and u.netloc != portal_host:
-                return "LOGIN_REQUIRED"
-            if any(f in u.path for f in frags) or self._locate("login_required_marker") is not None:
-                return "LOGIN_REQUIRED"
-            if self._locate("nav_docs_link") is not None:
-                return "LOGGED_IN"
+            st = classify_login(self.page.url, portal_host, nav_visible=self._visible("nav_docs_link"),
+                                login_marker_visible=self._visible("login_required_marker"), adapter=self.adapter)
+            if st != "IN_TRANSIT":
+                return st
             if time.monotonic() >= end:
                 return "UNKNOWN"
             time.sleep(1.0)
+
+    def _visible(self, name: str) -> bool:
+        try:
+            loc = self._locate(name)
+            return loc is not None and loc.is_visible()
+        except Exception:  # noqa: BLE001
+            return False
 
     def safe_url(self) -> str:
         """URL without query / fragment (SSO state parameters are never written to evidence)."""
@@ -216,9 +273,14 @@ class PlaywrightPortalDriver(PortalDriver):
 
     def read_window_status(self) -> str:
         body = self.page.inner_text("body", timeout=10000)
-        if any(m in body for m in wording_markers(self.adapter, "window_closed") + wording_markers(self.adapter, "rehearsal_closed")):
+        closed = wording_markers(self.adapter, "no_open_window") + wording_markers(self.adapter, "window_closed")
+        if any(m in body for m in closed):
             return "CLOSED"
-        return "UNKNOWN"          # an explicit OPEN marker is PENDING_REAL_E2E_WORDING
+        return "UNKNOWN"          # an explicit OPEN marker is PENDING_WINDOW_ONLY (never inferred)
+
+    def read_rehearsal_status(self) -> str:
+        body = self.page.inner_text("body", timeout=10000)
+        return "REHEARSAL_OPEN" if any(m in body for m in wording_markers(self.adapter, "rehearsal_open")) else "NO"
 
     def read_page_state(self) -> dict:
         known = wording_markers(self.adapter, "known_modals")
@@ -262,20 +324,10 @@ class PlaywrightPortalDriver(PortalDriver):
         return self._text("team_id")
 
     def read_trade_date(self) -> str | None:
-        t = self._text("trade_date")
-        if not t:
-            return None
-        import re
-        m = re.search(r"(20\d{2})[-/.](\d{1,2})[-/.](\d{1,2})", t)
-        return f"{m.group(1)}-{int(m.group(2)):02d}-{int(m.group(3)):02d}" if m else None
+        return parse_trade_date(self._text("trade_date"))
 
     def read_attempts(self) -> tuple[int | None, int | None]:
-        t = self._text("attempt_count")
-        if not t:
-            return None, None
-        import re
-        nums = [int(x) for x in re.findall(r"\d+", t)]
-        return (nums[0], nums[1]) if len(nums) >= 2 else (None, None)   # exact layout: PENDING_REAL_E2E_SELECTOR
+        return parse_attempts(self._text("attempt_count"))
 
     def read_history(self) -> list[dict]:
         try:
@@ -286,14 +338,17 @@ class PlaywrightPortalDriver(PortalDriver):
             return []
         loc = self.page.locator(self._sel("history_rows")["strategies"][0].get("css", "tr"))
         acc, rej = wording_markers(self.adapter, "history_accepted"), wording_markers(self.adapter, "history_rejected")
+        empty = wording_markers(self.adapter, "history_empty")
         out = []
         for i in range(loc.count()):
             text = (loc.nth(i).inner_text(timeout=3000) or "").strip()
+            if not text or any(m in text for m in empty):        # the empty-state row is not a submission
+                continue
             out.append({"text": text[:500], "accepted": any(m in text for m in acc), "rejected": any(m in text for m in rej)})
         return out
 
     def read_strategy_document_status(self) -> str | None:
-        return self._text("strategy_document_status")
+        return parse_doc_status(self._text("strategy_document_status"), self.adapter)
 
     # --- actions (guarded) -------------------------------------------------------------------------------------
     def upload_file(self, path: Path):
@@ -375,6 +430,14 @@ _ATTRS_JS = """e => ({tag: e.tagName.toLowerCase(), id: e.id || null, name: e.ge
   text: (e.innerText || '').trim().slice(0, 120)})"""   # never e.value: no form values are read
 
 
+_ANCESTORS_JS = """e => { const out = []; let n = e;
+  for (let i = 0; n && i < 4; i++, n = n.parentElement) {
+    out.push({level: i, tag: n.tagName.toLowerCase(), id: n.id || null, role: n.getAttribute('role'),
+      data: Object.fromEntries([...n.attributes].filter(a => a.name.startsWith('data-')).map(a => [a.name, a.value])),
+      text: (n.innerText || '').trim().slice(0, 300)}); }
+  return out; }"""
+
+
 def _attrs(loc) -> dict:
     """Structural attributes of one element (tag / id / name / aria / data-* / visible text). Read-only DOM
     inspection: never reads cookies, storage, tokens or form values of credential fields."""
@@ -427,9 +490,15 @@ def discover(*, wait_login_s: int = 0, headless: bool = False, ops_cfg: dict | N
         drv.open_portal()
         login = drv.check_login()
         end = time.monotonic() + wait_login_s
+        from urllib.parse import urlparse
         while login != "LOGGED_IN" and time.monotonic() < end:
             time.sleep(5)                                  # the Owner logs in manually in the opened window
-            login = drv.check_login()
+            u = urlparse(drv.page.url)
+            on_form = classify_login(drv.page.url, urlparse(drv.url).netloc, nav_visible=False,
+                                     login_marker_visible=False, adapter=drv.adapter) == "LOGIN_REQUIRED"
+            if not on_form and u.netloc != urlparse(drv.url).netloc:
+                drv.open_portal()                          # logged in but landed on the main site: go back
+            login = drv.check_login(settle_s=5)
         if login == "LOGGED_IN":
             drv.open_portal()
         state = drv.read_page_state()
@@ -469,6 +538,13 @@ def discover(*, wait_login_s: int = 0, headless: bool = False, ops_cfg: dict | N
             stable_attrs = [_attrs(stable.nth(i)) for i in range(min(stable.count(), 150))]
         except Exception:  # noqa: BLE001
             stable_attrs = []
+        anchors = {}
+        for text in drv.adapter.get("discovery_anchors") or []:
+            try:
+                loc = page.get_by_text(text)
+                anchors[text] = loc.first.evaluate(_ANCESTORS_JS, timeout=3000) if loc.count() else None
+            except Exception:  # noqa: BLE001
+                anchors[text] = None
         resolves = {}
         for name in (drv.adapter.get("selectors") or {}):
             try:
@@ -476,7 +552,7 @@ def discover(*, wait_login_s: int = 0, headless: bool = False, ops_cfg: dict | N
             except UIUnexpected as e:
                 resolves[name] = str(e).split(":")[0]
         res = {"captured_at": datetime.now(TPE).isoformat(), "login": login, "page_state": state,
-               "visible_by_role": visible, "elements": elements, "tables": table_info,
+               "visible_by_role": visible, "elements": elements, "tables": table_info, "anchors": anchors,
                "stable_attributes": stable_attrs, "file_inputs": inputs, "adapter_resolution": resolves,
                "read": {"team_id": drv.read_team_id(), "trade_date": drv.read_trade_date(),
                         "attempts": drv.read_attempts(), "history_rows": len(drv.read_history()),
@@ -512,6 +588,8 @@ def main(argv=None) -> int:
         return 0 if r["PORTAL_READONLY_REAL_TEST"] == "PASS" else 2
     try:
         r = discover(wait_login_s=a.wait_login, headless=a.headless)
+        if r.get("login") != "LOGGED_IN":
+            print("LOGIN_REQUIRED: log in in the opened automation-profile window (use --wait-login 600)")
     except UIUnexpected as e:
         print(json.dumps({"status": "FAIL_CLOSED", "reason": str(e)}, ensure_ascii=False))
         return 2
