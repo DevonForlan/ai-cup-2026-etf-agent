@@ -131,10 +131,18 @@ def test_team_portal_bound_and_auto_upload_disabled():
 
 def test_adapter_unconfirmed_entries_are_pending_and_never_guessed():
     inv = {r["element"]: r for r in PD.selector_inventory(PD.load_adapter())}
-    for name in ("upload_button", "server_validation_pass_marker", "submit_confirmation_modal", "history_rows",
-                 "trade_date", "team_id", "attempt_count", "accepted_history_marker"):
-        assert inv[name]["status"] in PD.PENDING and inv[name]["strategies"] == []
-    assert not any(r["usable_for_action_competition"] for r in inv.values())          # nothing CONFIRMED_REAL_E2E yet
+    # window-only elements (not visible on 2026-10-23, no window open): no strategy, never guessed
+    for name in ("upload_button", "server_validation_pass_marker", "server_validation_fail_marker",
+                 "submit_confirmation_modal", "submit_confirm_button", "accepted_history_marker", "rejected_marker"):
+        assert inv[name]["status"] == "PENDING_WINDOW_ONLY" and inv[name]["strategies"] == [], name
+    # confirmed on the real logged-in page (read-only discovery 2026-10-23)
+    for name in ("team_id", "trade_date", "attempt_count", "dplan_file_input", "upload_area", "validation_result_panel",
+                 "submission_history_table", "history_rows", "strategy_document_status", "datapack_download",
+                 "nav_docs_link", "no_window_marker"):
+        assert inv[name]["status"] == "CONFIRMED_REAL_E2E" and inv[name]["usable_for_read"], name
+    # the submit action is still unconfirmed -> COMPETITION can never submit through the adapter yet
+    assert not inv["submit_button"]["usable_for_action_competition"]
+    assert not inv["submit_confirm_button"]["usable_for_action_competition"]
     a = PD.load_adapter()
     for w in ("validation_pass", "validation_fail", "history_accepted", "submit_success"):
         assert a["wording"][w]["status"] in PD.PENDING and PD.wording_markers(a, w) == []
@@ -622,3 +630,33 @@ def test_e2e_plan_next_window(cfg, tmp_path):
     md = rp.read_text(encoding="utf-8")
     assert "2026-10-27" in md and "readonly-test" in md and "MANUAL_UPLOAD_REQUIRED" in md
     assert json.loads(pp.read_text(encoding="utf-8"))["team_id"] == TEAM
+
+
+# ---------------------------------------------------------------- real logged-in page observations (2026-10-23)
+def test_login_classification_sso_hop_is_not_logged_out():
+    a = PD.load_adapter()
+    host = "fundaiagent.esun-ai-challenge.tw"
+    kw = dict(nav_visible=False, login_marker_visible=False, adapter=a)
+    assert PD.classify_login("https://esun-ai-challenge.tw/sso", host, **kw) == "IN_TRANSIT"   # logged-in sessions hop too
+    assert PD.classify_login("https://esun-ai-challenge.tw/login", host, **kw) == "LOGIN_REQUIRED"
+    assert PD.classify_login(f"https://{host}/docs", host, nav_visible=True, login_marker_visible=False,
+                             adapter=a) == "LOGGED_IN"
+    assert PD.classify_login(f"https://{host}/docs", host, nav_visible=True, login_marker_visible=True,
+                             adapter=a) == "LOGIN_REQUIRED"
+    assert PD.classify_login(f"https://{host}/docs", host, **kw) == "IN_TRANSIT"             # SPA still loading
+
+
+def test_observed_page_texts_parse_exactly():
+    a = PD.load_adapter()
+    assert PD.parse_attempts("當日決策文件 D-Plan（單一 JSON）· 今日已繳交 0 / 25 次") == (0, 25)
+    assert PD.parse_attempts("今日已繳交 3 / 25 次") == (3, 22)
+    assert PD.parse_attempts("今日已繳交 25 / 25 次") == (25, 0)
+    assert PD.parse_attempts("今日繳交次數") == (None, None)                                   # unreadable
+    assert PD.parse_trade_date("本次繳交對應交易日 — · 目前沒有開放中的繳交窗口") is None
+    assert PD.parse_trade_date("本次繳交對應交易日 2026-10-27 · 窗口開放中") == "2026-10-27"
+    assert PD.parse_doc_status("ETF 投資策略說明文件\n未繳交", a) == "未繳交"
+    assert PD.parse_doc_status("ETF 投資策略說明文件\n處理中", a) is None                      # unseen status: not guessed
+    assert PD.wording_markers(a, "no_open_window") == ["目前沒有開放中的繳交窗口"]
+    assert "目前沒有繳交紀錄" in PD.wording_markers(a, "history_empty")
+    for w in ("validation_pass", "validation_fail", "submit_success", "history_accepted", "history_rejected"):
+        assert a["wording"][w]["status"] == "PENDING_WINDOW_ONLY" and PD.wording_markers(a, w) == []
