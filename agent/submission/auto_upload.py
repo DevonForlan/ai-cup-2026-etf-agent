@@ -350,17 +350,110 @@ def _official_test_state(trade_date: str, ops_cfg: dict, sha: str | None) -> str
     return recs[-1]["mapped_internal_state"] if recs else "READY_FOR_UPLOAD"
 
 
-def manual_e2e_completed(ops_cfg: dict) -> bool:
-    """True once ANY manual (non-automation) sealed-test record reached official acceptance evidence."""
-    from agent.submission.official_test import _dir
+AUTOMATION_OPERATORS = ("auto_upload",)
+MANUAL_PORTAL_METHODS = ("manual_web",)          # the same formal portal UI flow the automation would use
+
+
+def _norm_sha(x: str | None) -> str:
+    x = (x or "").strip().lower()
+    return x if x.startswith("sha256:") or not x else "sha256:" + x
+
+
+def _jsonl(p: Path) -> list[dict]:
+    return [json.loads(x) for x in p.read_text(encoding="utf-8").splitlines() if x.strip()] if p.exists() else []
+
+
+def manual_e2e_evidence(ops_cfg: dict) -> dict:
+    """The auto-upload prerequisite: at least one MANUAL submission through the formal portal flow that reached
+    OFFICIAL acceptance for a real FINAL. Sources:
+      * competition receipts (`submissions_dir/<ymd>/receipts.jsonl`, method `manual_web`) -- the Day-1 manual E2E;
+      * sealed-test records (`official_test_receipts_dir/<ymd>/records.jsonl`), if one ever reaches acceptance.
+    A record qualifies only with official evidence (receipt / submission id or the verbatim history row;
+    `receipt.has_acceptance_evidence`), the configured competition Team ID, and the SHA of the FINAL / sealed-test
+    package of that trade date. Automation records never count (an automated run cannot satisfy its own
+    prerequisite). A trade date with accepted manual evidence for different SHAs is ambiguous and does not count."""
+    from agent.ops.package_submission import active_final
+    from agent.ops.team import resolve
+    from agent.submission.official_test import _dir, dirs
+    from agent.submission.receipt import has_acceptance_evidence
+    team = resolve("COMPETITION", ops_cfg)
+    team_id = team["team_id"] if team["status"] == "OK" else None
+    ok, rejected = [], []
+
+    def reject(src, r, why):
+        rejected.append({"source": src, "trade_date": r.get("trade_date"), "reason": why})
+
+    # competition receipts (normal manual submission path)
+    sub_root = ops_path_safe(ops_cfg, "submissions_dir")
+    by_date: dict[str, list] = {}
+    for f in sorted(sub_root.glob("*/receipts.jsonl")) if sub_root and sub_root.exists() else []:
+        for r in _jsonl(f):
+            src = "competition_receipt"
+            if r.get("submission_method") not in MANUAL_PORTAL_METHODS or r.get("confirmed_by") in AUTOMATION_OPERATORS:
+                reject(src, r, f"not a manual portal submission ({r.get('submission_method')}, {r.get('confirmed_by')})")
+                continue
+            if not has_acceptance_evidence(r):
+                reject(src, r, "no official acceptance evidence (accepted + receipt id / history entry)")
+                continue
+            if not team_id or r.get("team_id") != team_id:
+                reject(src, r, f"team {r.get('team_id')} != configured {team_id}")
+                continue
+            fin = active_final(r.get("trade_date") or "", ops_cfg)
+            if not fin or fin.get("mode") != "competition" or fin.get("team_id") != team_id:
+                reject(src, r, "no competition FINAL for this trade date / team")
+                continue
+            if _norm_sha(r.get("dplan_sha256")) != _norm_sha(fin.get("sha256")):
+                reject(src, r, "receipt sha256 does not match the FINAL")
+                continue
+            by_date.setdefault(r["trade_date"], []).append({"source": src, "trade_date": r["trade_date"],
+                                                            "sha256": _norm_sha(r["dplan_sha256"]),
+                                                            "evidence": r.get("official_receipt_id") or r.get("history_entry")})
+    # sealed-test records (only if one ever reaches acceptance)
     root = _dir("official_test_receipts_dir", "data/official_test_receipts", ops_cfg)
-    for p in root.glob("*/records.jsonl") if root.exists() else []:
-        for line in p.read_text(encoding="utf-8").splitlines():
-            if line.strip():
-                r = json.loads(line)
-                if r.get("mapped_internal_state") == "ACCEPTED" and r.get("operator") != "auto_upload":
-                    return True
-    return False
+    for f in sorted(root.glob("*/records.jsonl")) if root.exists() else []:
+        for r in _jsonl(f):
+            src = "official_test_record"
+            if r.get("operator") in AUTOMATION_OPERATORS:
+                reject(src, r, "automation record")
+                continue
+            ev = {"official_status": "accepted" if r.get("official_result") == "accepted" else r.get("official_result"),
+                  "stage": r.get("stage"), "official_receipt_id": r.get("submission_id"),
+                  "history_entry": r.get("history_entry")}
+            if r.get("mapped_internal_state") != "ACCEPTED" or not has_acceptance_evidence(ev):
+                reject(src, r, "no official acceptance evidence")
+                continue
+            pkg_p = dirs(r.get("trade_date") or "", ops_cfg)["reports"] / "TEST_SUBMISSION_PACKAGE.json"
+            pkg = json.loads(pkg_p.read_text(encoding="utf-8")) if pkg_p.exists() else {}
+            fin = pkg.get("final") or {}
+            if not team_id or fin.get("team_id_in_file") != team_id:
+                reject(src, r, "package team does not match the configured competition team")
+                continue
+            if not fin.get("sha256") or _norm_sha(r.get("sha256")) != _norm_sha(fin.get("sha256")):
+                reject(src, r, "record sha256 does not match the sealed-test package")
+                continue
+            by_date.setdefault(r["trade_date"], []).append({"source": src, "trade_date": r["trade_date"],
+                                                            "sha256": _norm_sha(r["sha256"]),
+                                                            "evidence": r.get("submission_id") or r.get("history_entry")})
+    for t, rows in sorted(by_date.items()):
+        if len({x["sha256"] for x in rows}) > 1:
+            for x in rows:
+                rejected.append({"source": x["source"], "trade_date": t, "reason": "ambiguous: several accepted SHAs"})
+            continue
+        ok.append(rows[0])
+    return {"completed": bool(ok), "evidence": ok, "rejected": rejected}
+
+
+def ops_path_safe(ops_cfg: dict, key: str) -> Path | None:
+    from agent.ops.common import ops_path
+    try:
+        return ops_path(ops_cfg, key)
+    except (KeyError, TypeError):
+        return None
+
+
+def manual_e2e_completed(ops_cfg: dict) -> bool:
+    """See manual_e2e_evidence (Owner approval is still required before auto_upload.enabled = true)."""
+    return manual_e2e_evidence(ops_cfg)["completed"]
 
 
 def _automation_rows(trade_date: str, ops_cfg: dict, official_test: bool) -> list[dict]:

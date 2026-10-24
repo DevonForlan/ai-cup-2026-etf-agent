@@ -453,12 +453,123 @@ def test_prepare_generates_official_team_dplan_isolated_and_validated(cfg, fixtu
 
 
 def test_manual_e2e_flag_requires_human_accepted_record(cfg):
+    """Sealed-test path: a manual record counts only with official evidence AND the package's SHA / team;
+    an automation record never counts (ChatGPT review on PR #8, 2026-10-24)."""
+    sha = "sha256:" + "a" * 64
     assert not AU.manual_e2e_completed(cfg)
-    OT.record_upload(T1, "sha256:" + "a" * 64, "accepted", "已收件", "auto_upload", submission_id="X", ops_cfg=cfg)
-    assert not AU.manual_e2e_completed(cfg)
-    OT.record_upload(T1, "sha256:" + "a" * 64, "accepted", "已收件", "Owner", stage="submitted",
+    rep = OT.dirs(T1, cfg)["reports"]
+    rep.mkdir(parents=True, exist_ok=True)
+    (rep / "TEST_SUBMISSION_PACKAGE.json").write_text(json.dumps({"final": {"sha256": sha, "team_id_in_file": TEAM}}),
+                                                      encoding="utf-8")
+    OT.record_upload(T1, sha, "accepted", "已收件", "auto_upload", submission_id="X", ops_cfg=cfg)
+    assert not AU.manual_e2e_completed(cfg)                                        # automation record
+    OT.record_upload(T1, "sha256:" + "b" * 64, "accepted", "已收件", "Owner", stage="submitted",
                      history_entry=ACC["text"], ops_cfg=cfg)
+    assert not AU.manual_e2e_completed(cfg)                                        # SHA not the package's
+    OT.record_upload(T1, sha, "accepted", "已收件", "Owner", stage="submitted", history_entry=ACC["text"], ops_cfg=cfg)
+    ev = AU.manual_e2e_evidence(cfg)
+    assert ev["completed"] and ev["evidence"][0]["source"] == "official_test_record"
+
+
+# ---------------------------------------------------------------- manual-E2E prerequisite from the competition path
+T_COMP = "2026-10-27"
+FINAL_SHA = "sha256:" + "c" * 64
+
+
+def _final(monkeypatch, *, team=TEAM, sha=FINAL_SHA, mode="competition"):
+    import agent.ops.package_submission as PS
+    monkeypatch.setattr(PS, "active_final", lambda t, o=None: {"trade_date": t, "team_id": team, "sha256": sha,
+                                                              "mode": mode} if t == T_COMP else None)
+
+
+def _receipt(cfg, **kw):
+    from dataclasses import asdict
+    from agent.submission.receipt import receipts_path
+    r = dict(asdict(Receipt(T_COMP, TEAM, FINAL_SHA, "2026-10-27T08:10:00+08:00", "manual_web", "Owner",
+                            official_status="accepted", stage="accepted", history_entry=ACC["text"])), **kw)
+    p = receipts_path(r["trade_date"], cfg)
+    p.parent.mkdir(parents=True, exist_ok=True)
+    with open(p, "a", encoding="utf-8") as fh:
+        fh.write(json.dumps(r, ensure_ascii=False) + "\n")
+
+
+def test_e2e_prereq_a_no_manual_acceptance_blocks_gate(cfg, tmp_path, monkeypatch):
+    _final(monkeypatch)
+    assert AU.manual_e2e_evidence(cfg) == {"completed": False, "evidence": [], "rejected": []}
+    o, _ = go(cand(tmp_path), FakePortal(), cfg, e2e=AU.manual_e2e_completed(cfg))
+    assert o.status == "FAIL_CLOSED" and "MANUAL_E2E_NOT_COMPLETED" in o.reason
+
+
+def test_e2e_prereq_b_competition_manual_acceptance_with_evidence_passes(cfg, monkeypatch):
+    _final(monkeypatch)
+    _receipt(cfg)                                                          # history row as evidence
+    ev = AU.manual_e2e_evidence(cfg)
+    assert ev["completed"] and ev["evidence"][0] == {"source": "competition_receipt", "trade_date": T_COMP,
+                                                     "sha256": FINAL_SHA, "evidence": ACC["text"]}
+
+
+def test_e2e_prereq_b2_receipt_id_is_also_evidence(cfg, monkeypatch):
+    _final(monkeypatch)
+    _receipt(cfg, history_entry=None, official_receipt_id="R-0001")
     assert AU.manual_e2e_completed(cfg)
+
+
+def test_e2e_prereq_c_automation_receipt_never_satisfies_itself(cfg, monkeypatch):
+    _final(monkeypatch)
+    _receipt(cfg, submission_method="browser_automation", confirmed_by="auto_upload")
+    _receipt(cfg, confirmed_by="auto_upload")                              # even if mislabelled manual_web
+    ev = AU.manual_e2e_evidence(cfg)
+    assert not ev["completed"] and len(ev["rejected"]) == 2
+    assert all("not a manual portal submission" in r["reason"] for r in ev["rejected"])
+
+
+@pytest.mark.parametrize("kw,needle", [
+    (dict(history_entry=None), "no official acceptance evidence"),                  # "accepted" without evidence
+    (dict(official_status="pending"), "no official acceptance evidence"),
+    (dict(stage="server_validated"), "no official acceptance evidence"),            # stage below submitted
+    (dict(stage="file_uploaded", official_status="unknown"), "no official acceptance evidence"),
+])
+def test_e2e_prereq_d_accepted_wording_without_evidence_is_not_enough(cfg, monkeypatch, kw, needle):
+    _final(monkeypatch)
+    _receipt(cfg, **kw)
+    ev = AU.manual_e2e_evidence(cfg)
+    assert not ev["completed"] and needle in ev["rejected"][0]["reason"]
+
+
+@pytest.mark.parametrize("final_kw,receipt_kw,needle", [
+    ({}, dict(team_id="TEAM_99999"), "team"),                                       # wrong team on the receipt
+    (dict(team="TEAM_99999"), {}, "no competition FINAL"),                          # FINAL of another team
+    ({}, dict(trade_date="2026-10-28"), "no competition FINAL"),                    # no FINAL for that date
+    ({}, dict(dplan_sha256="sha256:" + "d" * 64), "does not match the FINAL"),      # different SHA
+    (dict(mode="dry-run"), {}, "no competition FINAL"),                             # paper / dry-run FINAL
+])
+def test_e2e_prereq_e_team_date_sha_must_match_the_final(cfg, monkeypatch, final_kw, receipt_kw, needle):
+    _final(monkeypatch, **final_kw)
+    _receipt(cfg, **receipt_kw)
+    ev = AU.manual_e2e_evidence(cfg)
+    assert not ev["completed"] and needle in ev["rejected"][0]["reason"]
+
+
+def test_e2e_prereq_ambiguity_rule_direct(cfg, monkeypatch):
+    """Two accepted manual records for one trade date with different SHAs (e.g. FINAL replaced): ambiguous."""
+    import agent.ops.package_submission as PS
+    shas = iter([FINAL_SHA, "sha256:" + "e" * 64])
+    monkeypatch.setattr(PS, "active_final", lambda t, o=None: {"team_id": TEAM, "mode": "competition",
+                                                              "sha256": next(shas)})
+    _receipt(cfg)
+    _receipt(cfg, dplan_sha256="sha256:" + "e" * 64)
+    ev = AU.manual_e2e_evidence(cfg)
+    assert not ev["completed"] and all("ambiguous" in r["reason"] for r in ev["rejected"])
+
+
+def test_e2e_prereq_does_not_enable_auto_upload(cfg, monkeypatch, tmp_path):
+    """The prerequisite only removes one gate failure; Owner approval (auto_upload.enabled) is still required."""
+    _final(monkeypatch)
+    _receipt(cfg)
+    off = dict(cfg, auto_upload=dict(cfg["auto_upload"], enabled=False))
+    o, _ = go(cand(tmp_path), FakePortal(), off, e2e=AU.manual_e2e_completed(off))
+    assert o.status == "FAIL_CLOSED" and "AUTO_UPLOAD_DISABLED" in o.reason and "MANUAL_E2E" not in o.reason
+    assert load_ops_config()["auto_upload"]["enabled"] is False
 
 
 # ---------------------------------------------------------------- pre-E2E finalization (gate, resume, audit, signals)
