@@ -13,7 +13,8 @@ All work follows `docs/COLLABORATION_WORKFLOW.md`. Short version:
 5. **CI must pass** (`ci.yml`). Fix the cause; never weaken or delete valid tests.
 6. **GitHub write-back + review handoff** — every substantive step ends with a status comment on the Issue / PR
    and the right `agent:*` label (`docs/COLLABORATION_WORKFLOW.md` §7). Owner decisions are requested and recorded
-   on GitHub with `owner:decision` (`docs/CODE_CHANGE_GOVERNANCE.md` §6).
+   on GitHub with `owner:decision` (`docs/CODE_CHANGE_GOVERNANCE.md` §6). At major points Claude Code also saves its
+   exact Owner-facing response under `handoff/claude_sessions/` and links it as `LATEST_CLAUDE_HANDOFF` (§7.10).
 7. **ChatGPT review** (`agent:review`) → address blocking items (fix or rebut with evidence) → second review.
 8. **Owner merges** (squash preferred; `agent:merge-ready` first). No auto-merge. Branch deleted after merge.
 

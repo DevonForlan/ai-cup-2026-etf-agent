@@ -56,3 +56,4 @@ Closes #
   (recorded as a PR comment `CHATGPT_REVIEW_RECOMMENDATION = …` when GitHub blocks self-review)
 - Decision (Owner only): MERGE / DO_NOT_MERGE
 - Handoff: status comment posted (docs/COLLABORATION_WORKFLOW.md §7.2) · label `agent:review` / `agent:merge-ready`
+  · `LATEST_CLAUDE_HANDOFF = handoff/claude_sessions/<file>.md @ <sha>` in the status comment (§7.10)
