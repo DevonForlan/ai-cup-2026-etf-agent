@@ -69,9 +69,13 @@ def build_plan(now: datetime | None = None, ops_cfg: dict | None = None) -> dict
         if not a.get("enabled") else "AUTOMATED (guarded) with manual fallback",
         "rehearsal_window": (ops.get("submission") or {}).get("rehearsal_window"),
         "strategy_document_deadline": (ops.get("submission") or {}).get("strategy_document_deadline"),
+        "STRATEGY_DOCUMENT_STATUS": (ops.get("submission") or {}).get("strategy_document_status") or "UNKNOWN",
         "owner_prerequisites": [
-            f"ETF 投資策略說明文件 (PDF) must be uploaded by the Owner before "
-            f"{(ops.get('submission') or {}).get('strategy_document_deadline')} (portal showed 未繳交 on 2026-10-23).",
+            ("ETF 投資策略說明文件: SUBMITTED "
+             f"({(ops.get('submission') or {}).get('strategy_document_submitted_at')}; Issue #12 / PR #13) -- no action."
+             if (ops.get("submission") or {}).get("strategy_document_status") == "SUBMITTED" else
+             f"ETF 投資策略說明文件 (PDF) must be uploaded before "
+             f"{(ops.get('submission') or {}).get('strategy_document_deadline')}."),
             "Optional (Owner decision): the 開賽前試繳 rehearsal "
             f"{((ops.get('submission') or {}).get('rehearsal_window') or {}).get('opens')} -> "
             f"{((ops.get('submission') or {}).get('rehearsal_window') or {}).get('closes')} validates an uploaded D-Plan "

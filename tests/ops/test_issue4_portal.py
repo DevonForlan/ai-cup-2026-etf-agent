@@ -766,6 +766,7 @@ def test_observed_page_texts_parse_exactly():
     assert PD.parse_trade_date("本次繳交對應交易日 — · 目前沒有開放中的繳交窗口") is None
     assert PD.parse_trade_date("本次繳交對應交易日 2026-10-27 · 窗口開放中") == "2026-10-27"
     assert PD.parse_doc_status("ETF 投資策略說明文件\n未繳交", a) == "未繳交"
+    assert PD.parse_doc_status("ETF 投資策略說明文件\n已繳交\n繳交期間", a) == "已繳交"          # observed 2026-10-24
     assert PD.parse_doc_status("ETF 投資策略說明文件\n處理中", a) is None                      # unseen status: not guessed
     assert PD.wording_markers(a, "no_open_window") == ["目前沒有開放中的繳交窗口"]
     assert "目前沒有繳交紀錄" in PD.wording_markers(a, "history_empty")

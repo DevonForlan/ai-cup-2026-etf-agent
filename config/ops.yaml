@@ -126,7 +126,9 @@ submission:
   official_daily_limit: 25        # portal: 25 attempts per trading day; the accepted version is not affected
   # observed on the logged-in portal 2026-10-23 (read-only): rehearsal = validation only, nothing collected / counted
   rehearsal_window: {opens: '2026-10-23T20:30:00+08:00', closes: '2026-10-26T00:00:00+08:00', trade_date: '2026-10-27'}
-  strategy_document_deadline: '2026-10-26T23:59:00+08:00'   # ETF 投資策略說明文件 (PDF <= 5 MB); status 未繳交 on 2026-10-23
+  strategy_document_deadline: '2026-10-26T23:59:00+08:00'   # ETF 投資策略說明文件 (PDF <= 5 MB)
+  strategy_document_status: SUBMITTED                         # portal 已繳交 2026-10-24 13:18 (Issue #12 / PR #13)
+  strategy_document_submitted_at: '2026-10-24T13:18:00+08:00'
   # official TEST period (封測; organiser clears test data before the competition) — kept apart from competition
   # artefacts (never data/official_datapack/ or submissions/<T>/receipts.jsonl): agent/submission/official_test.py
   official_test_reports_dir: reports/official_test
