@@ -482,7 +482,7 @@ def _final(monkeypatch, *, team=TEAM, sha=FINAL_SHA, mode="competition"):
                                                               "mode": mode} if t == T_COMP else None)
 
 
-def _receipt(cfg, **kw):
+def _comp_receipt(cfg, **kw):
     from dataclasses import asdict
     from agent.submission.receipt import receipts_path
     r = dict(asdict(Receipt(T_COMP, TEAM, FINAL_SHA, "2026-10-27T08:10:00+08:00", "manual_web", "Owner",
@@ -502,7 +502,7 @@ def test_e2e_prereq_a_no_manual_acceptance_blocks_gate(cfg, tmp_path, monkeypatc
 
 def test_e2e_prereq_b_competition_manual_acceptance_with_evidence_passes(cfg, monkeypatch):
     _final(monkeypatch)
-    _receipt(cfg)                                                          # history row as evidence
+    _comp_receipt(cfg)                                                          # history row as evidence
     ev = AU.manual_e2e_evidence(cfg)
     assert ev["completed"] and ev["evidence"][0] == {"source": "competition_receipt", "trade_date": T_COMP,
                                                      "sha256": FINAL_SHA, "evidence": ACC["text"]}
@@ -510,14 +510,14 @@ def test_e2e_prereq_b_competition_manual_acceptance_with_evidence_passes(cfg, mo
 
 def test_e2e_prereq_b2_receipt_id_is_also_evidence(cfg, monkeypatch):
     _final(monkeypatch)
-    _receipt(cfg, history_entry=None, official_receipt_id="R-0001")
+    _comp_receipt(cfg, history_entry=None, official_receipt_id="R-0001")
     assert AU.manual_e2e_completed(cfg)
 
 
 def test_e2e_prereq_c_automation_receipt_never_satisfies_itself(cfg, monkeypatch):
     _final(monkeypatch)
-    _receipt(cfg, submission_method="browser_automation", confirmed_by="auto_upload")
-    _receipt(cfg, confirmed_by="auto_upload")                              # even if mislabelled manual_web
+    _comp_receipt(cfg, submission_method="browser_automation", confirmed_by="auto_upload")
+    _comp_receipt(cfg, confirmed_by="auto_upload")                              # even if mislabelled manual_web
     ev = AU.manual_e2e_evidence(cfg)
     assert not ev["completed"] and len(ev["rejected"]) == 2
     assert all("not a manual portal submission" in r["reason"] for r in ev["rejected"])
@@ -531,7 +531,7 @@ def test_e2e_prereq_c_automation_receipt_never_satisfies_itself(cfg, monkeypatch
 ])
 def test_e2e_prereq_d_accepted_wording_without_evidence_is_not_enough(cfg, monkeypatch, kw, needle):
     _final(monkeypatch)
-    _receipt(cfg, **kw)
+    _comp_receipt(cfg, **kw)
     ev = AU.manual_e2e_evidence(cfg)
     assert not ev["completed"] and needle in ev["rejected"][0]["reason"]
 
@@ -545,7 +545,7 @@ def test_e2e_prereq_d_accepted_wording_without_evidence_is_not_enough(cfg, monke
 ])
 def test_e2e_prereq_e_team_date_sha_must_match_the_final(cfg, monkeypatch, final_kw, receipt_kw, needle):
     _final(monkeypatch, **final_kw)
-    _receipt(cfg, **receipt_kw)
+    _comp_receipt(cfg, **receipt_kw)
     ev = AU.manual_e2e_evidence(cfg)
     assert not ev["completed"] and needle in ev["rejected"][0]["reason"]
 
@@ -556,8 +556,8 @@ def test_e2e_prereq_ambiguity_rule_direct(cfg, monkeypatch):
     shas = iter([FINAL_SHA, "sha256:" + "e" * 64])
     monkeypatch.setattr(PS, "active_final", lambda t, o=None: {"team_id": TEAM, "mode": "competition",
                                                               "sha256": next(shas)})
-    _receipt(cfg)
-    _receipt(cfg, dplan_sha256="sha256:" + "e" * 64)
+    _comp_receipt(cfg)
+    _comp_receipt(cfg, dplan_sha256="sha256:" + "e" * 64)
     ev = AU.manual_e2e_evidence(cfg)
     assert not ev["completed"] and all("ambiguous" in r["reason"] for r in ev["rejected"])
 
@@ -565,7 +565,7 @@ def test_e2e_prereq_ambiguity_rule_direct(cfg, monkeypatch):
 def test_e2e_prereq_does_not_enable_auto_upload(cfg, monkeypatch, tmp_path):
     """The prerequisite only removes one gate failure; Owner approval (auto_upload.enabled) is still required."""
     _final(monkeypatch)
-    _receipt(cfg)
+    _comp_receipt(cfg)
     off = dict(cfg, auto_upload=dict(cfg["auto_upload"], enabled=False))
     o, _ = go(cand(tmp_path), FakePortal(), off, e2e=AU.manual_e2e_completed(off))
     assert o.status == "FAIL_CLOSED" and "AUTO_UPLOAD_DISABLED" in o.reason and "MANUAL_E2E" not in o.reason
