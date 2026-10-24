@@ -73,3 +73,13 @@
 - [ ] 於 2026-10-26 23:59 前，在 portal「ETF 投資策略說明文件」區塊上傳 **PDF**（僅限 PDF、5 MB 以內）。
 - [ ] 上傳後確認狀態由「未繳交」改變，截圖留本機；在 Issue #12 回報（不貼含帳號 email 的截圖）。
 - [ ] 文件不含個人資料、帳號或公司機密 ✓（已檢查）。
+
+## 7. 繳交紀錄（2026-10-24）
+
+- Owner 確認 PDF 內容並授權上傳（`AUTHORIZED_TO_UPLOAD_STRATEGY_PDF = YES`，Issue #12 Owner Decision comment）。
+- 2026-10-24 13:18 +08:00：Claude Code 使用既有已登入的 portal session，只在「ETF 投資策略說明文件」區塊的 PDF file input 選取檔案
+  （上傳前 sha256 `e1fac070…5ac7` 相符）。選檔即上傳，沒有確認視窗或警告，沒有按任何按鈕。
+- Portal 顯示：「已繳交 · TEAM_11442_ETF投資策略說明文件.pdf · 75.2 KB · 2026-10-24 已上傳 · 下載」，重新整理後仍相同；
+  頁面另註明「截止前可重新上傳覆蓋」。
+- 未操作 D-Plan 區塊；未修改任何設定。證據（截圖 / 頁面文字）在本機 gitignored
+  `data/portal_discovery/20261024_131742_strategy_pdf_upload/`（截圖含帳號 email，不上傳）。
