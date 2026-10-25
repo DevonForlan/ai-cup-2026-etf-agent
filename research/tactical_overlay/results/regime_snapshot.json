@@ -1,0 +1,55 @@
+{
+ "as_of_decision_date_after": "2026-10-22",
+ "breadth_through_last_close": 0.30666666666666664,
+ "ew_trend20": -0.0842467381258708,
+ "ew_vol20_ann": 0.2144819381448802,
+ "ew_dd60": -0.10865576886370809,
+ "ew_vol20_pctile_hist": 75.16025641025641,
+ "ew_trend20_pctile_hist": 6.41025641025641,
+ "SOX_last_date": "2026-10-23",
+ "SOX_ret20": -0.14092887153512945,
+ "SOX_vol20_ann": 0.37897285207161874,
+ "SOX_vol20_pctile_hist": 59.224806201550386,
+ "NDX_last_date": "2026-10-23",
+ "NDX_ret20": -0.04987620928079339,
+ "NDX_vol20_ann": 0.18427262881389442,
+ "NDX_vol20_pctile_hist": 55.50387596899225,
+ "SPX_last_date": "2026-10-22",
+ "SPX_ret20": 0.006636361394907642,
+ "SPX_vol20_ann": 0.08714501573039987,
+ "SPX_vol20_pctile_hist": 12.111801242236025,
+ "TSM_last_date": "2026-10-23",
+ "TSM_ret20": -0.08600241231937455,
+ "TSM_vol20_ann": 0.3213765833735177,
+ "TSM_vol20_pctile_hist": 28.217054263565895,
+ "USDTWD_last_date": "2026-10-23",
+ "USDTWD_ret20": 0.02361609673153242,
+ "USDTWD_vol20_ann": 0.04032641819740418,
+ "USDTWD_vol20_pctile_hist": 61.526232114467405,
+ "DGS10_last": [
+  "2026-10-22",
+  4.96
+ ],
+ "DGS10_chg20obs": -0.15000000000000036,
+ "DCOILWTICO_last": [
+  "2026-10-20",
+  107.89
+ ],
+ "DCOILWTICO_chg20obs": 11.480000000000004,
+ "DTWEXBGS_last": [
+  "2026-10-16",
+  121.4048
+ ],
+ "DTWEXBGS_chg20obs": 2.055899999999994,
+ "VIXCLS_last": [
+  "2026-10-22",
+  19.03
+ ],
+ "VIXCLS_chg20obs": 3.360000000000001,
+ "events_in_competition_month_us_dates": {
+  "FOMC": [
+   "2026-10-28"
+  ],
+  "note": "CPI / payroll / mega-cap earnings dates for Nov 2026 must be verified from official calendars; US midterm election 2026-11-03 falls inside the window"
+ }
+}

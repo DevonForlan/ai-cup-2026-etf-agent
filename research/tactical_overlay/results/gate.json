@@ -1,0 +1,16 @@
+{
+ "outcome": "KEEP_FROZEN_ONLY",
+ "passing": [],
+ "carried": {
+  "F1": "F1b",
+  "F2": null,
+  "F3": null,
+  "F4": null,
+  "F5": null,
+  "F6": null,
+  "F7": null,
+  "F8": null,
+  "F9": null
+ },
+ "advisory_signals": []
+}
