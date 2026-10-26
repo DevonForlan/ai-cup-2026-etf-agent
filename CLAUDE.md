@@ -43,6 +43,8 @@ ready-for-review PR. Verify locally: `.venv\Scripts\python.exe scripts\ci\local_
 
 ## 4. Git / GitHub workflow
 
+**Mandatory for every Claude Code session:** follow `docs/COLLABORATION_WORKFLOW.md` (§7 GitHub = Shared State: status comment after every substantive step, `agent:*` labels, blocker write-back, ChatGPT review handoff, redacted evidence) and `docs/CODE_CHANGE_GOVERNANCE.md` (§6 Owner Decision Required → `owner:decision`, merge boundary, no scope expansion). State that exists only in the session is `HANDOFF_INCOMPLETE`; a decision asked only in the session is `OWNER_DECISION_NOT_FORMALIZED`. At every major Owner-facing point, write the **exact** final response to `handoff/claude_sessions/` first and present that same text (§7.10); link it as `LATEST_CLAUDE_HANDOFF`.
+
 - Repo: `DevonForlan/ai-cup-2026-etf-agent` (private), default branch `master`.
 - **Issue → feature branch → implementation → tests → PR → ChatGPT review → Owner merge** (squash preferred;
   delete the branch after merge). Never push daily work to `master`; never force push; never rewrite history.
@@ -86,10 +88,26 @@ format, DataPack / receipt parser) go through an Issue and record: timestamp, re
 
 ## 9. Security
 
-No login automation, no uploads / submissions, no guessed private APIs, no cookie / token / password extraction.
-`OfficialPortalProvider` stays `DISABLED_PENDING_OFFICIAL_PORTAL_VALIDATION` until an official mechanism exists and
-the Owner approves. Organisation policy: no customer data, credentials or confidential documents; AI-generated
-content is reviewed by a human before use.
+**Default: fail closed.** No portal upload or submission happens unless every condition below is met.
+
+- **Never, under any approval:** login automation (the Owner logs in normally; the agent never types credentials),
+  guessed or private APIs, cookie / token / CSRF / password / browser-storage extraction, SSO / MFA / CAPTCHA bypass.
+- **Official API path:** the portal has no documented participant API. `OfficialPortalProvider` (extension point in
+  `agent/submission/future_api.py`) stays `DISABLED_PENDING_OFFICIAL_PORTAL_VALIDATION` until an official mechanism
+  exists and the Owner approves it.
+- **Browser upload / submission of the human UI** (Owner-logged-in automation profile) is allowed only when all hold:
+  1. an Owner-approved Issue plus an Owner Decision recorded on GitHub (`docs/CODE_CHANGE_GOVERNANCE.md` §6) for that
+     exact action or capability;
+  2. the official UI flow is validated: only selectors / wording marked `CONFIRMED_REAL_E2E` in
+     `config/portal_adapter.yaml` are used for actions; anything unconfirmed stops the run;
+  3. the competition safeguards hold: Team ID, trade date and FINAL SHA match; local validation passes; the 08:30 /
+     08:55 cutoffs; the attempt caps; same-SHA retry only; ACCEPTED only with official evidence; any unknown → stop
+     and fall back to manual upload;
+  4. **competition auto-upload** (`config/ops.yaml auto_upload.enabled`) stays disabled until an official-window E2E
+     reaches official acceptance and the Owner approves enabling it. A one-off action (e.g. the strategy-document
+     PDF upload, 2026-10-24, Issue #12) needs its own explicit Owner authorization and stays within that scope.
+- Organisation policy: no customer data, credentials or confidential documents; AI-generated content is reviewed by a
+  human before use.
 
 ## 10. ChatGPT review loop
 
