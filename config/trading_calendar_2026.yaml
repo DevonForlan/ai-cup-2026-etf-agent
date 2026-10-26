@@ -26,6 +26,7 @@ weekday_market_closures:          # weekdays with no trading (TWSE list; weekend
   - {date: '2026-09-25', name: '中秋節'}
   - {date: '2026-09-28', name: '孔子誕辰紀念日/ 教師節'}
   - {date: '2026-10-09', name: '國慶日'}
+  - {date: '2026-10-23', name: '颱風停止上班上課（休市）', source: 'Owner decision 2026-10-25, Issue #11; TWSE FMTQIK 115年10月 has no 10/23 row; MI_INDEX no data'}
   - {date: '2026-10-26', name: '臺灣光復暨金門古寧頭大捷紀念日'}
   - {date: '2026-12-25', name: '行憲紀念日'}
 competition_period: ['2026-10-26', '2026-11-27']   # organizer rules; first trade date = NC-15 (open)
