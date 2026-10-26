@@ -53,7 +53,8 @@ def test_nav_identity_is_checked():
 # ---------------------------------------------------------------- 8-9 freshness (official calendar)
 def test_previous_trading_day_uses_official_calendar():
     assert DP.previous_trading_day("2026-10-28") == "2026-10-27"
-    assert DP.previous_trading_day("2026-10-27") == "2026-10-23"        # 10-26 closed, weekend skipped
+    assert DP.previous_trading_day("2026-10-27") == "2026-10-22"        # 10-26 closed, weekend skipped, 10-23
+                                                                         # typhoon closure (Issue #11, 2026-10-25)
     assert DP.previous_trading_day("2026-10-12") == "2026-10-08"        # 10-09 closed
     assert DP.previous_trading_day("2026-11-02") == "2026-10-30"
 

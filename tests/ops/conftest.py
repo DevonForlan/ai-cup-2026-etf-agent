@@ -19,6 +19,9 @@ def ops_cfg(tmp_path):
     # synthetic fixture world: 2026-10-26 is its first trading day and it has no market holidays (TESTS ONLY;
     # the real config/ops.yaml never contains this key — asserted in tests/ops/test_datapack_integration.py)
     c["datapack_calendar_override"] = {"first_trade_date": "2026-10-26", "hol": set()}
+    # the synthetic fixture market TRADES on 2026-10-23 (its prices exist); the real 2026-10-23 typhoon closure
+    # (config/ops.yaml, Issue #11) belongs to the real calendar only, so the fixture world keeps 10-23 as a trading day
+    c["market_holidays"] = [d for d in c.get("market_holidays") or [] if str(d) != "2026-10-23"]
     return c
 
 
