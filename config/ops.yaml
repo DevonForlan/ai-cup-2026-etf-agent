@@ -98,7 +98,7 @@ market_holidays:              # 2026 TWSE official (config/trading_calendar_2026
 
 # Scheduler run mode (agent/ops/scheduled_run.py). PRECOMPETITION: paper ledger, DataPack NOT_REQUIRED, labelled
 # PRECOMPETITION_PAPER_RUN. COMPETITION: official DataPack REQUIRED (no fallback). Switch only by explicit decision.
-run_mode: PRECOMPETITION
+run_mode: COMPETITION         # Owner decision 2026-10-26 (PR #8 Decision 1 = A, Issue #16): Day 1 = 2026-10-27
 
 # Runtime Team ID (P-1, approved 2026-10-16): OPERATIONS config, decoupled from the frozen strategy file
 # (config/strategy_quant_v1.yaml team_id is no longer read at runtime; its sha256 stays pinned). agent/ops/team.py.
