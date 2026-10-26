@@ -172,6 +172,7 @@ def test_portal_provider_is_disabled_and_never_downloads():
 def test_real_config_and_official_folder_are_clean():
     from agent.ops.common import load_ops_config
     c = load_ops_config()
-    assert "datapack_calendar_override" not in c and S.run_mode(c) == "PRECOMPETITION"
+    # run_mode COMPETITION from Day 1 (Owner decision 2026-10-26, PR #8 Decision 1 = A, Issue #16)
+    assert "datapack_calendar_override" not in c and S.run_mode(c) == "COMPETITION"
     od = ROOT / c["paths"]["official_datapack_dir"]
     assert not [p for p in od.glob("*.json") if "synthetic" in p.name or "example" in p.name or "SIMULATED" in p.name]
