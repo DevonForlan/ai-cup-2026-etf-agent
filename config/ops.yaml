@@ -93,6 +93,7 @@ market_holidays:              # 2026 TWSE official (config/trading_calendar_2026
   - '2026-09-25'
   - '2026-09-28'
   - '2026-10-09'
+  - '2026-10-23'              # typhoon closure (Owner decision 2026-10-25, Issue #11; TWSE FMTQIK Oct lists no 10/23)
   - '2026-10-26'
   - '2026-12-25'
 
