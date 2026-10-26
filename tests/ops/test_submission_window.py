@@ -196,7 +196,7 @@ def test_status_lifecycle_ready_uploaded_accepted(fixture_store, ops_cfg):
     record_receipt(Receipt(T1, "TEAM_TEST", s["sha256"], "2026-10-26T08:12:00+08:00", "manual_web", "op",
                            official_status="pending"), ops_cfg)
     r = ST.compute(T1, now=now, ops_cfg=ops_cfg)
-    assert r["state"] == "UPLOADED" and r["uploaded_at"].startswith("2026-10-26T08:12") and r["accepted_at"] is None
+    assert r["state"] == "FILE_UPLOADED" and r["uploaded_at"].startswith("2026-10-26T08:12") and r["accepted_at"] is None
     record_receipt(Receipt(T1, "TEAM_TEST", s["sha256"], "2026-10-26T08:14:00+08:00", "manual_web", "op",
                            official_receipt_id="R-1", official_status="accepted",
                            accepted_at="2026-10-26T08:14:30+08:00", evidence_files=["receipt.png"]), ops_cfg)
@@ -223,9 +223,10 @@ def test_status_ui_unavailable_and_dry_run_not_uploadable(fixture_store, ops_cfg
 
 # ---------------------------------------------------------------- portal: browser-open only
 def test_portal_url_not_configured(ops_cfg):
+    ops_cfg = dict(ops_cfg, submission=dict(ops_cfg.get("submission") or {}, portal_url=None))
     r = open_submission_portal(T1, ops_cfg=ops_cfg, now=at("2026-10-26T08:00:00"), opener=lambda u: 1 / 0)
     assert r["opened"] is False and r["result"] == "SUBMISSION_PORTAL_URL_NOT_CONFIGURED"
-    assert r["SUBMISSION_UI_STATUS"] in ("NOT_YET_VERIFIED", "LOGIN_REQUIRED") and r["auto_upload"].startswith("DISABLED")
+    assert r["SUBMISSION_UI_STATUS"] in ("NOT_YET_VERIFIED", "LOGIN_REQUIRED", "AVAILABLE") and r["auto_upload"].startswith("DISABLED")
 
 
 def test_portal_opens_only_for_a_competition_final(fixture_store, ops_cfg):
@@ -238,13 +239,46 @@ def test_portal_opens_only_for_a_competition_final(fixture_store, ops_cfg):
     assert r["opened"] and opened == ["https://example.invalid/backoffice"]
 
 
+def _code_only(src: str) -> str:
+    """Python source without comments and docstrings (string literals that are code stay), lower-cased."""
+    import ast
+    import io
+    import tokenize
+    doc_lines = set()
+    for n in ast.walk(ast.parse(src)):
+        if isinstance(n, (ast.Module, ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)) and n.body \
+                and isinstance(n.body[0], ast.Expr) and isinstance(getattr(n.body[0], "value", None), ast.Constant) \
+                and isinstance(n.body[0].value.value, str):
+            doc_lines.update(range(n.body[0].lineno, n.body[0].end_lineno + 1))
+    return " ".join(t.string for t in tokenize.generate_tokens(io.StringIO(src).readline)
+                    if t.type != tokenize.COMMENT and t.start[0] not in doc_lines).lower()
+
+
+def test_code_only_scanner_sees_code_not_prose():
+    src = '"""never reads cookies"""\n# no token here\nx = page.context.cookies()\n'
+    assert "cookie" in _code_only(src) and "token" not in _code_only(src)
+    assert "cookie" not in _code_only('"""never reads cookies"""\n')
+
+
 def test_no_upload_login_or_credential_code():
     root = Path(__file__).resolve().parents[2] / "agent" / "submission"
-    src = "\n".join(p.read_text(encoding="utf-8") for p in root.glob("*.py"))
+    # Issue #4: normal browser automation is allowed ONLY in portal_driver.py (UI driver), rehearsal.py (Owner-requested
+    # step-by-step rehearsal probe) and auto_upload.py (guarded
+    # workflow, disabled by default); every other submission module stays free of network / browser code
+    automation = ("auto_upload.py", "portal_driver.py", "rehearsal.py")
+    src = "\n".join(p.read_text(encoding="utf-8") for p in root.glob("*.py") if p.name not in automation)
     # network / browser-automation / cookie-store code (official_test.py only REFUSES credential-like text)
     for bad in ("import requests", "import urllib", "urlopen(", ".post(", "selenium", "playwright", "pyautogui",
                 "http.cookiejar", "browser_cookie", "import http.client", "sqlite3"):
         assert bad not in src.lower(), bad
+    # automation code only (comments / docstrings stripped, so the prose that explains the rules cannot hide or fake a
+    # hit): no cookies / storage / passwords / tokens / CSRF, no private /api, no typing into forms, no MFA / CAPTCHA
+    for name in automation:
+        code = _code_only((root / name).read_text(encoding="utf-8"))
+        for bad in ("requests", "httpx", "urllib.request", "urlopen", "http.client", "cookie", "storage_state",
+                    "localstorage", "sessionstorage", "indexeddb", "password", "passwd", "token", "csrf", "/api/",
+                    ".fill(", ".type(", ".press(", "keyboard.", "captcha", "mfa", "otp", "sqlite3", "e.value"):
+            assert bad not in code, (name, bad)
     from agent.submission.future_api import PORTAL_STATUS, OfficialPortalProvider
     assert PORTAL_STATUS == "DISABLED_PENDING_OFFICIAL_PORTAL_VALIDATION"
     with pytest.raises(NotImplementedError):

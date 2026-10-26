@@ -8,11 +8,15 @@ only writer of upload / acceptance facts (agent/submission/receipt.py). A state 
   GENERATED                  a candidate D-Plan file exists                        (file in candidates/<run_id>/)
   VALIDATED                  a candidate passed schema / ticker / numeric / compliance (validation_report ok)
   READY_FOR_UPLOAD           an active FINAL exists and its sha256 still verifies  (FINAL/ + final_history)
-  UPLOADED                   a receipt says it was uploaded, no official acceptance (base SUBMITTED_UNVERIFIED)
-  ACCEPTED                   official receipt id + status accepted for the FINAL sha (base SUBMISSION_CONFIRMED)
-  REJECTED                   official receipt says rejected                        (base REJECTED)
+  FILE_UPLOADED              the file was uploaded to the official page (receipt stage file_uploaded)
+  SERVER_VALIDATED           the official 檢核結果 is explicitly PASS (stage server_validated)
+  SUBMITTED                  送出繳交 was pressed (stage submitted), no acceptance evidence yet
+  ACCEPTED                   official acceptance evidence: receipt / submission id OR verbatim history entry
+                             (receipt.has_acceptance_evidence; base SUBMISSION_CONFIRMED). Never inferred from
+                             FILE_UPLOADED / SERVER_VALIDATED / SUBMITTED alone.
+  REJECTED                   official rejection or 檢核結果 FAIL                     (base REJECTED)
   SUBMISSION_UI_UNAVAILABLE  READY_FOR_UPLOAD but config says the official upload page is unavailable
-  SUBMISSION_WINDOW_CLOSED   08:55 passed without ACCEPTED / UPLOADED / REJECTED evidence
+  SUBMISSION_WINDOW_CLOSED   08:55 passed without ACCEPTED / SUBMITTED / REJECTED evidence
 
 READY_FOR_UPLOAD is NEVER treated as ACCEPTED. A FINAL produced in dry-run / PRECOMPETITION is reported with
 uploadable = False (paper file, must not be uploaded).
@@ -26,11 +30,16 @@ from pathlib import Path
 from agent.ops.common import TPE, load_ops_config, ops_path, sha256_file, write_json, ymd
 
 NOT_GENERATED, GENERATED, VALIDATED, READY_FOR_UPLOAD = "NOT_GENERATED", "GENERATED", "VALIDATED", "READY_FOR_UPLOAD"
-UPLOADED, ACCEPTED, REJECTED = "UPLOADED", "ACCEPTED", "REJECTED"
+FILE_UPLOADED, SERVER_VALIDATED, SUBMITTED = "FILE_UPLOADED", "SERVER_VALIDATED", "SUBMITTED"
+ACCEPTED, REJECTED = "ACCEPTED", "REJECTED"
 UI_UNAVAILABLE, WINDOW_CLOSED = "SUBMISSION_UI_UNAVAILABLE", "SUBMISSION_WINDOW_CLOSED"
-STATES = (NOT_GENERATED, GENERATED, VALIDATED, READY_FOR_UPLOAD, UPLOADED, ACCEPTED, REJECTED, UI_UNAVAILABLE,
+IN_PROGRESS = (FILE_UPLOADED, SERVER_VALIDATED, SUBMITTED)
+STAGE_STATE = {"file_uploaded": FILE_UPLOADED, "server_validated": SERVER_VALIDATED, "submitted": SUBMITTED,
+               "accepted": SUBMITTED, None: FILE_UPLOADED}     # stage without acceptance evidence never = ACCEPTED
+STATES = (NOT_GENERATED, GENERATED, VALIDATED, READY_FOR_UPLOAD, FILE_UPLOADED, SERVER_VALIDATED, SUBMITTED, ACCEPTED,
+          REJECTED, UI_UNAVAILABLE,
           WINDOW_CLOSED)
-BASE_MAP = {"SUBMITTED_UNVERIFIED": UPLOADED, "SUBMISSION_CONFIRMED": ACCEPTED, "REJECTED": REJECTED}
+BASE_MAP = {"SUBMITTED_UNVERIFIED": FILE_UPLOADED, "SUBMISSION_CONFIRMED": ACCEPTED, "REJECTED": REJECTED}
 
 
 def submission_cfg(ops_cfg: dict | None = None) -> dict:
@@ -79,7 +88,8 @@ def compute(trade_date: str, now: datetime | None = None, ops_cfg: dict | None =
            "failure_reason": None, "uploadable": False, "mode": None, "ui_status": sc["ui_status"],
            "portal_url_configured": bool(sc["portal_url"]), "official_portal_provider": sc["official_portal_provider"],
            "official_receipt_format": sc.get("receipt_format", "PENDING_PORTAL_VALIDATION"),
-           "last_upload_status": None, "uploads_today": 0, "receipt_text": None, "last_upload_is_effective": None}
+           "last_upload_status": None, "uploads_today": 0, "receipt_text": None, "last_upload_is_effective": None,
+           "server_validated_at": None, "submitted_at": None, "server_validation_result": None}
     if cands:
         rec.update(state=GENERATED, generated_at=cands[-1]["generated_at"])
         rec["evidence"].append(f"{len(cands)} candidate D-Plan(s) in {day / 'candidates'}")
@@ -106,8 +116,16 @@ def compute(trade_date: str, now: datetime | None = None, ops_cfg: dict | None =
     if mapped and rec["sha256"]:                    # upload / acceptance facts only from the receipt state machine
         eff = effective_submission(receipts, trade_date) if receipts else {"effective": None, "last_upload": None}
         last = eff.get("last_upload") or (receipts[-1] if receipts else None)
-        rec.update(state=mapped, uploaded_at=(last or {}).get("submitted_at"),
-                   receipt_evidence=(last or {}).get("screenshot_reference"))
+        if mapped == FILE_UPLOADED:                 # refine by the furthest official stage with evidence
+            st = (last or {}).get("stage")
+            if st == "server_validated" and (last or {}).get("server_validation_result") != "PASS":
+                st = "file_uploaded"                     # 檢核結果 not explicitly PASS -> not SERVER_VALIDATED
+            mapped = STAGE_STATE.get(st, FILE_UPLOADED)
+        rec.update(state=mapped, uploaded_at=(last or {}).get("uploaded_at") or (last or {}).get("submitted_at"),
+                   server_validated_at=(last or {}).get("server_validated_at"),
+                   submitted_at=(last or {}).get("submitted_at") if (last or {}).get("stage") in ("submitted", "accepted") else None,
+                   server_validation_result=(last or {}).get("server_validation_result"),
+                   receipt_evidence=(last or {}).get("screenshot_reference") or (last or {}).get("evidence_files"))
         rec.update(last_upload_status=(last or {}).get("official_status"), uploads_today=eff.get("uploads"),
                    receipt_text=(last or {}).get("receipt_text"),
                    last_upload_is_effective=eff.get("last_upload_is_effective"))
@@ -115,7 +133,7 @@ def compute(trade_date: str, now: datetime | None = None, ops_cfg: dict | None =
             rec.update(accepted_at=eff["effective"].get("accepted_at") or eff["effective"].get("submitted_at"),
                        submission_id=eff["effective"].get("official_receipt_id"))
         if mapped == REJECTED:
-            rec["failure_reason"] = (last or {}).get("failure_reason") or "official receipt: rejected"
+            rec["failure_reason"] = (last or {}).get("failure_reason") or "official receipt: rejected / 檢核結果 FAIL"
         rec["evidence"].append(f"submission_state {base.get('state')} ({len(receipts)} receipt(s))")
     elif base.get("state") == "UNKNOWN":
         rec["failure_reason"] = "receipt evidence inconsistent with FINAL (base state UNKNOWN) — human must investigate"
@@ -124,7 +142,7 @@ def compute(trade_date: str, now: datetime | None = None, ops_cfg: dict | None =
         rec["evidence"].append("config submission.ui_status = UNAVAILABLE (official page has no upload function)")
     ph = SW.phase(trade_date, now, ops_cfg)
     rec["window_phase"] = ph
-    if ph == "SUBMISSION_WINDOW_CLOSED" and rec["state"] not in (ACCEPTED, UPLOADED, REJECTED):
+    if ph == "SUBMISSION_WINDOW_CLOSED" and rec["state"] not in (ACCEPTED, SUBMITTED, REJECTED):
         rec["state_before_close"] = rec["state"]
         rec["state"] = WINDOW_CLOSED
     rec["deadline_warnings"] = SW.warnings(trade_date, now, rec["state"], ops_cfg)

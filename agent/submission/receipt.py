@@ -23,6 +23,16 @@ from agent.ops.common import TPE, load_ops_config, ops_path, write_json, ymd  # 
 # the operator after logging in to the competition back office. Nothing below guesses it.
 OFFICIAL_RECEIPT_FORMAT = "PENDING_PORTAL_VALIDATION"
 
+# Observed official UI stages (Issue #4): file upload -> 檢核結果 (server validation) -> 送出繳交 (submit) -> history.
+# A record states the furthest stage it has evidence for. ACCEPTED needs official evidence: an official receipt /
+# submission id OR the verbatim history entry showing the submission as received / accepted.
+STAGES = ("file_uploaded", "server_validated", "submitted", "accepted", "rejected")
+
+
+def has_acceptance_evidence(r: dict) -> bool:
+    return (r.get("official_status") == "accepted" and r.get("stage") in (None, "submitted", "accepted")
+            and bool(r.get("official_receipt_id") or r.get("history_entry")))
+
 RECEIPT_SCHEMA = {
     "$schema": "https://json-schema.org/draft/2020-12/schema", "title": "SubmissionReceipt", "type": "object",
     "required": ["trade_date", "team_id", "dplan_sha256", "submitted_at", "submission_method", "confirmed_by"],
@@ -31,7 +41,7 @@ RECEIPT_SCHEMA = {
         "team_id": {"type": "string", "minLength": 1},
         "dplan_sha256": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
         "submitted_at": {"type": "string"},
-        "submission_method": {"enum": ["manual_web", "manual_email", "official_api", "other"]},
+        "submission_method": {"enum": ["manual_web", "manual_email", "official_api", "browser_automation", "other"]},
         "official_receipt_id": {"type": ["string", "null"]},
         "official_status": {"enum": ["accepted", "rejected", "pending", "unknown"]},
         "screenshot_reference": {"type": ["string", "null"]},
@@ -42,6 +52,11 @@ RECEIPT_SCHEMA = {
         "evidence_files": {"type": "array", "items": {"type": "string"}},   # screenshots / downloaded receipts
         "filename": {"type": ["string", "null"]},             # file name as uploaded / shown by the portal
         "receipt_text": {"type": ["string", "null"]},         # verbatim official message (copied by the operator)
+        "stage": {"enum": list(STAGES) + [None]},             # furthest official UI stage with evidence
+        "server_validation_result": {"enum": ["PASS", "FAIL", "UNKNOWN", None]},   # official 檢核結果
+        "uploaded_at": {"type": ["string", "null"]},
+        "server_validated_at": {"type": ["string", "null"]},
+        "history_entry": {"type": ["string", "null"]},        # verbatim official history row (acceptance evidence)
     },
     "additionalProperties": False,
 }
@@ -64,6 +79,11 @@ class Receipt:
     evidence_files: list = field(default_factory=list)
     filename: str | None = None
     receipt_text: str | None = None
+    stage: str | None = None
+    server_validation_result: str | None = None
+    uploaded_at: str | None = None
+    server_validated_at: str | None = None
+    history_entry: str | None = None
 
     def validate(self) -> list[str]:
         import jsonschema
@@ -98,9 +118,10 @@ def effective_submission(receipts: list[dict], trade_date: str, max_daily: int =
     cut = cutoff_for(trade_date)
     on_time = [r for r in receipts if r.get("trade_date") == trade_date
                and datetime.fromisoformat(r["submitted_at"]) <= cut]
-    ok = sorted((r for r in on_time if r.get("official_status") == "accepted"),
-                key=lambda r: datetime.fromisoformat(r["submitted_at"]))
-    last_upload = max(on_time, key=lambda r: datetime.fromisoformat(r["submitted_at"]), default=None)
+    order = {id(r): i for i, r in enumerate(on_time)}       # equal timestamps: the later record wins
+    key = lambda r: (datetime.fromisoformat(r["submitted_at"]), order[id(r)])  # noqa: E731
+    ok = sorted((r for r in on_time if has_acceptance_evidence(r)), key=key)   # evidence-backed acceptances only
+    last_upload = max(on_time, key=key, default=None)
     return {"effective": ok[-1] if ok else None, "last_upload": last_upload,
             "last_upload_is_effective": bool(ok) and last_upload is ok[-1],
             "uploads": len(on_time), "max_daily": max_daily, "limit_reached": len(on_time) >= max_daily,
@@ -129,10 +150,15 @@ def main(argv=None) -> int:
     ap.add_argument("--evidence", action="append", default=[], help="evidence file (repeatable)")
     ap.add_argument("--filename", default=None, help="file name as shown by the portal")
     ap.add_argument("--receipt-text", default=None, help="verbatim official response text")
+    ap.add_argument("--stage", default=None, choices=list(STAGES), help="furthest official UI stage reached")
+    ap.add_argument("--server-validation-result", default=None, choices=["PASS", "FAIL", "UNKNOWN"],
+                    help="official 檢核結果")
+    ap.add_argument("--history-entry", default=None, help="verbatim official history row (acceptance evidence)")
     a = ap.parse_args(argv)
     r = Receipt(a.date, a.team_id, a.sha256, a.submitted_at or datetime.now(TPE).isoformat(), a.method,
                 a.confirmed_by, a.receipt_id, a.official_status, a.screenshot, a.notes, a.accepted_at,
-                a.failure_reason, list(a.evidence), a.filename, a.receipt_text)
+                a.failure_reason, list(a.evidence), a.filename, a.receipt_text, stage=a.stage,
+                server_validation_result=a.server_validation_result, history_entry=a.history_entry)
     st = record_receipt(r)
     print(f"SUBMISSION STATE {a.date}: {st['state']}  ({st.get('reason', '')})")
     return 0 if st["state"] in ("SUBMISSION_CONFIRMED", "SUBMITTED_UNVERIFIED") else 2

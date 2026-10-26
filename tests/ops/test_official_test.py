@@ -73,10 +73,10 @@ def test_last_upload_vs_last_successful_submission():
 # ---------------------------------------------------------------- official -> internal mapping
 @pytest.mark.parametrize("result,sid,conf,state", [
     ("accepted", "S-1", False, "ACCEPTED"),
-    ("accepted", None, True, "ACCEPTED"),
-    ("accepted", None, False, "UPLOADED"),           # "upload completed" wording alone is not acceptance
-    ("pending", None, False, "UPLOADED"),
-    ("unknown", None, False, "UPLOADED"),
+    ("accepted", None, True, "SUBMITTED"),           # Issue #4: operator confirmation alone is NOT evidence
+    ("accepted", None, False, "SUBMITTED"),          # "upload completed" wording alone is not acceptance
+    ("pending", None, False, "FILE_UPLOADED"),
+    ("unknown", None, False, "FILE_UPLOADED"),
     ("rejected", None, False, "REJECTED"),
     ("ui_unavailable", None, False, "SUBMISSION_UI_UNAVAILABLE"),
 ])
@@ -84,11 +84,12 @@ def test_official_result_mapping(result, sid, conf, state):
     assert OT.map_official_result(result, sid, conf)["state"] == state
 
 
-def test_receipt_format_pending_and_ui_login_required():
+def test_receipt_format_pending_and_portal_bound():
     assert OFFICIAL_RECEIPT_FORMAT == "PENDING_PORTAL_VALIDATION"
     sub = load_ops_config()["submission"]
-    assert sub["receipt_format"] == "PENDING_PORTAL_VALIDATION" and sub["ui_status"] == "LOGIN_REQUIRED"
-    assert sub["portal_url"] is None and sub["official_portal_provider"] == "DISABLED_PENDING_OFFICIAL_PORTAL_VALIDATION"
+    assert sub["receipt_format"] == "PENDING_PORTAL_VALIDATION" and sub["ui_status"] == "AVAILABLE"   # Issue #4
+    assert sub["portal_url"] == "https://fundaiagent.esun-ai-challenge.tw/docs"
+    assert sub["official_portal_provider"] == "DISABLED_PENDING_OFFICIAL_PORTAL_VALIDATION"
 
 
 # ---------------------------------------------------------------- test-period evidence (isolated)
@@ -122,7 +123,7 @@ def test_package_ready_only_with_matching_official_team(fixture_store, test_cfg)
     assert p["status"] == "READY_FOR_MANUAL_TEST_UPLOAD", p["problems"]
     assert p["final"]["filename"] == f"D-Plan_TEAM_042_{T1}.json" and p["submission_status"] == "READY_FOR_UPLOAD"
     r = OT.record_upload(T1, p["final"]["sha256"], "accepted", "Upload completed", "op", ops_cfg=cfg)
-    assert r["sha256_matches_package"] is True and r["mapped_internal_state"] == "UPLOADED"   # no id -> not ACCEPTED
+    assert r["sha256_matches_package"] is True and r["mapped_internal_state"] == "SUBMITTED"   # no id -> not ACCEPTED
 
 
 def test_datapack_inventory_is_read_only(test_cfg):

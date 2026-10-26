@@ -20,7 +20,8 @@ from datetime import datetime, timedelta
 from agent.ops.common import TPE
 
 DEFAULTS = {"decision_cutoff": "08:30", "warn_0800": "08:00", "high_warn_0815": "08:15", "critical_warn_0845": "08:45"}
-READY_OR_BETTER = {"READY_FOR_UPLOAD", "SUBMISSION_UI_UNAVAILABLE", "UPLOADED", "ACCEPTED"}
+READY_OR_BETTER = {"READY_FOR_UPLOAD", "SUBMISSION_UI_UNAVAILABLE", "FILE_UPLOADED", "SERVER_VALIDATED", "SUBMITTED",
+                   "ACCEPTED"}
 
 
 def _hm(s: str) -> tuple[int, int]:

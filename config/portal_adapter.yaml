@@ -1,0 +1,137 @@
+# Official portal UI adapter (Issue #4) — the ONLY place for selectors and official wording.
+# Core workflow code never hard-codes portal DOM or text. After the REAL_E2E only this file is updated.
+#
+# status values:
+#   CONFIRMED_REAL_E2E          observed on the real logged-in page (read-only discovery or real E2E); usable for actions
+#   CONFIRMED_PUBLIC_BUNDLE     present in the portal's public frontend code (route labels / error texts)
+#   OWNER_OBSERVED_LABEL        visible label the Owner saw on the logged-in page; DOM structure unconfirmed
+#   GENERIC_CANDIDATE           standard element (e.g. input[type=file]); identity must be confirmed
+#   PENDING_WINDOW_ONLY         only exists while a submission window is open / after an upload or submit -> no
+#                               strategy until observed in the real window, never guessed
+#   PENDING_REAL_E2E_SELECTOR   visible after login but not captured yet -> no strategy, never guessed
+#   PENDING_REAL_E2E_WORDING    official wording not seen yet -> never matched
+# Strategy order (portal_driver tries in this order): role -> label -> accessible name -> stable visible text ->
+# stable data-* / id -> CSS fallback. The first strategy is the primary, the rest are fallbacks. No absolute XPath, no
+# nth-child-only selectors, no pixel / screen coordinates, no layout dependency.
+# Every entry records `source` (evidence) and `confidence` (HIGH / MEDIUM / LOW / NONE).
+# Action policy: upload / submit need CONFIRMED_REAL_E2E in COMPETITION; in --official-test (sealed test) they may use
+# OWNER_OBSERVED_LABEL / GENERIC_CANDIDATE. PENDING_* entries can never be used for anything -> fail closed.
+
+version: 3
+portal_url: "https://fundaiagent.esun-ai-challenge.tw/docs"
+login_path_fragment: "/login"            # CONFIRMED_PUBLIC_BUNDLE: router path of 參賽者登入
+login_url_markers: ["/login"]            # CONFIRMED_REAL_E2E: the login FORM (esun-ai-challenge.tw/login, Email / 密碼;
+                                         # never filled) = logged out
+sso_hop_markers: ["/sso"]                # CONFIRMED_REAL_E2E: SSO hop passed by BOTH logged-out and logged-in sessions
+                                         # (2026-10-23) -> in transit, never "logged out" by itself
+discovery_anchors: ["ETF 投資策略說明文件", "每日上傳（D-Plan）", "檢核結果", "歷史繳交紀錄", "本次繳交對應交易日",
+                    "TEAM_11442"]       # read-only structure capture around these visible texts
+
+selectors:
+  nav_docs_link:
+    status: CONFIRMED_REAL_E2E
+    strategies: [{by: role, role: link, name: "文件繳交"}, {by: text, text: "文件繳交"}]
+    source: "public bundle route label (2026-10-22); link role confirmed by logged-in read-only discovery 2026-10-23 20:44 (data/portal_discovery/20261023_202917, local)"
+    confidence: HIGH
+  login_required_marker:
+    status: CONFIRMED_PUBLIC_BUNDLE
+    strategies: [{by: text, text: "參賽者登入"}]
+    source: "public frontend bundle (2026-10-22)"
+    confidence: HIGH
+  no_window_marker:
+    status: CONFIRMED_REAL_E2E
+    strategies: [{by: text_regex, pattern: "目前沒有開放中的繳交窗口"}, {by: text, text: "目前不在繳交時間內"}]
+    source: "logged-in read-only discovery 2026-10-23 20:44 (data/portal_discovery/20261023_202917, local): 「本次繳交對應交易日 — · 目前沒有開放中的繳交窗口」 (fallback: public bundle error text)"
+    confidence: HIGH
+  dplan_file_input:
+    status: CONFIRMED_REAL_E2E
+    strategies: [{by: css, css: "input[type=\"file\"][accept*=\"json\"]"}]
+    source: "logged-in read-only discovery 2026-10-23 20:44 (data/portal_discovery/20261023_202917, local): two file inputs, accept=\".json,application/json\" (D-Plan) and \".pdf,application/pdf\" (strategy document)"
+    confidence: HIGH
+  validation_result_panel:
+    status: CONFIRMED_REAL_E2E
+    strategies: [{by: anchor_ancestor, text: "檢核結果", levels: 2}, {by: text, text: "檢核結果", exact: true}]
+    source: "logged-in read-only discovery 2026-10-23 20:44 (data/portal_discovery/20261023_202917, local): section 「檢核結果 / 待上傳 / 尚未上傳 · 上傳後於此顯示檢核結果」"
+    confidence: HIGH
+  submit_button:
+    status: OWNER_OBSERVED_LABEL
+    strategies: [{by: role, role: button, name: "送出繳交"}, {by: text, text: "送出繳交"}]
+    source: "Owner observation (Issue #4). rehearsal upload probe 2026-10-23 23:28 (minimal test JSON; data/official_test_runs/20261027_rehearsal/probe/20261023_232824, local): the submit slot is a <button> 「試繳期間不收件」 with the HTML disabled attribute before AND after the instant check; no 送出繳交 control exists in the DOM (hidden or visible) during the rehearsal. logged-in read-only discovery 2026-10-23 20:44 (data/portal_discovery/20261023_202917, local): during the rehearsal the button reads 「試繳期間不收件」; the 送出繳交 label itself appears only in an official window"
+    confidence: MEDIUM
+  submission_history_table:
+    status: CONFIRMED_REAL_E2E
+    strategies: [{by: role, role: table}, {by: text, text: "歷史繳交紀錄"}]
+    source: "logged-in read-only discovery 2026-10-23 20:44 (data/portal_discovery/20261023_202917, local): heading 歷史繳交紀錄 + one table, headers 交易日 / 日期 / 每日上傳 JSON / 繳交時間 / 回看"
+    confidence: HIGH
+  datapack_download:
+    status: CONFIRMED_REAL_E2E
+    strategies: [{by: role, role: button, name: "下載資料包"}, {by: text, text: "下載資料包"}]
+    source: "logged-in read-only discovery 2026-10-23 20:44 (data/portal_discovery/20261023_202917, local): button 下載資料包 (not clicked)"
+    confidence: HIGH
+  upload_area:
+    status: CONFIRMED_REAL_E2E
+    strategies: [{by: text, text: "拖曳檔案至此，或點擊上傳", exact: true}]
+    source: "logged-in read-only discovery 2026-10-23 20:44 (data/portal_discovery/20261023_202917, local): D-Plan drop zone 「拖曳檔案至此，或點擊上傳 / 僅限 JSON · 2 MB 以內 · 一次一個檔案」 (the PDF zone reads 「拖曳 PDF 至此…」)"
+    confidence: HIGH
+  upload_button:
+    status: PENDING_WINDOW_ONLY
+    strategies: []
+    source: "rehearsal upload probe 2026-10-23 23:28 (minimal test JSON; data/official_test_runs/20261027_rehearsal/probe/20261023_232824, local): selecting the JSON in the file input starts the official instant check by itself (no button click needed). logged-in read-only discovery 2026-10-23 20:44 (data/portal_discovery/20261023_202917, local): during the rehearsal the D-Plan button reads 「上傳試繳檔案」; the official-window label is not visible yet"
+    confidence: NONE
+  history_rows:
+    status: CONFIRMED_REAL_E2E
+    strategies: [{by: css, css: "table:has(th:has-text(\"每日上傳 JSON\")) tbody tr"}]
+    source: "logged-in read-only discovery 2026-10-23 20:44 (data/portal_discovery/20261023_202917, local): tbody rows of the history table; the empty-state row 「賽程尚未開始，目前沒有繳交紀錄。」 is skipped (wording history_empty). Row content of a real submission: PENDING_WINDOW_ONLY"
+    confidence: MEDIUM
+  trade_date:
+    status: CONFIRMED_REAL_E2E
+    strategies: [{by: text_regex, pattern: "本次繳交對應交易日"}]
+    source: "logged-in read-only discovery 2026-10-23 20:44 (data/portal_discovery/20261023_202917, local): 「本次繳交對應交易日 — · 目前沒有開放中的繳交窗口」 (no window -> no date; parse_trade_date)"
+    confidence: MEDIUM
+  team_id:
+    status: CONFIRMED_REAL_E2E
+    strategies: [{by: text_regex, pattern: "^TEAM_\\d+$"}]
+    source: "logged-in read-only discovery 2026-10-23 20:44 (data/portal_discovery/20261023_202917, local): header shows 「TEAM_11442」"
+    confidence: HIGH
+  attempt_count:
+    status: CONFIRMED_REAL_E2E
+    strategies: [{by: text_regex, pattern: "今日已繳交\\s*\\d+\\s*/\\s*\\d+\\s*次"}]
+    source: "logged-in read-only discovery 2026-10-23 20:44 (data/portal_discovery/20261023_202917, local): 「今日已繳交 0 / 25 次」 = used / daily limit (parse_attempts)"
+    confidence: HIGH
+  strategy_document_status:
+    status: CONFIRMED_REAL_E2E
+    strategies: [{by: anchor_ancestor, text: "ETF 投資策略說明文件", levels: 1}]
+    source: "logged-in read-only discovery 2026-10-23 20:48 (data/portal_discovery/20261023_204847, local): the heading's parent reads 「ETF 投資策略說明文件 / 未繳交」; status parsed with wording strategy_doc_status_values"
+    confidence: MEDIUM
+  server_validation_pass_marker: {status: PENDING_WINDOW_ONLY, strategies: [], source: "appears only after an upload in an open window", confidence: NONE}
+  server_validation_fail_marker:
+    status: CONFIRMED_REAL_E2E
+    strategies: [{by: text, text: "文件檢查未通過"}]
+    source: "rehearsal upload probe 2026-10-23 23:28 (minimal test JSON; data/official_test_runs/20261027_rehearsal/probe/20261023_232824, local): 「文件檢查未通過 / 缺少下列項目：… / 請修正後重新上傳；本次未存檔，也不計入當日繳交次數。」"
+    confidence: HIGH
+  submit_confirmation_modal: {status: PENDING_WINDOW_ONLY, strategies: [], source: "appears only after pressing 送出繳交", confidence: NONE}
+  submit_confirm_button:     {status: PENDING_WINDOW_ONLY, strategies: [], source: "appears only after pressing 送出繳交", confidence: NONE}
+  accepted_history_marker:   {status: PENDING_WINDOW_ONLY, strategies: [], source: "needs an accepted submission", confidence: NONE}
+  rejected_marker:           {status: PENDING_WINDOW_ONLY, strategies: [], source: "needs a rejected submission", confidence: NONE}
+
+wording:
+  # official texts; markers are matched verbatim (substring), never fuzzily
+  window_closed:     {status: CONFIRMED_PUBLIC_BUNDLE, markers: ["目前不在繳交時間內，本次未送出。"], source: "public bundle", confidence: HIGH}
+  rehearsal_closed:  {status: CONFIRMED_PUBLIC_BUNDLE, markers: ["目前不在開賽前試繳期間內，檢核未執行。"], source: "public bundle", confidence: HIGH}
+  attempt_limit:     {status: CONFIRMED_PUBLIC_BUNDLE, markers: ["今日繳交次數已用盡，已收件的版本不受影響。"], source: "public bundle", confidence: HIGH}
+  auth_loop:         {status: CONFIRMED_PUBLIC_BUNDLE, markers: ["登入後仍無法通過驗證，請聯繫主辦單位。"], source: "public bundle", confidence: HIGH}
+  file_too_large:    {status: CONFIRMED_PUBLIC_BUNDLE, markers: ["檔案超過大小上限，請縮小後重新上傳。"], source: "public bundle", confidence: HIGH}
+  validation_pass:   {status: PENDING_WINDOW_ONLY, markers: [], source: "needs a file that passes the instant check (impossible before the window: C6)", confidence: NONE}
+  validation_fail:   {status: CONFIRMED_REAL_E2E, markers: ["文件檢查未通過"], source: "rehearsal upload probe 2026-10-23 23:28 (minimal test JSON; data/official_test_runs/20261027_rehearsal/probe/20261023_232824, local)", confidence: HIGH}
+  submit_success:    {status: PENDING_WINDOW_ONLY, markers: [], source: "shown only after a submit", confidence: NONE}
+  history_accepted:  {status: PENDING_WINDOW_ONLY, markers: [], source: "needs an accepted history row", confidence: NONE}
+  history_rejected:  {status: PENDING_WINDOW_ONLY, markers: [], source: "needs a rejected history row", confidence: NONE}
+  known_modals:      {status: PENDING_REAL_E2E_WORDING, markers: [], source: "no modal on the logged-in page (2026-10-23)", confidence: NONE}   # any modal -> UNEXPECTED_MODAL
+  no_open_window:    {status: CONFIRMED_REAL_E2E, markers: ["目前沒有開放中的繳交窗口"], source: "logged-in read-only discovery 2026-10-23 20:44 (data/portal_discovery/20261023_202917, local)", confidence: HIGH}
+  rehearsal_open:    {status: CONFIRMED_REAL_E2E, markers: ["開賽前試繳", "試繳期間不收件"], source: "logged-in read-only discovery 2026-10-23 20:44 (data/portal_discovery/20261023_202917, local): 「開賽前試繳 · 2026-10-23 20:30 至 2026-10-26 00:00」", confidence: HIGH}
+  history_empty:     {status: CONFIRMED_REAL_E2E, markers: ["目前沒有繳交紀錄"], source: "logged-in read-only discovery 2026-10-23 20:44 (data/portal_discovery/20261023_202917, local): 「賽程尚未開始，目前沒有繳交紀錄。」", confidence: HIGH}
+  validation_not_uploaded: {status: CONFIRMED_REAL_E2E, markers: ["尚未上傳 · 上傳後於此顯示檢核結果"], source: "logged-in read-only discovery 2026-10-23 20:44 (data/portal_discovery/20261023_202917, local)", confidence: HIGH}
+  strategy_doc_status_values: {status: CONFIRMED_REAL_E2E, markers: ["未繳交", "已繳交"], source: "「未繳交」 logged-in read-only discovery 2026-10-23 20:44; 「已繳交」 after the Owner-authorized PDF upload 2026-10-24 13:18 and the read-only re-check 16:05 (local evidence); any other status text -> None (never guessed)", confidence: HIGH}
+  validation_pending: {status: CONFIRMED_REAL_E2E, markers: ["待上傳", "尚未上傳 · 上傳後於此顯示檢核結果"], source: "rehearsal upload probe 2026-10-23 23:28 (minimal test JSON; data/official_test_runs/20261027_rehearsal/probe/20261023_232824, local)", confidence: HIGH}
+  instant_check_note: {status: CONFIRMED_REAL_E2E, markers: ["上傳即時檢查要項 · 送出後回報收件檢核"], source: "rehearsal upload probe 2026-10-23 23:28 (minimal test JSON; data/official_test_runs/20261027_rehearsal/probe/20261023_232824, local): the instant check runs on upload; the receipt check is reported only after 送出", confidence: HIGH}
+  rehearsal_not_collected: {status: CONFIRMED_REAL_E2E, markers: ["目前為開賽前試繳：只檢核、不收件，正式繳交窗口開啟後才能送出。", "本次未存檔，也不計入當日繳交次數。"], source: "rehearsal upload probe 2026-10-23 23:28 (minimal test JSON; data/official_test_runs/20261027_rehearsal/probe/20261023_232824, local)", confidence: HIGH}
