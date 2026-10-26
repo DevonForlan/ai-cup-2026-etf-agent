@@ -26,9 +26,13 @@ def isolated_logs(monkeypatch, tmp_path):
 def test_failure_is_never_silent(monkeypatch, isolated_logs):
     _, tmp = isolated_logs
     monkeypatch.setattr(V, "git_checks", lambda: (_ for _ in ()).throw(RuntimeError("git unavailable")))
+    monkeypatch.setattr(V, "task_checks", lambda: [V._check("task_1930_exists", True, "ok")])
+    monkeypatch.setattr(V, "preflight_checks", lambda: ([V._check("competition_preflight_no_blocked", True, "ok")], {}))
     r = V.verify(dry_run=True)
     assert r["RUN_MODE_SWITCH_STATUS"] == "FAIL" and r["MANUAL_ACTION_REQUIRED"] == "YES"
     assert any("git unavailable" in x for x in r["failure_reasons"])
+    names = {c["check"] for c in r["checks"]}                  # later sections still ran
+    assert {"task_1930_exists", "competition_preflight_no_blocked", "run_mode_competition"} <= names
     assert (tmp / "ops" / "day1" / "latest.json").exists() and (tmp / "ops" / "day1" / "verify.jsonl").exists()
 
 

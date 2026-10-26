@@ -91,7 +91,7 @@ def task_checks() -> list[dict]:
           "Get-ScheduledTaskInfo; [pscustomobject]@{State=[string]$t.State; StartWhenAvailable=$t.Settings.StartWhenAvailable;"
           " WakeToRun=$t.Settings.WakeToRun; Next=[string]$i.NextRunTime; Trigger=($t.Triggers | ForEach-Object {$_.StartBoundary})"
           " -join ','} | ConvertTo-Json -Compress }")
-    r = subprocess.run(["powershell", "-NoProfile", "-Command", ps], capture_output=True, text=True, timeout=60)
+    r = subprocess.run(["powershell", "-NoProfile", "-Command", ps], capture_output=True, text=True, timeout=300)
     if not r.stdout.strip():
         return [_check("task_1930_exists", False, f"{TASK_1930} not found ({r.stderr.strip()[:120]})")]
     t = json.loads(r.stdout)
@@ -128,17 +128,23 @@ def verify(dry_run: bool = False) -> dict:
     now = datetime.now(TPE)
     rec = {"tool": "day1_verify", "read_only": True, "dry_run": dry_run, "checked_at": now.replace(microsecond=0).isoformat(),
            "DAY1_TARGET_TRADE_DATE": DAY1, "PREVIOUS_TRADING_DAY_EXPECTED": EXPECTED_PREV, "checks": [], "warnings": []}
+    ops = None
     try:
         ops = load_ops_config()
-        rec["checks"] += git_checks()
-        rec["checks"] += config_checks(ops)
-        rec["checks"] += task_checks()
-        pf, info = preflight_checks()
-        rec["checks"] += pf
-        rec.update(info)
-    except Exception as e:  # noqa: BLE001 - never silent: any error is a FAIL with the reason
-        rec["checks"].append(_check("verification_error", False, f"{type(e).__name__}: {e}"))
-        rec["traceback"] = traceback.format_exc()[-2000:]
+    except Exception as e:  # noqa: BLE001
+        rec["checks"].append(_check("config_load", False, f"{type(e).__name__}: {e}"))
+    sections = [("git", git_checks), ("config", lambda: config_checks(ops)), ("tasks", task_checks),
+                ("preflight", preflight_checks)]
+    for name, fn in sections:          # each section independently: one failure never hides the others
+        try:
+            res = fn()
+            if name == "preflight":
+                res, info = res
+                rec.update(info)
+            rec["checks"] += res
+        except Exception as e:  # noqa: BLE001 - never silent: an error is a FAIL with the reason
+            rec["checks"].append(_check(f"{name}_error", False, f"{type(e).__name__}: {str(e)[:300]}"))
+            rec.setdefault("tracebacks", {})[name] = traceback.format_exc()[-1500:]
     failed = [c for c in rec["checks"] if c["status"] != "PASS"]
     ok = not failed
     by = {c["check"]: c for c in rec["checks"]}
