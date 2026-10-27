@@ -128,7 +128,8 @@ def test_team_portal_bound_and_auto_upload_disabled():
     assert ops["team"]["competition_team_id"] == TEAM
     assert ops["submission"]["portal_url"] == "https://fundaiagent.esun-ai-challenge.tw/docs"
     assert ops["submission"]["ui_status"] == "AVAILABLE" and ops["submission"]["max_upload_bytes"] == 2097152
-    assert ops["auto_upload"]["enabled"] is False                                       # disabled pending REAL_E2E
+    # Owner Decision 2026-10-27 (Issue #20): enabled after the Day-1 manual E2E reached SUBMISSION_CONFIRMED
+    assert ops["auto_upload"]["enabled"] is True and ops["auto_upload"]["method"] == "browser"
 
 
 def test_adapter_unconfirmed_entries_are_pending_and_never_guessed():
@@ -148,8 +149,10 @@ def test_adapter_unconfirmed_entries_are_pending_and_never_guessed():
     assert "Issue #20" in PD.load_adapter()["selectors"]["submit_button"]["confirmed"]
     assert not inv["submit_confirm_button"]["usable_for_action_competition"]
     a = PD.load_adapter()
-    for w in ("validation_pass", "history_accepted", "submit_success"):           # validation_fail: confirmed 10-23
-        assert a["wording"][w]["status"] in PD.PENDING and PD.wording_markers(a, w) == []
+    assert a["wording"]["history_accepted"]["status"] in PD.PENDING and PD.wording_markers(a, "history_accepted") == []
+    # Issue #20 live observation 2026-10-27 21:04: validation_pass / submit_success confirmed from the real submit
+    for w in ("validation_pass", "submit_success"):
+        assert a["wording"][w]["status"] == "CONFIRMED_REAL_E2E" and "_observe" in a["wording"][w]["source"], w
     for st in a["selectors"].values():                                                 # no xpath / nth-child selectors
         for s in st.get("strategies") or []:
             assert "xpath" not in json.dumps(s).lower() and "nth-child" not in json.dumps(s)
@@ -577,7 +580,9 @@ def test_e2e_prereq_does_not_enable_auto_upload(cfg, monkeypatch, tmp_path):
     off = dict(cfg, auto_upload=dict(cfg["auto_upload"], enabled=False))
     o, _ = go(cand(tmp_path), FakePortal(), off, e2e=AU.manual_e2e_completed(off))
     assert o.status == "FAIL_CLOSED" and "AUTO_UPLOAD_DISABLED" in o.reason and "MANUAL_E2E" not in o.reason
-    assert load_ops_config()["auto_upload"]["enabled"] is False
+    # the switch itself is an explicit Owner decision recorded next to it (Issue #20), never set by the prerequisite
+    assert "Owner Decision 2026-10-27 (Issue #20)" in (Path(__file__).resolve().parents[2] / "config" /
+                                                       "ops.yaml").read_text(encoding="utf-8")
 
 
 # ---------------------------------------------------------------- pre-E2E finalization (gate, resume, audit, signals)
@@ -633,7 +638,10 @@ def test_execute_stage_signals_audit_and_fallback_fields(cfg, tmp_path, monkeypa
                    driver_factory=lambda o, t: drv)
     assert r["outcome"]["status"] == "SUBMITTED_UNVERIFIED"
     names = [s["signal"] for s in signals.read(T1, cfg)]
-    for sig in ("AUTO_UPLOAD_RUNNING", "FILE_UPLOADED", "SERVER_VALIDATED", "SUBMITTED", "MANUAL_UPLOAD_REQUIRED"):
+    # Owner Decision 2026-10-27 (best effort): an unverified submit is not an Owner action -> no MANUAL_UPLOAD_REQUIRED
+    # signal, the instructions file is still written (r["manual"]) and SUBMISSION_BEST_EFFORT_FAILED is raised instead
+    assert r["owner_action_required"] is False and "MANUAL_UPLOAD_REQUIRED" not in names
+    for sig in ("AUTO_UPLOAD_RUNNING", "FILE_UPLOADED", "SERVER_VALIDATED", "SUBMITTED", "SUBMISSION_BEST_EFFORT_FAILED"):
         assert sig in names, sig
     rows = [json.loads(x) for x in (AU.evidence_dir(T1, cfg) / "audit.jsonl").read_text(encoding="utf-8").splitlines()]
     assert rows[0]["file_uploaded_at"] and rows[1]["server_validated_at"] and rows[2]["submitted_at"]
@@ -778,8 +786,10 @@ def test_observed_page_texts_parse_exactly():
     assert PD.parse_doc_status("ETF 投資策略說明文件\n處理中", a) is None                      # unseen status: not guessed
     assert PD.wording_markers(a, "no_open_window") == ["目前沒有開放中的繳交窗口"]
     assert "目前沒有繳交紀錄" in PD.wording_markers(a, "history_empty")
-    for w in ("validation_pass", "submit_success", "history_accepted", "history_rejected"):
+    for w in ("history_accepted", "history_rejected"):
         assert a["wording"][w]["status"] == "PENDING_WINDOW_ONLY" and PD.wording_markers(a, w) == []
+    assert PD.wording_markers(a, "validation_pass") == ["檢核通過，待送出"]          # Issue #20, real submit 2026-10-27
+    assert PD.wording_markers(a, "submit_success") == ["已收件"]
 
 
 def test_real_rehearsal_validation_texts_classify_safely():
