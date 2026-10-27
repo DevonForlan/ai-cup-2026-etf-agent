@@ -30,6 +30,8 @@ logs/wake_test/
 logs/evaluation/
 data/paper_ledger/
 data/official_datapack/*.json
+data/official_datapack/.incoming/
+data/official_datapack/provenance/
 data/research/
 data/official_test_receipts/*
 !data/official_test_receipts/README.md
