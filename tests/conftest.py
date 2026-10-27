@@ -78,6 +78,7 @@ def _no_real_portal(monkeypatch):
     import agent.ops.scheduled_run as S
     import agent.submission.auto_upload as AU
     monkeypatch.setattr(S, "_acquire_datapack", lambda *a, **k: None)
+    monkeypatch.setattr(S, "_ensure_internal_settlement", lambda *a, **k: "SKIPPED_IN_TESTS")
 
     def _refuse(*a, **k):
         raise RuntimeError("real portal driver is forbidden in tests")

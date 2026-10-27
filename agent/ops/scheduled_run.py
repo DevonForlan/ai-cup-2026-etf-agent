@@ -594,6 +594,8 @@ def competition_preparation(mode: str, trade_date: str, team: str, log: RunLog, 
         g = datapack_gate(trade_date, team, provider=provider, initial=initial, ops_cfg=ops_cfg)
         if g["status"] != "PASS" and provider is None:    # Issue #23: fetch it through the confirmed portal UI
             g = _acquire_datapack(trade_date, team, initial, log, ops_cfg) or g
+        if g["status"] == "PASS" and provider is None and not initial:
+            _ensure_internal_settlement(g.get("settlement_date"), log, ops_cfg)
         out.update(label="COMPETITION", datapack_status=g["status"] if g["status"] != "PASS" else
                    f"PASS ({g['freshness']})", datapack_date=g["settlement_date"], datapack_source="ManualFileProvider",
                    datapack_file=g["file"], cd_mode="competition",
@@ -633,6 +635,29 @@ def _acquire_datapack(trade_date: str, team: str, initial: bool, log: RunLog, op
     if r.get("status") not in ("INSTALLED", "ALREADY_PRESENT"):
         return None
     return datapack_gate(trade_date, team, initial=initial, ops_cfg=ops_cfg)
+
+
+def _ensure_internal_settlement(prev_date: str | None, log: RunLog, ops_cfg: dict | None, settler=None) -> str:
+    """Issue #23: runbook step 'T ~15:30 internal settlement of T' (agent/ops/settle_internal.py) had no scheduled
+    owner in COMPETITION mode, so the next run always blocked on settlement_reconciled. Produce the internal
+    settlement of the DataPack's as_of day if it is missing (never overwritten). Reconciliation itself is unchanged:
+    competition_day still compares it with the official DataPack and a BLOCK still needs a human."""
+    from agent.ops.settlement import path_for
+    if not prev_date:
+        return "SKIPPED"
+    if path_for(prev_date, "internal", ops_cfg).exists():
+        log.w("INTERNAL_SETTLEMENT", f"{prev_date} present")
+        return "PRESENT"
+    try:
+        if settler is None:
+            from agent.ops.settle_internal import settle_day
+            settler = settle_day
+        s = settler(prev_date, ops_cfg=ops_cfg or load_ops_config())
+        log.w("INTERNAL_SETTLEMENT", f"{prev_date} CREATED nav={s.nav} holdings={len(s.holdings)}")
+        return "CREATED"
+    except Exception as e:  # noqa: BLE001 - no settlement -> competition_day blocks exactly as before
+        log.w("INTERNAL_SETTLEMENT", f"{prev_date} FAILED {type(e).__name__}: {str(e)[:200]}")
+        return "FAILED"
 
 
 def backfill_gaps(trade_date: str, log: RunLog) -> list[str]:

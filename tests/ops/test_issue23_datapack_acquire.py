@@ -15,6 +15,7 @@ from agent.ops.common import load_ops_config
 from agent.submission import portal_driver as PD
 
 REAL_HOOK = S._acquire_datapack                      # the conftest guard replaces it per test; restored on demand
+REAL_SETTLE = S._ensure_internal_settlement
 FX = Path(__file__).resolve().parents[1] / "fixtures" / "datapack"
 VALID = "official_example_3_1_valid_TEAM_042_2026-10-28.json"
 STALE = "synthetic_stale_TEAM_042.json"
@@ -167,3 +168,42 @@ def test_guard_no_test_reaches_the_real_portal():
     assert S._acquire_datapack("2026-10-28", "TEAM_042", False, None, None) is None
     with pytest.raises(RuntimeError, match="forbidden in tests"):
         AU._default_driver({}, False)
+
+
+# ---------------------------------------------------------------- internal settlement of T-1 (runbook step 7)
+class _Log:
+    def __init__(self):
+        self.lines = []
+
+    def w(self, k, v):
+        self.lines.append(f"{k} {v}")
+
+
+def _settle_cfg(tmp_path):
+    c = copy.deepcopy(load_ops_config())
+    c["paths"] = dict(c["paths"], settlement_dir=str(tmp_path / "settlement"))
+    return c
+
+
+def test_internal_settlement_created_only_when_missing(tmp_path):
+    from types import SimpleNamespace
+    c, log, calls = _settle_cfg(tmp_path), _Log(), []
+
+    def settler(d, ops_cfg):
+        calls.append(d)
+        p = Path(ops_cfg["paths"]["settlement_dir"]) / "20261028_internal.json"
+        p.parent.mkdir(parents=True, exist_ok=True)
+        p.write_text("{}", encoding="utf-8")
+        return SimpleNamespace(nav=1, holdings={})
+    assert REAL_SETTLE("2026-10-28", log, c, settler=settler) == "CREATED" and calls == ["2026-10-28"]
+    assert REAL_SETTLE("2026-10-28", log, c, settler=settler) == "PRESENT" and calls == ["2026-10-28"]   # never redone
+    assert any("CREATED" in x for x in log.lines)
+
+
+def test_internal_settlement_failure_never_crashes_the_run(tmp_path):
+    def boom(d, ops_cfg):
+        raise RuntimeError("no T-day market data for 2026-10-28 yet (VWAP/close needed)")
+    log = _Log()
+    assert REAL_SETTLE("2026-10-28", log, _settle_cfg(tmp_path), settler=boom) == "FAILED"
+    assert "FAILED RuntimeError" in log.lines[-1]
+    assert REAL_SETTLE(None, log, _settle_cfg(tmp_path)) == "SKIPPED"
