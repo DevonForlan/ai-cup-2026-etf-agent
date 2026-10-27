@@ -56,6 +56,7 @@ def candidates(snaps: list[dict], adapter: dict) -> dict:
     timeline = []
     baseline = _buttons(snaps[0]) if snaps else set()
     prev = {}
+    submitted_seen, pre_lines = False, set()
     for s in snaps:
         if "native_dialog" in s:                                         # window.confirm / alert: recorded verbatim
             nd = s["native_dialog"]
@@ -63,9 +64,19 @@ def candidates(snaps: list[dict], adapter: dict) -> dict:
                    note="native browser dialog: CANCELLED by the observer (nothing submitted)")
             timeline.append({"at": s.get("at"), "event": "native_dialog", "detail": nd})
             continue
-        panel = (s.get("validation_panel") or "").strip()
-        if panel and not _is_known(panel, known):
-            _first(out["validation_pass"], panel, s, kind="validation panel text (new wording)")
+        if s.get("dplan_status") == "已繳交" or (prev.get("attempts") and s.get("attempts") != prev.get("attempts")):
+            submitted_seen = True
+        # line by line: the panel always carries static known text (e.g. the instant-check note), so judging the
+        # whole panel hid every new status line (found on the real 2026-10-27 capture)
+        for line in (s.get("validation_panel") or "").splitlines():
+            line = line.strip()
+            if not line or line in known or line in ("檢核結果", "送出繳交"):
+                continue
+            if not submitted_seen:
+                pre_lines.add(line)
+                _first(out["validation_pass"], line, s, kind="panel status line")
+            elif line not in pre_lines:                              # new after the submit only
+                _first(out["submit_success"], line, s, kind="panel line after 送出繳交 (success candidate)")
         dialogs = [d for d in s.get("dialogs") or [] if REVIEW_DIALOG not in d]
         for d in dialogs:
             _first(out["submit_confirmation_modal"], d, s, kind="role dialog / alertdialog")

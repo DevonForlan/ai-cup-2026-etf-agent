@@ -148,8 +148,10 @@ def test_adapter_unconfirmed_entries_are_pending_and_never_guessed():
     assert "Issue #20" in PD.load_adapter()["selectors"]["submit_button"]["confirmed"]
     assert not inv["submit_confirm_button"]["usable_for_action_competition"]
     a = PD.load_adapter()
-    for w in ("validation_pass", "history_accepted", "submit_success"):           # validation_fail: confirmed 10-23
-        assert a["wording"][w]["status"] in PD.PENDING and PD.wording_markers(a, w) == []
+    assert a["wording"]["history_accepted"]["status"] in PD.PENDING and PD.wording_markers(a, "history_accepted") == []
+    # Issue #20 live observation 2026-10-27 21:04: validation_pass / submit_success confirmed from the real submit
+    for w in ("validation_pass", "submit_success"):
+        assert a["wording"][w]["status"] == "CONFIRMED_REAL_E2E" and "_observe" in a["wording"][w]["source"], w
     for st in a["selectors"].values():                                                 # no xpath / nth-child selectors
         for s in st.get("strategies") or []:
             assert "xpath" not in json.dumps(s).lower() and "nth-child" not in json.dumps(s)
@@ -778,8 +780,10 @@ def test_observed_page_texts_parse_exactly():
     assert PD.parse_doc_status("ETF 投資策略說明文件\n處理中", a) is None                      # unseen status: not guessed
     assert PD.wording_markers(a, "no_open_window") == ["目前沒有開放中的繳交窗口"]
     assert "目前沒有繳交紀錄" in PD.wording_markers(a, "history_empty")
-    for w in ("validation_pass", "submit_success", "history_accepted", "history_rejected"):
+    for w in ("history_accepted", "history_rejected"):
         assert a["wording"][w]["status"] == "PENDING_WINDOW_ONLY" and PD.wording_markers(a, w) == []
+    assert PD.wording_markers(a, "validation_pass") == ["檢核通過，待送出"]          # Issue #20, real submit 2026-10-27
+    assert PD.wording_markers(a, "submit_success") == ["已收件"]
 
 
 def test_real_rehearsal_validation_texts_classify_safely():

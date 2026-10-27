@@ -330,8 +330,8 @@ def _adapter_with(**status):
 
 
 def test_submit_flow_pending_on_real_adapter_lists_only_window_only_items():
-    assert PD.submit_flow_pending(PD.load_adapter()) == ["submit_confirmation_modal", "submit_confirm_button",
-                                                         "validation_pass", "submit_success"]
+    # Issue #20 live observation 2026-10-27 21:04 confirmed validation_pass / submit_success; the dialog pair is unseen
+    assert PD.submit_flow_pending(PD.load_adapter()) == ["submit_confirmation_modal", "submit_confirm_button"]
     ok = dict(validation_pass="CONFIRMED_REAL_E2E", submit_success="CONFIRMED_REAL_E2E")
     assert PD.submit_flow_pending(_adapter_with(submit_confirmation_modal="CONFIRMED_REAL_E2E",
                                                 submit_confirm_button="CONFIRMED_REAL_E2E", **ok)) == []
@@ -816,3 +816,39 @@ def test_window_only_items_need_live_observation_evidence():
         assert "_observe" in e.get("source", "") and "Issue #20" in e.get("source", ""), name
         if name in ("validation_pass", "submit_success"):
             assert e.get("markers"), name
+
+
+# ---------------------------------------------------------------- real 2026-10-27 21:04 submit (verbatim panel texts)
+P_IDLE = "檢核結果\n待上傳\n上傳即時檢查要項 · 送出後回報收件檢核\n尚未上傳 · 上傳後於此顯示檢核結果\n送出繳交"
+P_CHECKING = "檢核結果\n結構檢查通過\n上傳即時檢查要項 · 送出後回報收件檢核\n檢核中…\n送出繳交"
+P_PASS = "檢核結果\n檢核通過，待送出\n上傳即時檢查要項 · 送出後回報收件檢核\n✓\xa0\xa0收件層檢核全數通過\n送出繳交"
+P_DONE = "檢核結果\n已收件\n上傳即時檢查要項 · 送出後回報收件檢核\n✓\xa0\xa0收件層檢核全數通過\n送出繳交"
+
+
+def test_real_panel_sequence_classifies_exactly():
+    a = PD.load_adapter()
+    cls = [PD.classify(p, a, "validation_pass", "validation_fail") for p in (P_IDLE, P_CHECKING, P_PASS, P_DONE)]
+    assert cls == ["UNKNOWN", "UNKNOWN", "PASS", "UNKNOWN"]        # 結構檢查通過 / 檢核中… is not a pass
+    assert PD.submit_result_from("", P_DONE, a) == ("OK", "已收件")
+    assert PD.submit_result_from("", P_PASS, a) == ("UNKNOWN", "")   # not yet submitted
+    limit = "今日繳交次數已用盡，已收件的版本不受影響。"                # contains 已收件 but is a FAILURE
+    assert PD.submit_result_from(limit, P_PASS, a) == ("FAIL", limit)
+    assert PD.submit_result_from("目前不在繳交窗口內，無法送出繳交。", P_DONE, a)[0] == "FAIL"
+
+
+def test_real_capture_report_proposes_the_confirmed_values():
+    from agent.submission import observation_report as R
+    snaps = [{"at": "20:58:09", "validation_panel": P_IDLE, "dplan_status": "未繳交", "attempts": [0, 25]},
+             {"at": "21:04:25", "validation_panel": P_CHECKING, "dplan_status": "未繳交", "attempts": [0, 25]},
+             {"at": "21:04:26", "validation_panel": P_PASS, "dplan_status": "未繳交", "attempts": [0, 25]},
+             {"at": "21:04:31", "validation_panel": P_DONE, "dplan_status": "已繳交", "attempts": [1, 24]}]
+    r = R.candidates(snaps, PD.load_adapter())
+    vp = [c["text"] for c in r["items"]["validation_pass"]]
+    assert "檢核通過，待送出" in vp and "結構檢查通過" in vp and "已收件" not in vp
+    assert "已收件" in [c["text"] for c in r["items"]["submit_success"]]
+    assert r["items"]["submit_confirmation_modal"] == []         # nothing seen -> the dialog stays PENDING
+
+
+def test_mutation_hook_observes_the_document_not_a_missing_root():
+    # init scripts run before <html> exists: observing documentElement silently recorded nothing on 2026-10-27
+    assert ".observe(document, {" in PD._MUTATION_JS and "documentElement" not in PD._MUTATION_JS

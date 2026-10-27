@@ -69,6 +69,21 @@ def classify(text: str, adapter: dict, pass_key: str, fail_key: str) -> str:
     return "PASS" if (p and not f) else ("FAIL" if (f and not p) else "UNKNOWN")
 
 
+def submit_result_from(body: str, panel: str, adapter: dict) -> tuple[str, str]:
+    """OK / FAIL / UNKNOWN after 送出繳交. Failure wording anywhere on the page wins; success only as a WHOLE line of
+    the 檢核結果 panel (observed 2026-10-27: 「已收件」), because 「…已收件的版本不受影響。」 is part of the
+    attempt-limit failure text."""
+    for k in ("window_closed", "window_closed_inline", "attempt_limit", "auth_loop", "validation_fail"):
+        for m in wording_markers(adapter, k):
+            if m in (body or ""):
+                return "FAIL", m
+    lines = {x.strip() for x in (panel or "").splitlines()}
+    for m in wording_markers(adapter, "submit_success"):
+        if m in lines:
+            return "OK", m
+    return "UNKNOWN", ""
+
+
 def submit_flow_pending(adapter: dict) -> list[str]:
     """Elements of the submit flow not yet confirmed from a real submission ([] = the runner may press 送出繳交).
     The dialog / its confirm button may instead be CONFIRMED_NOT_PRESENT (both together), never assumed absent."""
@@ -524,13 +539,7 @@ class PlaywrightPortalDriver(PortalDriver):
 
     def read_submit_result(self) -> tuple[str, str]:
         body = self.page.inner_text("body", timeout=10000)
-        if any(m in body for m in wording_markers(self.adapter, "submit_success")):
-            return "OK", next(m for m in wording_markers(self.adapter, "submit_success") if m in body)
-        for k in ("window_closed", "attempt_limit", "auth_loop"):
-            for m in wording_markers(self.adapter, k):
-                if m in body:
-                    return "FAIL", m
-        return "UNKNOWN", ""
+        return submit_result_from(body, self._text("validation_result_panel") or "", self.adapter)
 
     def verify_acceptance(self, file_name: str, sha256: str, trade_date: str, timeout_s: float, poll_s: float) -> list[dict]:
         end = time.monotonic() + timeout_s
@@ -713,7 +722,7 @@ _MUTATION_JS = """(() => { if (window.__aicupObs) return; window.__aicupObs = []
       if (m.type === 'childList') m.addedNodes.forEach(n => push('added', n.nodeType === 1 ? n : n.parentElement || n));
       else if (m.type === 'characterData' && m.target.parentElement) push('text', m.target.parentElement);
       else if (m.type === 'attributes' && m.target.getAttribute) push('attr:' + m.attributeName, m.target); } })
-    .observe(document.documentElement, {childList: true, subtree: true, characterData: true,
+    .observe(document, {childList: true, subtree: true, characterData: true,
                                         attributes: true, attributeFilter: ['disabled', 'aria-disabled', 'open']});
 })();"""
 _DRAIN_JS = "() => { const o = window.__aicupObs || []; window.__aicupObs = []; return o; }"

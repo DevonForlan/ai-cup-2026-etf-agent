@@ -9,7 +9,17 @@ Four portal elements exist only while a submission window is open, during an upl
 | `submit_confirm_button` (selector) | the confirm button in that dialog, or `CONFIRMED_NOT_PRESENT` together with the dialog | the submit step |
 | `submit_success` (wording) | the success text after a submit | the submit result |
 
-They are `PENDING_WINDOW_ONLY`. While any one is pending, `portal_driver.submit_flow_pending()` blocks the submit
+**Status after the first live capture (2026-10-27 21:04, `data/portal_discovery/20261027_205804_observe`):**
+
+| Item | Status | Evidence |
+|---|---|---|
+| `validation_pass` | **CONFIRMED_REAL_E2E** `檢核通過，待送出` | `結構檢查通過` / `檢核中…` (intermediate, not a pass) → `檢核通過，待送出` + `✓ 收件層檢核全數通過`; 送出繳交 enabled |
+| `submit_success` | **CONFIRMED_REAL_E2E** `已收件` | matched only as a whole panel line (the attempt-limit text contains 已收件) |
+| `submit_confirmation_modal` / `submit_confirm_button` | still `PENDING_WINDOW_ONLY` | no dialog seen, but there was a 5 s snapshot gap and the DOM-mutation hook was broken (fixed); a short dialog cannot be ruled out |
+
+The next manual submit with the fixed observer settles the dialog pair, as either the observed selectors or `CONFIRMED_NOT_PRESENT` for both.
+
+Originally all four items were `PENDING_WINDOW_ONLY`. While any one is pending, `portal_driver.submit_flow_pending()` blocks the submit
 step:
 - the runner never presses 送出繳交 → `SUBMISSION_STATUS = BLOCKED`, `MANUAL_ACTION_REQUIRED = YES`;
 - `PREDICTION_STATUS` is unaffected.
