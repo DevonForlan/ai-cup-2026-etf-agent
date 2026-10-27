@@ -268,16 +268,17 @@ def test_duplicate_history_before_upload_fails_closed(cfg, tmp_path):
     assert o.status == "FAIL_CLOSED" and "HISTORY_AMBIGUOUS" in o.reason and "upload" not in drv.calls
 
 
-def test_earlier_different_submission_on_portal_fails_closed(cfg, tmp_path):
-    """A row for T that is not this FINAL (e.g. an unrecorded manual submission) or whose review cannot be read:
-    never upload / submit over it -- a human checks (Owner: unknown -> read-only verify first, no blind action)."""
+def test_earlier_different_submission_on_portal_is_replaced_best_effort(cfg, tmp_path):
+    """Owner Decision 2026-10-27 (best effort; spec changed from fail-closed): a row for T that is not provably this
+    FINAL (older content / 回看 unreadable) -> this FINAL is submitted (the last successful submission counts) and
+    verified; the step is recorded. A row whose 回看 == FINAL still stops everything (ALREADY_SUBMITTED)."""
     c = comp(tmp_path)
     old = _doc_of(c) | {"orders": [{"ticker": "2330", "shares": 1000}]}
     for pre in (_evidence(old), _evidence(_doc_of(c), review=False)):
         drv = Portal20(date=T, pre=pre, post=_evidence(_doc_of(c)))
         o, _ = go20(c, drv, cfg)
-        assert o.status == "FAIL_CLOSED" and "HISTORY_ROW_EXISTS_UNCONFIRMED" in o.reason
-        assert "upload" not in drv.calls and "submit" not in drv.calls
+        assert o.status == "SUBMISSION_CONFIRMED" and drv.calls.count("submit") == 1
+        assert any(s.startswith("HISTORY_ROW_NOT_THIS_FINAL") for s in o.steps)
 
 
 class FlowPortal(Portal20):
@@ -329,30 +330,43 @@ def _adapter_with(**status):
     return a
 
 
-def test_submit_flow_pending_on_real_adapter_lists_only_window_only_items():
-    assert PD.submit_flow_pending(PD.load_adapter()) == ["submit_confirmation_modal", "submit_confirm_button",
-                                                         "validation_pass", "submit_success"]
-    ok = dict(validation_pass="CONFIRMED_REAL_E2E", submit_success="CONFIRMED_REAL_E2E")
-    assert PD.submit_flow_pending(_adapter_with(submit_confirmation_modal="CONFIRMED_REAL_E2E",
-                                                submit_confirm_button="CONFIRMED_REAL_E2E", **ok)) == []
-    assert PD.submit_flow_pending(_adapter_with(submit_confirmation_modal=PD.NOT_PRESENT,
-                                                submit_confirm_button=PD.NOT_PRESENT, **ok)) == []
-    mixed = PD.submit_flow_pending(_adapter_with(submit_confirmation_modal=PD.NOT_PRESENT, **ok))
-    assert mixed == ["submit_confirm_button"]
-    assert PD.submit_flow_pending(_adapter_with(submit_confirmation_modal="OWNER_OBSERVED_LABEL",
-                                                submit_confirm_button="CONFIRMED_REAL_E2E", **ok))
-    no_markers = _adapter_with(submit_confirmation_modal=PD.NOT_PRESENT, submit_confirm_button=PD.NOT_PRESENT, **ok)
-    no_markers["wording"]["submit_success"]["markers"] = []
-    assert PD.submit_flow_pending(no_markers) == ["submit_success"]
+def test_only_the_submit_button_blocks_the_submit_flow():
+    """Owner Decision 2026-10-27 (spec changed): the unconfirmed dialog pair no longer blocks; it is explored at run
+    time. Only an unknown 送出繳交 button blocks. The unconfirmed items stay listed for evidence."""
+    a = PD.load_adapter()
+    assert PD.submit_flow_pending(a) == []
+    assert PD.submit_flow_unconfirmed(a) == ["submit_confirmation_modal", "submit_confirm_button"]
+    assert PD.submit_flow_pending(_adapter_with(submit_button="PENDING_WINDOW_ONLY")) == ["submit_button"]
 
 
-def test_real_driver_submit_refuses_unconfirmed_flow_before_any_click():
-    drv = PD.PlaywrightPortalDriver.__new__(PD.PlaywrightPortalDriver)
-    drv.adapter = PD.load_adapter()
-    drv.read_page_state = lambda: pytest.fail("must refuse before touching the page")
-    with pytest.raises(PD.UIUnexpected, match="SUBMIT_FLOW_UNCONFIRMED"):
-        drv.submit()
-    assert drv.submit_clicked is False
+@pytest.mark.parametrize("labels, pick", [
+    (["取消", "確認送出"], "確認送出"),
+    (["確定", "取消"], "確定"),
+    (["Cancel", "OK"], "OK"),
+    (["取消"], None),                                   # nothing to confirm -> stop, never guess
+    (["關閉"], None),
+    (["選項 A", "選項 B"], None),                        # unknown buttons -> stop
+    (["確認送出", "確認送出"], "確認送出"),               # duplicate label of one action
+    (["送出", "繳交"], None),                            # two different plausible actions -> stop
+])
+def test_confirm_button_choice_is_unambiguous(labels, pick):
+    assert PD.choose_button(labels, PD.CONFIRM_LABELS, avoid=PD.CANCEL_LABELS) == pick
+
+
+def test_dismiss_choice_never_presses_a_submit_like_button():
+    assert PD.choose_button(["我知道了"], PD.DISMISS_LABELS, avoid=("送出", "繳交")) == "我知道了"
+    assert PD.choose_button(["確定送出"], PD.DISMISS_LABELS, avoid=("送出", "繳交")) is None
+
+
+def test_validation_inferred_only_when_the_page_allows_submit():
+    a = PD.load_adapter()
+    new_wording = "檢核結果\n全新的通過字樣\n上傳即時檢查要項 · 送出後回報收件檢核\n送出繳交"
+    assert PD.infer_validation(new_wording, True, a) == "PASS_INFERRED"
+    assert PD.infer_validation(new_wording, False, a) == "UNKNOWN"            # button disabled -> not a pass
+    assert PD.infer_validation(P_CHECKING, True, a) == "UNKNOWN"             # still checking
+    assert PD.infer_validation(P_IDLE, True, a) == "UNKNOWN"
+    assert PD.infer_validation("檢核結果\n文件檢查未通過", True, a) == "FAIL"   # failure wording always wins
+    assert PD.infer_validation(P_PASS, False, a) == "PASS"                    # confirmed wording
 
 
 def test_idempotency_key_local_receipt_blocks_before_browser(cfg, tmp_path):
@@ -363,22 +377,50 @@ def test_idempotency_key_local_receipt_blocks_before_browser(cfg, tmp_path):
     assert o2.status == "ALREADY_SUBMITTED"
 
 
-def test_retry_after_unknown_only_verifies(cfg, tmp_path):
+def test_retry_after_unknown_checks_history_first_then_retries_within_the_cap(cfg, tmp_path):
+    """Owner Decision 2026-10-27 (spec changed): an unknown earlier result is first checked on the portal (history +
+    回看); confirmed -> stop; not confirmed and under the daily cap -> one more upload + submit; at the cap ->
+    read-only verification only (never another click)."""
     c = comp(tmp_path, state="SUBMITTED")
-    drv = Portal20(date=T, pre=_evidence(None, rows=[]))
-    o, _ = go20(c, drv, cfg, used=1)
-    assert o.status == "SUBMITTED_UNVERIFIED" and "upload" not in drv.calls and "submit" not in drv.calls
-    drv2 = Portal20(date=T, pre=_evidence(_doc_of(c)))                       # history now shows it -> stop re-sending
+    drv2 = Portal20(date=T, pre=_evidence(_doc_of(c)))                       # history shows it -> stop re-sending
     o2, _ = go20(c, drv2, cfg, used=1)
     assert o2.status == "ALREADY_SUBMITTED" and "submit" not in drv2.calls
+    drv = Portal20(date=T, pre=_evidence(None, rows=[]), post=_evidence(_doc_of(c)))
+    o, _ = go20(c, drv, cfg, used=1)
+    assert o.status == "SUBMISSION_CONFIRMED" and drv.calls.count("submit") == 1
+    assert "PREVIOUS_SUBMIT_NOT_CONFIRMED -> retry" in o.steps
+    drv3 = Portal20(date=T, pre=_evidence(None, rows=[]))
+    o3, _ = go20(c, drv3, cfg, used=3)                                       # cap (3 in this config) reached
+    assert o3.status == "SUBMITTED_UNVERIFIED" and "upload" not in drv3.calls and "submit" not in drv3.calls
 
 
-def test_retry_is_bounded_and_same_sha_only(cfg, tmp_path):
+def test_retry_is_bounded(cfg, tmp_path):
+    """The daily cap always applies. A different SHA is the superseding active FINAL (07:30), not a retry: allowed in
+    COMPETITION (spec changed, Owner Decision 2026-10-27); the sealed-test path keeps same-SHA-only."""
     c = comp(tmp_path)
     o, _ = go20(c, Portal20(date=T, pre=_evidence(None, rows=[])), cfg, used=3)
-    assert o.status == "FAIL_CLOSED" and "MAX_AUTOMATED_ATTEMPTS" in o.reason
-    o2, _ = go20(c, Portal20(date=T, pre=_evidence(None, rows=[])), cfg, prior=("sha256:" + "9" * 64,))
-    assert "DIFFERENT_SHA_RETRY_BLOCKED" in o2.reason
+    assert o.status == "FAIL_CLOSED" and "MAX_AUTOMATED_ATTEMPTS" in o.reason and not AU.retryable(o)
+    o2, _ = go20(c, Portal20(date=T, pre=_evidence(None, rows=[]), post=_evidence(_doc_of(c))), cfg,
+                 prior=("sha256:" + "9" * 64,))
+    assert o2.status == "SUBMISSION_CONFIRMED"
+    assert AU.cfg_auto({})["max_automated_attempts"] == 4 and AU.cfg_auto({})["retries_per_run"] == 2
+
+
+@pytest.mark.parametrize("status, reason, owner, retry", [
+    ("LOGIN_REQUIRED", "LOGIN_STATE_LOGIN_REQUIRED", True, False),
+    ("FAIL_CLOSED", "PAGE_TEAM_ID 'TEAM_1' != TEAM_11442", True, False),
+    ("FAIL_CLOSED", "PAGE_TRADE_DATE '2026-10-29' != 2026-10-28", True, False),
+    ("FAIL_CLOSED", "UNEXPECTED_MODAL ['系統公告']", False, True),
+    ("FAIL_CLOSED", "VALIDATION_RESULT_UNKNOWN ('?')", False, True),
+    ("FAIL_CLOSED", "BROWSER_START_FAILED (Error: profile in use)", False, True),
+    ("SUBMITTED_UNVERIFIED", "MANUAL_CHECK_REQUIRED: not confirmed", False, True),
+    ("REJECTED", "檢核結果 FAIL: 文件檢查未通過", False, False),
+    ("WINDOW_CLOSED", "08:55", False, False),
+    ("FAIL_CLOSED", "MAX_AUTOMATED_ATTEMPTS (4/4)", False, False),
+])
+def test_owner_escalation_only_for_owner_only_causes(status, reason, owner, retry):
+    o = AU.Outcome(status, reason)
+    assert AU.owner_action_required(o) is owner and AU.retryable(o) is retry
 
 
 @pytest.mark.parametrize("now, status", [
@@ -810,9 +852,108 @@ def test_window_only_items_need_live_observation_evidence():
                "submit_confirm_button": a["selectors"]["submit_confirm_button"]}
     for name, e in entries.items():
         if e["status"] in PD.PENDING:
-            assert name in PD.submit_flow_pending(a)
+            assert name in PD.submit_flow_unconfirmed(a)          # explored at run time (Owner Decision 2026-10-27)
             continue
         assert e["status"] in ("CONFIRMED_REAL_E2E", PD.NOT_PRESENT), name
         assert "_observe" in e.get("source", "") and "Issue #20" in e.get("source", ""), name
         if name in ("validation_pass", "submit_success"):
             assert e.get("markers"), name
+
+
+# ---------------------------------------------------------------- real 2026-10-27 21:04 submit (verbatim panel texts)
+P_IDLE = "檢核結果\n待上傳\n上傳即時檢查要項 · 送出後回報收件檢核\n尚未上傳 · 上傳後於此顯示檢核結果\n送出繳交"
+P_CHECKING = "檢核結果\n結構檢查通過\n上傳即時檢查要項 · 送出後回報收件檢核\n檢核中…\n送出繳交"
+P_PASS = "檢核結果\n檢核通過，待送出\n上傳即時檢查要項 · 送出後回報收件檢核\n✓\xa0\xa0收件層檢核全數通過\n送出繳交"
+P_DONE = "檢核結果\n已收件\n上傳即時檢查要項 · 送出後回報收件檢核\n✓\xa0\xa0收件層檢核全數通過\n送出繳交"
+
+
+def test_real_panel_sequence_classifies_exactly():
+    a = PD.load_adapter()
+    cls = [PD.classify(p, a, "validation_pass", "validation_fail") for p in (P_IDLE, P_CHECKING, P_PASS, P_DONE)]
+    assert cls == ["UNKNOWN", "UNKNOWN", "PASS", "UNKNOWN"]        # 結構檢查通過 / 檢核中… is not a pass
+    assert PD.submit_result_from("", P_DONE, a) == ("OK", "已收件")
+    assert PD.submit_result_from("", P_PASS, a) == ("UNKNOWN", "")   # not yet submitted
+    limit = "今日繳交次數已用盡，已收件的版本不受影響。"                # contains 已收件 but is a FAILURE
+    assert PD.submit_result_from(limit, P_PASS, a) == ("FAIL", limit)
+    assert PD.submit_result_from("目前不在繳交窗口內，無法送出繳交。", P_DONE, a)[0] == "FAIL"
+
+
+def test_real_capture_report_proposes_the_confirmed_values():
+    from agent.submission import observation_report as R
+    snaps = [{"at": "20:58:09", "validation_panel": P_IDLE, "dplan_status": "未繳交", "attempts": [0, 25]},
+             {"at": "21:04:25", "validation_panel": P_CHECKING, "dplan_status": "未繳交", "attempts": [0, 25]},
+             {"at": "21:04:26", "validation_panel": P_PASS, "dplan_status": "未繳交", "attempts": [0, 25]},
+             {"at": "21:04:31", "validation_panel": P_DONE, "dplan_status": "已繳交", "attempts": [1, 24]}]
+    r = R.candidates(snaps, PD.load_adapter())
+    vp = [c["text"] for c in r["items"]["validation_pass"]]
+    assert "檢核通過，待送出" in vp and "結構檢查通過" in vp and "已收件" not in vp
+    assert "已收件" in [c["text"] for c in r["items"]["submit_success"]]
+    assert r["items"]["submit_confirmation_modal"] == []         # nothing seen -> the dialog stays PENDING
+
+
+def test_mutation_hook_observes_the_document_not_a_missing_root():
+    # init scripts run before <html> exists: observing documentElement silently recorded nothing on 2026-10-27
+    assert ".observe(document, {" in PD._MUTATION_JS and "documentElement" not in PD._MUTATION_JS
+
+
+# ---------------------------------------------------------------- best-effort in-run retry loop (Owner Decision 2026-10-27)
+def _exec_setup(cfg, tmp_path, monkeypatch):
+    from agent.submission.manual import ManualSubmissionProvider
+    c = comp(tmp_path)
+    _final(monkeypatch, c.sha256)
+    monkeypatch.setattr(ManualSubmissionProvider, "_final", lambda self, d: {"sha256": c.sha256, "team_id": TEAM,
+                        "trade_date": T, "mode": "competition", "file": c.file.name})
+    monkeypatch.setattr(AU, "candidate_from_competition", lambda t, o: c)
+    monkeypatch.setattr(AU, "manual_e2e_completed", lambda o: True)
+    cfg["auto_upload"] = dict(cfg["auto_upload"], max_automated_attempts=4, retries_per_run=2, retry_wait_s=0)
+    return c
+
+
+def test_in_run_retry_recovers_from_a_transient_portal_problem(cfg, tmp_path, monkeypatch):
+    c = _exec_setup(cfg, tmp_path, monkeypatch)
+    drivers = iter([Portal20(date=T, pre=_evidence(None, rows=[]), dialogs=["系統維護公告"]),       # attempt 1 fails
+                    Portal20(date=T, pre=_evidence(None, rows=[]), post=_evidence(_doc_of(c)))])   # attempt 2 succeeds
+    waits = []
+    r = AU._execute(T, official_test=False, ops_cfg=cfg, now_fn=lambda: at("2026-10-28T07:40:00"),
+                    run_mode="COMPETITION", driver_factory=lambda o, t: next(drivers), sleep=waits.append)
+    assert [x["status"] for x in r["tries"]] == ["FAIL_CLOSED", "SUBMISSION_CONFIRMED"] and waits == [0.0]
+    assert r["outcome"]["status"] == "SUBMISSION_CONFIRMED" and r["owner_action_required"] is False
+
+
+def test_in_run_retry_is_bounded_and_needs_no_owner(cfg, tmp_path, monkeypatch):
+    from agent.ops import signals
+    _exec_setup(cfg, tmp_path, monkeypatch)
+    made = []
+
+    def factory(o, t):
+        made.append(1)
+        return Portal20(date=T, pre=_evidence(None, rows=[]), validation=("UNKNOWN", "?"))
+    r = AU._execute(T, official_test=False, ops_cfg=cfg, now_fn=lambda: at("2026-10-28T07:40:00"),
+                    run_mode="COMPETITION", driver_factory=factory, sleep=lambda s: None)
+    assert len(r["tries"]) == 3 and len(made) == 3                        # 1 + retries_per_run, never more
+    assert r["owner_action_required"] is False and r["manual"]["owner_action_required"] is False
+    names = [s["signal"] for s in signals.read(T, cfg)]
+    assert "SUBMISSION_BEST_EFFORT_FAILED" in names and "MANUAL_UPLOAD_REQUIRED" not in names
+
+
+def test_owner_only_failure_is_not_retried_and_escalates(cfg, tmp_path, monkeypatch):
+    from agent.ops import signals
+    _exec_setup(cfg, tmp_path, monkeypatch)
+    made = []
+
+    def factory(o, t):
+        made.append(1)
+        return Portal20(date=T, pre=_evidence(None, rows=[]), login="LOGIN_REQUIRED")
+    r = AU._execute(T, official_test=False, ops_cfg=cfg, now_fn=lambda: at("2026-10-28T07:40:00"),
+                    run_mode="COMPETITION", driver_factory=factory, sleep=lambda s: None)
+    assert len(made) == 1 and r["outcome"]["status"] == "LOGIN_REQUIRED" and r["owner_action_required"] is True
+    assert "MANUAL_UPLOAD_REQUIRED" in [s["signal"] for s in signals.read(T, cfg)]
+
+
+def test_confirmed_trade_date_is_never_submitted_again(cfg, tmp_path, monkeypatch):
+    """Item 7 of the Owner Decision: a SUBMISSION_CONFIRMED date (e.g. 10/28) is evidence only."""
+    c = _exec_setup(cfg, tmp_path, monkeypatch)
+    drv = Portal20(date=T, pre=_evidence(_doc_of(c)))                     # portal already shows this FINAL
+    r = AU._execute(T, official_test=False, ops_cfg=cfg, now_fn=lambda: at("2026-10-28T07:40:00"),
+                    run_mode="COMPETITION", driver_factory=lambda o, t: drv, sleep=lambda s: None)
+    assert r["outcome"]["status"] == "ALREADY_SUBMITTED" and "upload" not in drv.calls and "submit" not in drv.calls
