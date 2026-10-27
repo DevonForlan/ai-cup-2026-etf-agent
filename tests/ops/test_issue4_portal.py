@@ -126,7 +126,8 @@ def test_team_portal_bound_and_auto_upload_disabled():
     assert ops["team"]["competition_team_id"] == TEAM
     assert ops["submission"]["portal_url"] == "https://fundaiagent.esun-ai-challenge.tw/docs"
     assert ops["submission"]["ui_status"] == "AVAILABLE" and ops["submission"]["max_upload_bytes"] == 2097152
-    assert ops["auto_upload"]["enabled"] is False                                       # disabled pending REAL_E2E
+    # Owner Decision 2026-10-27 (Issue #20): enabled after the Day-1 manual E2E reached SUBMISSION_CONFIRMED
+    assert ops["auto_upload"]["enabled"] is True and ops["auto_upload"]["method"] == "browser"
 
 
 def test_adapter_unconfirmed_entries_are_pending_and_never_guessed():
@@ -575,7 +576,9 @@ def test_e2e_prereq_does_not_enable_auto_upload(cfg, monkeypatch, tmp_path):
     off = dict(cfg, auto_upload=dict(cfg["auto_upload"], enabled=False))
     o, _ = go(cand(tmp_path), FakePortal(), off, e2e=AU.manual_e2e_completed(off))
     assert o.status == "FAIL_CLOSED" and "AUTO_UPLOAD_DISABLED" in o.reason and "MANUAL_E2E" not in o.reason
-    assert load_ops_config()["auto_upload"]["enabled"] is False
+    # the switch itself is an explicit Owner decision recorded next to it (Issue #20), never set by the prerequisite
+    assert "Owner Decision 2026-10-27 (Issue #20)" in (Path(__file__).resolve().parents[2] / "config" /
+                                                       "ops.yaml").read_text(encoding="utf-8")
 
 
 # ---------------------------------------------------------------- pre-E2E finalization (gate, resume, audit, signals)
