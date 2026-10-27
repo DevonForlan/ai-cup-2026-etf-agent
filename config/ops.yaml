@@ -112,6 +112,16 @@ team:
 
 # Market-data coverage gate (P-2): a date is usable only when every market of the universe is present with at least
 # this share of its universe tickers priced, and every holding (and ordered ticker) has a valid price.
+# Issue #23 (Owner priority update 2026-10-27): the 19:30 / 07:30 COMPETITION runs download the official DataPack
+# themselves when the gate does not pass: confirmed 下載資料包 button in the Owner-logged-in profile, quarantine,
+# the same gate validation, atomic install + provenance (agent/ops/datapack_acquire.py). No API / cookies / login.
+datapack:
+  auto_download:
+    enabled: true
+    max_attempts: 3               # only STALE / not yet published / download failure are retried
+    retry_wait_s: 300             # the portal refreshes the DataPack after 19:00
+    download_timeout_s: 60
+
 market_coverage:
   min_market_share: 0.95
 
@@ -138,10 +148,11 @@ submission:
 
 # Guarded automated upload (Issue #4). NO documented participant API exists (portal uses SSO session + CSRF on a
 # private /api) -> only normal browser automation of the human UI may ever be used, after a successful manual E2E.
-# Disabled until the Owner enables it after a sealed-test automatic run reaches an official accepted state.
+# Owner Decision 2026-10-27 (Issue #20): enabled after the Day-1 manual E2E reached SUBMISSION_CONFIRMED (the portal
+# shows no "accepted" word; agent/submission/confirmation.py). Every run still needs the full fail-closed gate.
 auto_upload:
-  enabled: false
-  method: none                    # none | browser   (official API: not available)
+  enabled: true
+  method: browser                 # none | browser   (official API: not available)
   max_automated_attempts: 3       # internal cap per trade date (official limit 25 is never exhausted)
   browser_profile_dir: data/browser_profiles/fundaiagent   # gitignored; the Owner logs in interactively once
   selectors: {}                   # filled ONLY from the observed UI after the manual E2E; empty -> fail closed
