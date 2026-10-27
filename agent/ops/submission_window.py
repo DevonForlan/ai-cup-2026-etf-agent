@@ -21,7 +21,8 @@ from agent.ops.common import TPE
 
 DEFAULTS = {"decision_cutoff": "08:30", "warn_0800": "08:00", "high_warn_0815": "08:15", "critical_warn_0845": "08:45"}
 READY_OR_BETTER = {"READY_FOR_UPLOAD", "SUBMISSION_UI_UNAVAILABLE", "FILE_UPLOADED", "SERVER_VALIDATED", "SUBMITTED",
-                   "ACCEPTED"}
+                   "ACCEPTED", "SUBMISSION_CONFIRMED"}
+DONE = ("ACCEPTED", "SUBMISSION_CONFIRMED")      # Issue #20: SUBMISSION_CONFIRMED is the portal's success state
 
 
 def _hm(s: str) -> tuple[int, int]:
@@ -77,6 +78,6 @@ def warnings(trade_date: str, now: datetime, submission_state: str | None, ops_c
         out.append("SUBMISSION_WARNING_0800")
     if now >= t["high_warn_0815"] and st not in READY_OR_BETTER:
         out.append("SUBMISSION_HIGH_WARNING_0815")
-    if now >= t["critical_warn_0845"] and st != "ACCEPTED":
+    if now >= t["critical_warn_0845"] and st not in DONE:
         out.append("SUBMISSION_CRITICAL_WARNING_0845")
     return out

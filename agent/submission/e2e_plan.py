@@ -40,7 +40,7 @@ def build_plan(now: datetime | None = None, ops_cfg: dict | None = None) -> dict
     phase = SW.phase(t, now, ops)
     st = compute(t, now=now, ops_cfg=ops)
     if st.get("file") and st["state"] in ("READY_FOR_UPLOAD", "FILE_UPLOADED", "SERVER_VALIDATED", "SUBMITTED",
-                                          "ACCEPTED"):
+                                          "ACCEPTED", "SUBMISSION_CONFIRMED"):
         prep = "FINAL_READY"
     else:
         prep = {"WINDOW_NOT_OPEN": "WAITING_FOR_DECISION_WINDOW", "DECISION_OPEN": "DECISION_WINDOW_OPEN",

@@ -40,7 +40,7 @@ def datapack_handoff(trade_date: str, *, ops_cfg: dict | None = None, now: datet
     mode = (run_mode or rm(ops_cfg)).upper()
     nxt = next_trading_day(trade_date)
     sub = compute(trade_date, now=now, ops_cfg=ops_cfg)
-    out = {"trade_date": trade_date, "submission_state": sub["state"], "accepted": sub["state"] == "ACCEPTED",
+    out = {"trade_date": trade_date, "submission_state": sub["state"], "accepted": sub["state"] in ("ACCEPTED", "SUBMISSION_CONFIRMED"),
            "next_trade_date": nxt, "datapack_expected_as_of": trade_date, "mode": mode}
     if mode != "COMPETITION":
         out.update(datapack_status="NOT_APPLICABLE_PRECOMPETITION", start_source_next="PRECOMPETITION_PAPER_LEDGER")

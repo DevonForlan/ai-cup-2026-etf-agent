@@ -11,6 +11,9 @@ only writer of upload / acceptance facts (agent/submission/receipt.py). A state 
   FILE_UPLOADED              the file was uploaded to the official page (receipt stage file_uploaded)
   SERVER_VALIDATED           the official 檢核結果 is explicitly PASS (stage server_validated)
   SUBMITTED                  送出繳交 was pressed (stage submitted), no acceptance evidence yet
+  SUBMISSION_CONFIRMED       Issue #20: read-only portal proof (unique history row 已繳交 + 回看 content == FINAL, no
+                             rejection / 檢核 failure; agent/submission/confirmation.py). The portal shows no
+                             "accepted" wording, so this is the competition success state (never called ACCEPTED).
   ACCEPTED                   official acceptance evidence: receipt / submission id OR verbatim history entry
                              (receipt.has_acceptance_evidence; base SUBMISSION_CONFIRMED). Never inferred from
                              FILE_UPLOADED / SERVER_VALIDATED / SUBMITTED alone.
@@ -32,12 +35,14 @@ from agent.ops.common import TPE, load_ops_config, ops_path, sha256_file, write_
 NOT_GENERATED, GENERATED, VALIDATED, READY_FOR_UPLOAD = "NOT_GENERATED", "GENERATED", "VALIDATED", "READY_FOR_UPLOAD"
 FILE_UPLOADED, SERVER_VALIDATED, SUBMITTED = "FILE_UPLOADED", "SERVER_VALIDATED", "SUBMITTED"
 ACCEPTED, REJECTED = "ACCEPTED", "REJECTED"
+SUBMISSION_CONFIRMED = "SUBMISSION_CONFIRMED"
+CONFIRMED_STATES = (ACCEPTED, SUBMISSION_CONFIRMED)      # the trade date's submission is done (never re-submitted)
 UI_UNAVAILABLE, WINDOW_CLOSED = "SUBMISSION_UI_UNAVAILABLE", "SUBMISSION_WINDOW_CLOSED"
 IN_PROGRESS = (FILE_UPLOADED, SERVER_VALIDATED, SUBMITTED)
 STAGE_STATE = {"file_uploaded": FILE_UPLOADED, "server_validated": SERVER_VALIDATED, "submitted": SUBMITTED,
                "accepted": SUBMITTED, None: FILE_UPLOADED}     # stage without acceptance evidence never = ACCEPTED
 STATES = (NOT_GENERATED, GENERATED, VALIDATED, READY_FOR_UPLOAD, FILE_UPLOADED, SERVER_VALIDATED, SUBMITTED, ACCEPTED,
-          REJECTED, UI_UNAVAILABLE,
+          SUBMISSION_CONFIRMED, REJECTED, UI_UNAVAILABLE,
           WINDOW_CLOSED)
 BASE_MAP = {"SUBMITTED_UNVERIFIED": FILE_UPLOADED, "SUBMISSION_CONFIRMED": ACCEPTED, "REJECTED": REJECTED}
 
@@ -129,6 +134,12 @@ def compute(trade_date: str, now: datetime | None = None, ops_cfg: dict | None =
         rec.update(last_upload_status=(last or {}).get("official_status"), uploads_today=eff.get("uploads"),
                    receipt_text=(last or {}).get("receipt_text"),
                    last_upload_is_effective=eff.get("last_upload_is_effective"))
+        if mapped == ACCEPTED and eff.get("effective"):
+            from agent.submission.receipt import has_acceptance_evidence
+            if not has_acceptance_evidence(eff["effective"]):
+                mapped = SUBMISSION_CONFIRMED            # confirmed by the read-only portal check, not "accepted"
+                rec["state"] = mapped
+                rec["confirmation"] = eff["effective"].get("confirmation")
         if eff.get("effective"):
             rec.update(accepted_at=eff["effective"].get("accepted_at") or eff["effective"].get("submitted_at"),
                        submission_id=eff["effective"].get("official_receipt_id"))
@@ -142,7 +153,7 @@ def compute(trade_date: str, now: datetime | None = None, ops_cfg: dict | None =
         rec["evidence"].append("config submission.ui_status = UNAVAILABLE (official page has no upload function)")
     ph = SW.phase(trade_date, now, ops_cfg)
     rec["window_phase"] = ph
-    if ph == "SUBMISSION_WINDOW_CLOSED" and rec["state"] not in (ACCEPTED, SUBMITTED, REJECTED):
+    if ph == "SUBMISSION_WINDOW_CLOSED" and rec["state"] not in (ACCEPTED, SUBMISSION_CONFIRMED, SUBMITTED, REJECTED):
         rec["state_before_close"] = rec["state"]
         rec["state"] = WINDOW_CLOSED
     rec["deadline_warnings"] = SW.warnings(trade_date, now, rec["state"], ops_cfg)

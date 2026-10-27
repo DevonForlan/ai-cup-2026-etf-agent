@@ -14,6 +14,13 @@
 # stable data-* / id -> CSS fallback. The first strategy is the primary, the rest are fallbacks. No absolute XPath, no
 # nth-child-only selectors, no pixel / screen coordinates, no layout dependency.
 # Every entry records `source` (evidence) and `confidence` (HIGH / MEDIUM / LOW / NONE).
+# Issue #20 pre-window re-verification 2026-10-27 16:13 (data/portal_discovery/20261027_161339_issue20_prewindow, local; read-only, logged in): every
+# CONFIRMED_REAL_E2E element observable between windows resolved again (file input, 檢核結果 panel, 送出繳交 (disabled),
+# history table / row / 回看, D-Plan badge 未繳交, trade date 2026-10-28, TEAM_11442, 「今日已繳交 0 / 25 次」) and the 10/27
+# submission re-checked SUBMISSION_CONFIRMED (8/8). The review dialog / content / close resolve only while 回看 is open.
+# Submit step: portal_driver.submit_flow_pending() blocks 送出繳交 until validation_pass, submit_confirmation_modal,
+# submit_confirm_button and submit_success are confirmed from a live observation (docs/LIVE_OBSERVATION_1930.md); the
+# dialog pair may instead be CONFIRMED_NOT_PRESENT (observed absent in a real submit).
 # Action policy: upload / submit need CONFIRMED_REAL_E2E in COMPETITION; in --official-test (sealed test) they may use
 # OWNER_OBSERVED_LABEL / GENERIC_CANDIDATE. PENDING_* entries can never be used for anything -> fail closed.
 
@@ -54,10 +61,11 @@ selectors:
     source: "logged-in read-only discovery 2026-10-23 20:44 (data/portal_discovery/20261023_202917, local): section 「檢核結果 / 待上傳 / 尚未上傳 · 上傳後於此顯示檢核結果」"
     confidence: HIGH
   submit_button:
-    status: OWNER_OBSERVED_LABEL
+    status: CONFIRMED_REAL_E2E
     strategies: [{by: role, role: button, name: "送出繳交"}, {by: text, text: "送出繳交"}]
     source: "Owner observation (Issue #4). rehearsal upload probe 2026-10-23 23:28 (minimal test JSON; data/official_test_runs/20261027_rehearsal/probe/20261023_232824, local): the submit slot is a <button> 「試繳期間不收件」 with the HTML disabled attribute before AND after the instant check; no 送出繳交 control exists in the DOM (hidden or visible) during the rehearsal. logged-in read-only discovery 2026-10-23 20:44 (data/portal_discovery/20261023_202917, local): during the rehearsal the button reads 「試繳期間不收件」; the 送出繳交 label itself appears only in an official window"
-    confidence: MEDIUM
+    confirmed: "Issue #20 read-only discovery 2026-10-27 09:13 (data/portal_discovery/20261027_091337_issue20_review + 20261027_091444_issue20_review; live confirmation 20261027_094708_issue20_confirm_live, local): get_by_role('button', name='送出繳交') resolves to exactly one <button> 「送出繳交」 (disabled outside the window); official-window page text 01:19 (data/portal_discovery/20261027_011902_readonly, local) shows the same 送出繳交 control; the Owner's real submit through it produced history row 「第 1 · 2026-10-27 · 已繳交 · 01:16」"
+    confidence: HIGH
   submission_history_table:
     status: CONFIRMED_REAL_E2E
     strategies: [{by: role, role: table}, {by: text, text: "歷史繳交紀錄"}]
@@ -71,18 +79,43 @@ selectors:
   upload_area:
     status: CONFIRMED_REAL_E2E
     strategies: [{by: text, text: "拖曳檔案至此，或點擊上傳", exact: true}]
-    source: "logged-in read-only discovery 2026-10-23 20:44 (data/portal_discovery/20261023_202917, local): D-Plan drop zone 「拖曳檔案至此，或點擊上傳 / 僅限 JSON · 2 MB 以內 · 一次一個檔案」 (the PDF zone reads 「拖曳 PDF 至此…」)"
+    source: "logged-in read-only discovery 2026-10-23 20:44 (data/portal_discovery/20261023_202917, local): D-Plan drop zone 「拖曳檔案至此，或點擊上傳 / 僅限 JSON · 2 MB 以內 · 一次一個檔案」 (the PDF zone reads 「拖曳 PDF 至此…」). Between windows (Issue #20, 2026-10-27 16:13, data/portal_discovery/20261027_161339_issue20_prewindow, local) the zone reads 「目前非上傳期間」 instead, so this text resolves only in an open window; the runner never uses it (upload = dplan_file_input)"
     confidence: HIGH
   upload_button:
     status: PENDING_WINDOW_ONLY
     strategies: []
-    source: "rehearsal upload probe 2026-10-23 23:28 (minimal test JSON; data/official_test_runs/20261027_rehearsal/probe/20261023_232824, local): selecting the JSON in the file input starts the official instant check by itself (no button click needed). logged-in read-only discovery 2026-10-23 20:44 (data/portal_discovery/20261023_202917, local): during the rehearsal the D-Plan button reads 「上傳試繳檔案」; the official-window label is not visible yet"
+    source: "rehearsal upload probe 2026-10-23 23:28 (minimal test JSON; data/official_test_runs/20261027_rehearsal/probe/20261023_232824, local): selecting the JSON in the file input starts the official instant check by itself (no button click needed). logged-in read-only discovery 2026-10-23 20:44 (data/portal_discovery/20261023_202917, local): during the rehearsal the D-Plan button reads 「上傳試繳檔案」; the official-window label is not visible yet. Issue #20 (2026-10-27 16:13, data/portal_discovery/20261027_161339_issue20_prewindow, local): between windows the D-Plan section shows a 「上傳檔案」 control; whether it is needed in the window is unobserved, so it stays pending and the runner only sets the file input"
     confidence: NONE
   history_rows:
     status: CONFIRMED_REAL_E2E
     strategies: [{by: css, css: "table:has(th:has-text(\"每日上傳 JSON\")) tbody tr"}]
-    source: "logged-in read-only discovery 2026-10-23 20:44 (data/portal_discovery/20261023_202917, local): tbody rows of the history table; the empty-state row 「賽程尚未開始，目前沒有繳交紀錄。」 is skipped (wording history_empty). Row content of a real submission: PENDING_WINDOW_ONLY"
-    confidence: MEDIUM
+    source: "logged-in read-only discovery 2026-10-23 20:44 (data/portal_discovery/20261023_202917, local): tbody rows of the history table; the empty-state row 「賽程尚未開始，目前沒有繳交紀錄。」 is skipped (wording history_empty). Real submission row (Issue #20, data/portal_discovery/20261027_091337_issue20_review + 20261027_091444_issue20_review; live confirmation 20261027_094708_issue20_confirm_live, local): five td cells 「第 1 | 2026-10-27 | 已繳交 | 2026-10-27 01:16 | 回看」"
+    confidence: HIGH
+  history_review_link:
+    status: CONFIRMED_REAL_E2E
+    strategies: [{by: css, css: "a:text-is(\"回看\")"}]
+    source: "Issue #20 read-only discovery (data/portal_discovery/20261027_091337_issue20_review + 20261027_091444_issue20_review; live confirmation 20261027_094708_issue20_confirm_live, local): the 回看 cell holds one <a> 「回看」 (no role / href); scoped to the ONE history row of the trade date; clicking it opens the review dialog on the same page (no navigation)"
+    confidence: HIGH
+  review_dialog:
+    status: CONFIRMED_REAL_E2E
+    strategies: [{by: role, role: dialog, name: "繳交內容回看"}]
+    source: "Issue #20 read-only discovery (data/portal_discovery/20261027_091337_issue20_review + 20261027_091444_issue20_review; live confirmation 20261027_094708_issue20_confirm_live, local): role=dialog aria-label 「繳交內容回看」, header 「第 1 交易日 · 2026-10-27 / 2026-10-27 01:16 繳交 / 關閉」"
+    confidence: HIGH
+  review_content:
+    status: CONFIRMED_REAL_E2E
+    strategies: [{by: css, css: "pre"}]
+    source: "Issue #20 read-only discovery (data/portal_discovery/20261027_091337_issue20_review + 20261027_091444_issue20_review; live confirmation 20261027_094708_issue20_confirm_live, local): one <pre> inside the dialog with the submitted D-Plan JSON (keys re-ordered by the portal; parsed content == the FINAL)"
+    confidence: HIGH
+  review_close_button:
+    status: CONFIRMED_REAL_E2E
+    strategies: [{by: role, role: button, name: "關閉"}]
+    source: "Issue #20 read-only discovery (data/portal_discovery/20261027_091337_issue20_review + 20261027_091444_issue20_review; live confirmation 20261027_094708_issue20_confirm_live, local): button 「關閉」 in the review dialog"
+    confidence: HIGH
+  dplan_section:
+    status: CONFIRMED_REAL_E2E
+    strategies: [{by: anchor_ancestor, text: "每日上傳（D-Plan）", levels: 1}]
+    source: "Issue #20 read-only discovery (data/portal_discovery/20261027_091337_issue20_review + 20261027_091444_issue20_review; live confirmation 20261027_094708_issue20_confirm_live, local): heading parent reads 「每日上傳（D-Plan） / 未繳交」 (next trade date, window not open); official window 01:19 (data/portal_discovery/20261027_011902_readonly, local): 「每日上傳（D-Plan） / 已繳交 / … 今日已繳交 1 / 25 次」"
+    confidence: HIGH
   trade_date:
     status: CONFIRMED_REAL_E2E
     strategies: [{by: text_regex, pattern: "本次繳交對應交易日"}]
@@ -124,7 +157,10 @@ wording:
   validation_pass:   {status: PENDING_WINDOW_ONLY, markers: [], source: "needs a file that passes the instant check (impossible before the window: C6)", confidence: NONE}
   validation_fail:   {status: CONFIRMED_REAL_E2E, markers: ["文件檢查未通過"], source: "rehearsal upload probe 2026-10-23 23:28 (minimal test JSON; data/official_test_runs/20261027_rehearsal/probe/20261023_232824, local)", confidence: HIGH}
   submit_success:    {status: PENDING_WINDOW_ONLY, markers: [], source: "shown only after a submit", confidence: NONE}
-  history_accepted:  {status: PENDING_WINDOW_ONLY, markers: [], source: "needs an accepted history row", confidence: NONE}
+  history_accepted:  {status: PENDING_WINDOW_ONLY, markers: [], source: "the portal shows no 'accepted' wording (Issue #20 Owner Decision 2026-10-27: success = SUBMISSION_CONFIRMED, agent/submission/confirmation.py); never matched", confidence: NONE}
+  history_submitted: {status: CONFIRMED_REAL_E2E, markers: ["已繳交"], source: "Issue #20 (data/portal_discovery/20261027_091337_issue20_review + 20261027_091444_issue20_review; live confirmation 20261027_094708_issue20_confirm_live, local): 每日上傳 JSON cell of the real 10/27 history row", confidence: HIGH}
+  dplan_status_values: {status: CONFIRMED_REAL_E2E, markers: ["已繳交", "未繳交"], source: "Issue #20: 已繳交 in the open window 01:19 (data/portal_discovery/20261027_011902_readonly, local); 未繳交 for the next trade date 09:13 (data/portal_discovery/20261027_091337_issue20_review + 20261027_091444_issue20_review; live confirmation 20261027_094708_issue20_confirm_live, local)", confidence: HIGH}
+  window_closed_inline: {status: CONFIRMED_REAL_E2E, markers: ["目前不在繳交窗口內，無法送出繳交。", "目前非上傳期間"], source: "Issue #20 read-only discovery 2026-10-27 09:13 (data/portal_discovery/20261027_091337_issue20_review + 20261027_091444_issue20_review; live confirmation 20261027_094708_issue20_confirm_live, local), between windows", confidence: HIGH}
   history_rejected:  {status: PENDING_WINDOW_ONLY, markers: [], source: "needs a rejected history row", confidence: NONE}
   known_modals:      {status: PENDING_REAL_E2E_WORDING, markers: [], source: "no modal on the logged-in page (2026-10-23)", confidence: NONE}   # any modal -> UNEXPECTED_MODAL
   no_open_window:    {status: CONFIRMED_REAL_E2E, markers: ["目前沒有開放中的繳交窗口"], source: "logged-in read-only discovery 2026-10-23 20:44 (data/portal_discovery/20261023_202917, local)", confidence: HIGH}

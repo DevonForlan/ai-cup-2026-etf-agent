@@ -13,6 +13,10 @@ config/portal_adapter.yaml; anything not confirmed there is unusable (UIUnexpect
     .venv\\Scripts\\python.exe -m agent.submission.portal_driver readonly-test [--headless]
         read-only real-portal test: open -> login -> Team ID -> trade date -> window -> attempts -> history ->
         strategy document -> evidence. Prints PORTAL_READONLY_REAL_TEST = PASS | FAIL. Never uploads / submits.
+    ... -m agent.submission.portal_driver observe [--minutes 20]
+        Issue #20 read-only capture while the OWNER uploads / submits by hand in the opened automation-profile window:
+        every change of the validation panel, dialogs (e.g. a submit confirmation), buttons and history rows is saved
+        (text + screenshot) to data/portal_discovery/<timestamp>_observe/. Never clicks, types or uploads.
     .venv\\Scripts\\python.exe -m agent.submission.portal_driver inventory
 """
 from __future__ import annotations
@@ -33,7 +37,11 @@ ACTION_OK_COMPETITION = {"CONFIRMED_REAL_E2E"}
 ACTION_OK_OFFICIAL_TEST = {"CONFIRMED_REAL_E2E", "OWNER_OBSERVED_LABEL", "GENERIC_CANDIDATE"}
 READ_OK = {"CONFIRMED_REAL_E2E", "CONFIRMED_PUBLIC_BUNDLE", "OWNER_OBSERVED_LABEL", "GENERIC_CANDIDATE"}
 PENDING = ("PENDING_WINDOW_ONLY", "PENDING_REAL_E2E_SELECTOR", "PENDING_REAL_E2E_WORDING")
-ALL_STATUSES = READ_OK | set(PENDING) | {"CONFIRMED_PUBLIC_BUNDLE"}
+NOT_PRESENT = "CONFIRMED_NOT_PRESENT"     # observed in a real submit: the element does not exist (e.g. no dialog)
+ALL_STATUSES = READ_OK | set(PENDING) | {"CONFIRMED_PUBLIC_BUNDLE", NOT_PRESENT}
+# Issue #20: the submit step needs every element of the flow confirmed from a real submission (window-only evidence)
+SUBMIT_FLOW_SELECTORS = ("submit_button", "submit_confirmation_modal", "submit_confirm_button")
+SUBMIT_FLOW_WORDING = ("validation_pass", "submit_success")
 
 
 class UIUnexpected(RuntimeError):
@@ -59,6 +67,23 @@ def classify(text: str, adapter: dict, pass_key: str, fail_key: str) -> str:
     p = any(m in t for m in wording_markers(adapter, pass_key))
     f = any(m in t for m in wording_markers(adapter, fail_key))
     return "PASS" if (p and not f) else ("FAIL" if (f and not p) else "UNKNOWN")
+
+
+def submit_flow_pending(adapter: dict) -> list[str]:
+    """Elements of the submit flow not yet confirmed from a real submission ([] = the runner may press 送出繳交).
+    The dialog / its confirm button may instead be CONFIRMED_NOT_PRESENT (both together), never assumed absent."""
+    sel, wd = adapter.get("selectors") or {}, adapter.get("wording") or {}
+    st = {k: (sel.get(k) or {}).get("status") for k in SUBMIT_FLOW_SELECTORS}
+    out = [] if st["submit_button"] == "CONFIRMED_REAL_E2E" else ["submit_button"]
+    modal, confirm = st["submit_confirmation_modal"], st["submit_confirm_button"]
+    if not ((modal == confirm == NOT_PRESENT) or (modal == confirm == "CONFIRMED_REAL_E2E")):
+        out += [k for k, v in (("submit_confirmation_modal", modal), ("submit_confirm_button", confirm))
+                if v not in ("CONFIRMED_REAL_E2E", NOT_PRESENT)] or ["submit_confirmation_modal/submit_confirm_button"]
+    for k in SUBMIT_FLOW_WORDING:
+        w = wd.get(k) or {}
+        if w.get("status") != "CONFIRMED_REAL_E2E" or not [m for m in (w.get("markers") or []) if m]:
+            out.append(k)
+    return out
 
 
 def selector_inventory(adapter: dict) -> list[dict]:
@@ -139,6 +164,11 @@ class PortalDriver:
     def verify_acceptance(self, file_name: str, sha256: str, trade_date: str, timeout_s: float, poll_s: float) -> list[dict]: ...
     def capture_evidence(self, tag: str) -> list[str]: ...
     def close(self): ...
+
+    def read_confirmation_evidence(self, trade_date: str) -> dict | None:
+        """Issue #20: read-only SUBMISSION_CONFIRMED evidence (history rows, D-Plan status, 回看 review JSON).
+        None = this driver cannot read it (the runner then fails closed / uses the legacy acceptance path)."""
+        return None
 
     # names used by the operations brief (aliases of the methods above; same behaviour)
     def read_window_state(self) -> str:
@@ -234,7 +264,17 @@ class PlaywrightPortalDriver(PortalDriver):
 
     # --- read-only ---------------------------------------------------------------------------------------------
     def open_portal(self):
-        self.page.goto(self.url, wait_until="networkidle", timeout=60000)
+        """Load the page, then wait (bounded) for the network to settle. Issue #20: on 2026-10-27 15:30 the page
+        stopped reaching `networkidle` (a background request stays open), so idle is best effort; every read
+        below waits for its own element / text and fails closed when it is missing."""
+        self.page.goto(self.url, wait_until="load", timeout=60000)
+        self._settle()
+
+    def _settle(self, timeout_ms: int = 15000):
+        try:
+            self.page.wait_for_load_state("networkidle", timeout=timeout_ms)
+        except Exception:  # noqa: BLE001 - a long-lived request is not an error; the reads decide
+            pass
 
     def check_login(self, settle_s: float = 30.0) -> str:
         """Waits for redirects to settle (SSO hop -> portal), then classify_login(). The login form is never filled
@@ -273,7 +313,7 @@ class PlaywrightPortalDriver(PortalDriver):
 
     def read_window_status(self) -> str:
         body = self.page.inner_text("body", timeout=10000)
-        closed = wording_markers(self.adapter, "no_open_window") + wording_markers(self.adapter, "window_closed")
+        closed = wording_markers(self.adapter, "no_open_window") + wording_markers(self.adapter, "window_closed") +             wording_markers(self.adapter, "window_closed_inline")
         if any(m in body for m in closed):
             return "CLOSED"
         return "UNKNOWN"          # an explicit OPEN marker is PENDING_WINDOW_ONLY (never inferred)
@@ -350,6 +390,77 @@ class PlaywrightPortalDriver(PortalDriver):
     def read_strategy_document_status(self) -> str | None:
         return parse_doc_status(self._text("strategy_document_status"), self.adapter)
 
+    # --- Issue #20 read-only confirmation evidence ---------------------------------------------------------------
+    def read_history_cells(self) -> list[dict]:
+        """History rows as {"text", "cells"} (cells = visible td texts: 交易日 / 日期 / 每日上傳 JSON / 繳交時間 / 回看)."""
+        try:
+            if self._locate("history_rows") is None:
+                return []
+        except UIUnexpected:
+            return []
+        loc = self.page.locator(self._sel("history_rows")["strategies"][0].get("css", "tr"))
+        empty = wording_markers(self.adapter, "history_empty")
+        out = []
+        for i in range(loc.count()):
+            row = loc.nth(i)
+            text = (row.inner_text(timeout=3000) or "").strip()
+            if not text or any(m in text for m in empty):
+                continue
+            out.append({"text": text[:500], "cells": [(c or "").strip() for c in row.locator("td").all_inner_texts()]})
+        return out
+
+    def read_dplan_status(self) -> str | None:
+        """每日上傳（D-Plan） section badge for the page's current trade date (verbatim 已繳交 / 未繳交, else None)."""
+        lines = [x.strip() for x in (self._text("dplan_section") or "").splitlines() if x.strip()]
+        badge = lines[1] if len(lines) > 1 else None          # observed: 「每日上傳（D-Plan）\n未繳交」
+        return badge if badge in wording_markers(self.adapter, "dplan_status_values") else None
+
+    def open_review(self, trade_date: str) -> dict | None:
+        """Read-only: click 回看 on the ONE history row of `trade_date`, read the review dialog (header + JSON text),
+        close it. None when the row / link / dialog / content is not found (never guessed)."""
+        css = self._sel("history_rows")["strategies"][0].get("css", "tr")
+        rows = self.page.locator(css).filter(has_text=trade_date)
+        if rows.count() != 1:
+            return None
+        link_sel = self._sel("history_review_link")
+        if link_sel.get("status") not in READ_OK or not link_sel.get("strategies"):
+            raise UIUnexpected(f"{link_sel.get('status')}: history_review_link not usable")
+        link = rows.first.locator(link_sel["strategies"][0]["css"])
+        if link.count() != 1:
+            return None
+        link.first.click()
+        dlg = None
+        end = time.monotonic() + 15
+        while time.monotonic() < end:
+            dlg = self._locate("review_dialog")
+            if dlg is not None and dlg.is_visible():
+                break
+            time.sleep(0.5)
+        if dlg is None:
+            return None
+        pre = dlg.locator(self._sel("review_content")["strategies"][0]["css"])
+        content = None
+        end = time.monotonic() + 20                         # the JSON loads after the dialog opens (observed)
+        while time.monotonic() < end:
+            if pre.count() and (pre.first.inner_text(timeout=5000) or "").strip():
+                content = pre.first.inner_text(timeout=5000)
+                break
+            time.sleep(0.5)
+        header = (dlg.inner_text(timeout=5000) or "").split("{", 1)[0].strip()
+        try:
+            close = dlg.get_by_role("button", name=self._sel("review_close_button")["strategies"][0]["name"])
+            if close.count():
+                close.first.click()
+        except Exception:  # noqa: BLE001 - closing the read-only dialog never changes the outcome
+            pass
+        return {"header": header[:300], "json_text": content}
+
+    def read_confirmation_evidence(self, trade_date: str) -> dict | None:
+        body = self.page.inner_text("body", timeout=10000)
+        return {"team_id": self.read_team_id(), "page_trade_date": self.read_trade_date(),
+                "dplan_status": self.read_dplan_status(), "history_rows": self.read_history_cells(),
+                "review": self.open_review(trade_date), "page_text": body}
+
     # --- actions (guarded) -------------------------------------------------------------------------------------
     def upload_file(self, path: Path):
         inp = self._locate("dplan_file_input", action=True)
@@ -380,20 +491,36 @@ class PlaywrightPortalDriver(PortalDriver):
         text = self._text("validation_result_panel") or ""
         return classify(text, self.adapter, "validation_pass", "validation_fail"), text
 
+    def submit_flow_pending(self) -> list[str]:
+        """Issue #20: the submit step runs only when every element of it is confirmed from real evidence."""
+        return submit_flow_pending(self.adapter)
+
     def submit(self):
+        self.submit_clicked = False
+        if self.submit_flow_pending():
+            raise UIUnexpected(f"SUBMIT_FLOW_UNCONFIRMED {self.submit_flow_pending()}")
         st = self.read_page_state()
         if st["unexpected_dialogs"]:
             raise UIUnexpected(f"UNEXPECTED_MODAL {st['unexpected_dialogs'][:1]}")
         btn = self._locate("submit_button", action=True)
         if btn is None or not btn.is_enabled():
             raise UIUnexpected("SUBMIT_BUTTON_NOT_AVAILABLE")
+        self.submit_clicked = True                     # from here on the result is unknown until verified read-only
         btn.click()
-        if self._sel("submit_confirmation_modal").get("status") not in PENDING:
-            if self._locate("submit_confirmation_modal") is not None:
-                c = self._locate("submit_confirm_button", action=True)
-                if c is None:
-                    raise UIUnexpected("SUBMIT_CONFIRM_BUTTON_NOT_FOUND")
-                c.click()
+        if self._sel("submit_confirmation_modal").get("status") == NOT_PRESENT:
+            return
+        end, modal = time.monotonic() + 15, None
+        while time.monotonic() < end:                  # the confirmed dialog must appear; never clicked blind
+            modal = self._locate("submit_confirmation_modal")
+            if modal is not None and modal.is_visible():
+                break
+            time.sleep(0.5)
+        if modal is None:
+            raise UIUnexpected("SUBMIT_CONFIRMATION_MODAL_NOT_SHOWN")
+        c = self._locate("submit_confirm_button", action=True)
+        if c is None:
+            raise UIUnexpected("SUBMIT_CONFIRM_BUTTON_NOT_FOUND")
+        c.click()
 
     def read_submit_result(self) -> tuple[str, str]:
         body = self.page.inner_text("body", timeout=10000)
@@ -412,7 +539,8 @@ class PlaywrightPortalDriver(PortalDriver):
             if rows or time.monotonic() >= end:
                 return rows
             time.sleep(poll_s)
-            self.page.reload(wait_until="networkidle")
+            self.page.reload(wait_until="load")
+            self._settle()
 
     def capture_evidence(self, tag: str) -> list[str]:
         out = []
@@ -573,10 +701,163 @@ def discover(*, wait_login_s: int = 0, headless: bool = False, ops_cfg: dict | N
     return res
 
 
+# Read-only page instrumentation for observe(): records text added / changed in the DOM (toasts that vanish between
+# polls, dialogs). It reads visible text only -- never form values, cookies or storage.
+_MUTATION_JS = """(() => { if (window.__aicupObs) return; window.__aicupObs = [];
+  const push = (kind, el) => { try { const t = (el.innerText || el.textContent || '').trim();
+      if (!t || t.length > 2000) return;
+      window.__aicupObs.push({t: Date.now(), kind, tag: (el.tagName || '#text').toLowerCase(),
+        role: el.getAttribute ? el.getAttribute('role') : null, text: t.slice(0, 600)});
+      if (window.__aicupObs.length > 500) window.__aicupObs.shift(); } catch (e) {} };
+  new MutationObserver(ms => { for (const m of ms) {
+      if (m.type === 'childList') m.addedNodes.forEach(n => push('added', n.nodeType === 1 ? n : n.parentElement || n));
+      else if (m.type === 'characterData' && m.target.parentElement) push('text', m.target.parentElement);
+      else if (m.type === 'attributes' && m.target.getAttribute) push('attr:' + m.attributeName, m.target); } })
+    .observe(document.documentElement, {childList: true, subtree: true, characterData: true,
+                                        attributes: true, attributeFilter: ['disabled', 'aria-disabled', 'open']});
+})();"""
+_DRAIN_JS = "() => { const o = window.__aicupObs || []; window.__aicupObs = []; return o; }"
+
+
+def production_busy(ops_cfg: dict | None = None) -> list[str]:
+    """Locks held by a live production run (the 19:30 / 07:30 run may be using the automation profile)."""
+    from agent.data.locks import is_stale
+    from agent.ops.common import ops_path
+    cfg = ops_cfg or load_ops_config()
+    d = ops_path(cfg, "ops_logs_dir").parent / "locks"
+    held = []
+    for p in sorted(d.glob("competition_production.lock")) + sorted(d.glob("submission_*.lock")):
+        try:
+            stale, _ = is_stale(p, 0)
+        except Exception:  # noqa: BLE001
+            stale = False
+        if not stale:
+            held.append(p.name)
+    return held
+
+
+def observe(*, minutes: float = 20.0, poll_s: float = 0.75, ops_cfg: dict | None = None, force: bool = False,
+            out_root: Path | None = None) -> dict:
+    """Read-only observation of the Owner's manual upload / submit (Issue #20): a snapshot on every visible change.
+
+    Captures, for the window-only adapter items (validation_pass, submit_confirmation_modal, submit_confirm_button,
+    submit_success): the 檢核 panel text, the upload control / file input attributes (never their value), every
+    button with its enabled state, dialogs (role dialog / alertdialog), alert / status regions, DOM text mutations
+    (short-lived toasts), D-Plan status, history rows, attempts and trade date.
+    The agent never clicks, types or uploads. A NATIVE browser confirm() cannot be answered by the Owner inside the
+    automated window: it is recorded verbatim and CANCELLED (Playwright's default; nothing is submitted) -- the Owner
+    then submits in the normal browser. Refuses to start while a production run holds its lock (same profile)."""
+    cfg = ops_cfg or load_ops_config()
+    busy = production_busy(cfg)
+    if busy and not force:
+        return {"status": "BUSY", "locks": busy,
+                "note": "a 19:30 / 07:30 run holds the automation profile; start observe after it finishes"}
+    out_dir = Path(out_root or ROOT) / "data" / "portal_discovery" / (datetime.now(TPE).strftime("%Y%m%d_%H%M%S") +
+                                                                    "_observe")
+    out_dir.mkdir(parents=True, exist_ok=True)
+    drv = PlaywrightPortalDriver(cfg, evidence_dir=out_dir)
+    log = out_dir / "observe.jsonl"
+    n, last = 0, None
+    seen = {"dialogs": [], "native_dialogs": [], "alerts": [], "validation_panel": [], "mutations": [],
+            "dplan_status": [], "submit_button": []}
+
+    def write(row: dict) -> None:
+        with open(log, "a", encoding="utf-8") as f:
+            f.write(json.dumps(row, ensure_ascii=False, default=str) + "\n")
+
+    def keep(kind: str, value) -> None:
+        if value not in (None, "", []) and value not in seen[kind]:
+            seen[kind].append(value)
+
+    def on_dialog(dialog) -> None:                     # native alert / confirm / prompt
+        row = {"at": datetime.now(TPE).isoformat(), "native_dialog": {"type": dialog.type, "message": dialog.message}}
+        keep("native_dialogs", row["native_dialog"])
+        write(row)
+        try:
+            dialog.dismiss()                           # cancel = nothing submitted (same as Playwright's default)
+        except Exception:  # noqa: BLE001
+            pass
+
+    def roles_text(*roles) -> list[str]:
+        out = []
+        for r in roles:
+            loc = drv.page.get_by_role(r)
+            out += [(loc.nth(i).inner_text(timeout=2000) or "").strip()[:600] for i in range(min(loc.count(), 10))]
+        return [x for x in out if x]
+
+    def submit_state():
+        try:
+            b = drv._locate("submit_button")
+            return None if b is None else {"visible": b.is_visible(), "enabled": b.is_enabled()}
+        except Exception:  # noqa: BLE001
+            return None
+
+    try:
+        drv.ctx.add_init_script(_MUTATION_JS)
+        drv.page.on("dialog", on_dialog)
+        drv.open_portal()
+        end = time.monotonic() + minutes * 60
+        try:                                   # Ctrl+C ends the observation; the summary is still written
+            while time.monotonic() < end:
+                try:
+                    muts = drv.page.evaluate(_DRAIN_JS) or []
+                except Exception:  # noqa: BLE001
+                    muts = []
+                for m in muts:
+                    keep("mutations", m.get("text"))
+                try:
+                    btn = drv.page.get_by_role("button")
+                    inputs = drv.page.locator("input[type=\"file\"]")
+                    state = {"validation_panel": drv._text("validation_result_panel"),
+                             "dialogs": roles_text("dialog", "alertdialog"), "alerts": roles_text("alert", "status"),
+                             "buttons": [_attrs(btn.nth(i)) for i in range(min(btn.count(), 40))],
+                             "file_inputs": [_attrs(inputs.nth(i)) for i in range(inputs.count())],
+                             "submit_button": submit_state(), "window_status": drv.read_window_status(),
+                             "dplan_status": drv.read_dplan_status(), "dplan_section": drv._text("dplan_section"),
+                             "history": drv.read_history_cells(), "attempts": drv.read_attempts(),
+                             "trade_date": drv.read_trade_date()}
+                except Exception:  # noqa: BLE001 - page in transition; look again
+                    state = None
+                if state is not None:
+                    for d in state["dialogs"]:
+                        keep("dialogs", d)
+                    for a_ in state["alerts"]:
+                        keep("alerts", a_)
+                    keep("validation_panel", state["validation_panel"])
+                    keep("dplan_status", state["dplan_status"])
+                    keep("submit_button", state["submit_button"])
+                key = json.dumps(state, ensure_ascii=False, sort_keys=True, default=str)
+                if (state is not None and key != last) or muts:
+                    snap = {"at": datetime.now(TPE).isoformat(), **(state or {}), "mutations": muts}
+                    if state is not None and key != last:
+                        last = key
+                        snap["evidence"] = drv.capture_evidence(f"observe_{n:03d}")
+                        n += 1
+                    write(snap)
+                time.sleep(poll_s)
+        except KeyboardInterrupt:
+            pass
+    finally:
+        drv.close()
+    summary = {"out_dir": str(out_dir), "snapshots": n, "observed": seen,
+               "adapter_items": ["validation_pass", "submit_confirmation_modal", "submit_confirm_button",
+                                 "submit_success"],
+               "note": "READ-ONLY observation: the agent never clicked, typed or uploaded; evidence local only. "
+                       "Adapter values come only from this verbatim evidence (docs/LIVE_OBSERVATION_1930.md)."}
+    (out_dir / "observe_summary.json").write_text(json.dumps(summary, ensure_ascii=False, indent=1, default=str),
+                                                  encoding="utf-8")
+    return summary
+
+
 def main(argv=None) -> int:
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")
     ap = argparse.ArgumentParser()
     sp = ap.add_subparsers(dest="cmd", required=True)
+    ob = sp.add_parser("observe")
+    ob.add_argument("--minutes", type=float, default=20.0)
+    ob.add_argument("--force", action="store_true", help="start even if a production lock is held (not advised)")
+    ob.add_argument("--root", default=None, help="project folder whose automation profile / locks / evidence folder "
+                    "to use (e.g. the main folder when running this code from a worktree before merge)")
     d = sp.add_parser("discover")
     d.add_argument("--wait-login", type=int, default=0, help="seconds to wait for the Owner's manual login")
     d.add_argument("--headless", action="store_true")
@@ -584,6 +865,17 @@ def main(argv=None) -> int:
     r_ = sp.add_parser("readonly-test")
     r_.add_argument("--headless", action="store_true")
     a = ap.parse_args(argv)
+    if a.cmd == "observe":
+        cfg = None
+        if a.root:
+            import copy
+            cfg = copy.deepcopy(load_ops_config())
+            cfg["paths"]["ops_logs_dir"] = str(Path(a.root) / cfg["paths"]["ops_logs_dir"])
+            au = cfg.setdefault("auto_upload", {})
+            au["browser_profile_dir"] = str(Path(a.root) / au.get("browser_profile_dir", "data/browser_profiles/fundaiagent"))
+        r = observe(minutes=a.minutes, force=a.force, ops_cfg=cfg, out_root=Path(a.root) if a.root else None)
+        print(json.dumps(r, ensure_ascii=False, indent=1, default=str))
+        return 2 if r.get("status") == "BUSY" else 0
     if a.cmd == "inventory":
         print(json.dumps(selector_inventory(load_adapter()), ensure_ascii=False, indent=1))
         return 0

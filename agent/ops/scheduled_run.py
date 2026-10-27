@@ -46,7 +46,8 @@ NETWORK_TARGETS = [("DNS", "www.twse.com.tw"), ("HTTPS", "https://www.google.com
                    ("ESUN", "https://esun-ai-challenge.tw/"),
                    ("TWSE", "https://www.twse.com.tw/zh/"), ("TPEX", "https://www.tpex.org.tw/")]
 LOG_KEYS = ["LABEL", "RUN_MODE", "RUN_KIND", "WINDOW_PHASE", "SUBMISSION_STATE", "DEADLINE_WARNINGS",
-            "AUTO_UPLOAD_STATUS", "LOGIN_STATE", "ATTEMPTS", "MANUAL_ACTION_REQUIRED", "ACCEPTED", "NEXT_ACTION", "DATAPACK_STATUS", "DATAPACK_DATE", "DATAPACK_FILE", "SETTLEMENT_SOURCE",
+            "AUTO_UPLOAD_STATUS", "PREDICTION_STATUS", "SUBMISSION_STATUS", "LOGIN_STATE", "ATTEMPTS",
+            "MANUAL_ACTION_REQUIRED", "ACCEPTED", "NEXT_ACTION", "DATAPACK_STATUS", "DATAPACK_DATE", "DATAPACK_FILE", "SETTLEMENT_SOURCE",
             "PAPER_CHAIN", "SCHEDULED_TIME", "ACTUAL_START_TIME", "RUN_DELAY_MINUTES", "TRADE_DATE", "NETWORK", "NETWORK_RETRIES",
             "CLAUDE_VERSION", "CLAUDE_STATUS", "DATA_REFRESH", "ETF_FRESHNESS", "QUANT", "ACTIVE_SHARE", "GROUNDING",
             "DPLAN_VERSION", "DPLAN_VALIDATION", "FINAL_CANDIDATE", "OVERALL_STATUS", "BLOCKED_REASON",
@@ -247,16 +248,37 @@ def summarize(summary: dict | None, preflight: dict | None, rc: int) -> dict:
     return out
 
 
+def split_status(rec: dict) -> dict:
+    """Issue #20: PREDICTION_STATUS (the decision run; `status` stays the prediction result) and SUBMISSION_STATUS
+    (downstream portal step) are separate -- a BLOCKED submission never marks the prediction failed."""
+    from agent.submission.auto_upload import submission_status
+    rec["prediction_status"] = rec["status"]
+    au, st = rec.get("auto_upload_status"), rec.get("submission_state")
+    if rec.get("run_mode") != "COMPETITION":
+        rec["submission_status"] = "NOT_APPLICABLE"
+    elif st in ("ACCEPTED", "SUBMISSION_CONFIRMED"):
+        rec["submission_status"] = "SUBMISSION_CONFIRMED"
+    elif au is None:
+        rec["submission_status"] = "NOT_RUN"
+    elif au == "DISABLED":
+        rec["submission_status"] = "MANUAL_UPLOAD_REQUIRED"
+    else:
+        rec["submission_status"] = submission_status(au)
+    return rec
+
+
 def finish(rec: dict, log: RunLog) -> dict:
     rec["finished_at"] = datetime.now(TPE).replace(microsecond=0).isoformat()
     rec["log_file"] = str(log.path)
     assert rec["status"] in STATUSES
+    split_status(rec)
     for k in LOG_KEYS:
         v = {"LABEL": rec.get("label") or "PRECOMPETITION_PAPER_RUN", "RUN_MODE": rec.get("run_mode"),
              "RUN_KIND": rec.get("run_kind"), "WINDOW_PHASE": rec.get("window_phase"),
              "SUBMISSION_STATE": rec.get("submission_state"),
              "DEADLINE_WARNINGS": ",".join(rec.get("deadline_warnings") or []) or None,
              "AUTO_UPLOAD_STATUS": rec.get("auto_upload_status"), "LOGIN_STATE": rec.get("login_state"),
+             "PREDICTION_STATUS": rec.get("prediction_status"), "SUBMISSION_STATUS": rec.get("submission_status"),
              "ATTEMPTS": None if rec.get("attempts_used") is None else
              f"{rec.get('attempts_used')} used / {rec.get('attempts_remaining')} remaining",
              "MANUAL_ACTION_REQUIRED": rec.get("manual_action_required"), "ACCEPTED": rec.get("accepted"),
@@ -341,8 +363,8 @@ def ops_status_fields(rec: dict, sub: dict | None) -> dict:
                                                      "DECISION_WINDOW_CLOSED" else "NOT_RUN"),
                validation_status=rec.get("dplan_validation"), final_status="FINAL" if rec.get("final_candidate") else
                ("EXISTING_FINAL" if st in ("READY_FOR_UPLOAD", "FILE_UPLOADED", "SERVER_VALIDATED", "SUBMITTED",
-                                           "ACCEPTED") else "NONE"),
-               submission_state=st, accepted=st == "ACCEPTED")
+                                           "ACCEPTED", "SUBMISSION_CONFIRMED") else "NONE"),
+               submission_state=st, accepted=st in ("ACCEPTED", "SUBMISSION_CONFIRMED"))
     for k in ("portal_state", "login_state", "attempts_used", "attempts_remaining", "auto_upload_status",
               "last_error", "manual_action_required", "datapack_status"):
         rec.setdefault(k, None)
@@ -352,7 +374,7 @@ def ops_status_fields(rec: dict, sub: dict | None) -> dict:
 
 def next_action(rec: dict, state: str | None) -> str:
     """One operator instruction derived from the run record (shown in latest_status.json)."""
-    if state == "ACCEPTED":
+    if state in ("ACCEPTED", "SUBMISSION_CONFIRMED"):
         return "WAIT_FOR_OFFICIAL_DATAPACK (then: python -m agent.submission.handoff --date T)"
     if rec.get("blocked_reason") in ("DATAPACK_MISSING", "DATAPACK_STALE"):
         return "DOWNLOAD_OFFICIAL_DATAPACK into data/official_datapack/ and re-run"
@@ -403,8 +425,30 @@ def resume_existing_final(trade_date: str, rec: dict, sub: dict, log) -> dict:
     return finish(rec, log)
 
 
+PRODUCTION_LOCK_WAIT_S = 15 * 60       # Issue #20: wait for a running 07:30 / catch-up run, then fail closed
+
+
 def run(now: datetime | None = None, setup_test: bool = False, net_retries: int = 5, net_wait: float = 30.0,
         safe_retry: bool = False) -> dict:
+    """The scheduled run under the COMPETITION production lock (agent/ops/production_lock.py); unchanged otherwise."""
+    from agent.data.locks import LockTimeout
+    from agent.ops.production_lock import production_lock
+    lk = production_lock(LOG_DIR.parent / "locks", wait_s=PRODUCTION_LOCK_WAIT_S)
+    try:
+        lk.acquire()
+    except LockTimeout as e:
+        now = now or datetime.now(TPE)
+        rec = {"run_mode": run_mode(), "actual_start_time": now.replace(microsecond=0).isoformat(),
+               "status": "BLOCKED", "blocked_reason": "LOCK_UNAVAILABLE", "error_message": str(e)[:300]}
+        return finish(rec, RunLog(now))
+    try:
+        return _run(now, setup_test, net_retries, net_wait, safe_retry)
+    finally:
+        lk.release()
+
+
+def _run(now: datetime | None = None, setup_test: bool = False, net_retries: int = 5, net_wait: float = 30.0,
+         safe_retry: bool = False) -> dict:
     now = now or datetime.now(TPE)
     log = RunLog(now)
     p = plan(now, holidays(), window_open_time(), ops_cfg=load_ops_config(), close_hm=window_close_time())
@@ -436,7 +480,8 @@ def run(now: datetime | None = None, setup_test: bool = False, net_retries: int 
     if not setup_test and already_passed(p["scheduled_date"], read_history()):
         rec.update(status="SKIPPED", blocked_reason="SKIP_ALREADY_PASSED")
         return finish(rec, log)
-    if not setup_test and sub and sub["state"] in ("ACCEPTED", "FILE_UPLOADED", "SERVER_VALIDATED", "SUBMITTED"):
+    if not setup_test and sub and sub["state"] in ("ACCEPTED", "SUBMISSION_CONFIRMED", "FILE_UPLOADED",
+                                                   "SERVER_VALIDATED", "SUBMITTED"):
         rec.update(status="SKIPPED", blocked_reason=f"SUBMISSION_ALREADY_{sub['state']}")
         return resume_existing_final(p["trade_date"], rec, sub, log)
     if not setup_test and not safe_retry and sub and sub["state"] in ("READY_FOR_UPLOAD", "SUBMISSION_UI_UNAVAILABLE"):

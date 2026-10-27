@@ -101,10 +101,13 @@ format, DataPack / receipt parser) go through an Issue and record: timestamp, re
   2. the official UI flow is validated: only selectors / wording marked `CONFIRMED_REAL_E2E` in
      `config/portal_adapter.yaml` are used for actions; anything unconfirmed stops the run;
   3. the competition safeguards hold: Team ID, trade date and FINAL SHA match; local validation passes; the 08:30 /
-     08:55 cutoffs; the attempt caps; same-SHA retry only; ACCEPTED only with official evidence; any unknown → stop
+     08:55 cutoffs; the attempt caps; same-SHA retry only; success only with evidence; any unknown → stop
      and fall back to manual upload;
   4. **competition auto-upload** (`config/ops.yaml auto_upload.enabled`) stays disabled until an official-window E2E
-     reaches official acceptance and the Owner approves enabling it. A one-off action (e.g. the strategy-document
+     reaches official success and the Owner approves enabling it. The portal shows no "ACCEPTED" word: success is
+     **SUBMISSION_CONFIRMED** (Owner Decision 2026-10-27, Issue #20): unique history row 已繳交 for T, Team and trade
+     date match, 「回看」 content == the FINAL, no rejection / 檢核 failure (`agent/submission/confirmation.py`).
+     Never write ACCEPTED for it. A one-off action (e.g. the strategy-document
      PDF upload, 2026-10-24, Issue #12) needs its own explicit Owner authorization and stays within that scope.
 - Organisation policy: no customer data, credentials or confidential documents; AI-generated content is reviewed by a
   human before use.

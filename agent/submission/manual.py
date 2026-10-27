@@ -69,22 +69,22 @@ class ManualSubmissionProvider(SubmissionProvider):
                 reasons.append(f"receipt team {team} != FINAL team {rec['team_id']}")
             if d != rec["trade_date"]:
                 reasons.append("trade date mismatch")
+        from agent.submission.receipt import is_confirmed
         st = get_state(d, self.cfg)["state"]
-        if st == CONFIRMED and receipt.get("official_status") != "accepted":
+        if st == CONFIRMED and not is_confirmed(receipt):
             # NC-10: the LAST SUCCESSFUL submission before the cutoff counts. A later rejected / pending / unknown
             # upload is recorded (receipts.jsonl) but never overwrites an accepted one.
             out = dict(get_state(d, self.cfg))
             out["reason"] = (f"later upload {receipt.get('official_status')} recorded; the accepted submission stays "
                              f"effective" + (f" ({'; '.join(reasons)})" if reasons else ""))
             return out
-        from agent.submission.receipt import has_acceptance_evidence
         if reasons:
             new = UNKNOWN
         elif (receipt.get("official_status") == "rejected" or receipt.get("stage") == "rejected"
               or receipt.get("server_validation_result") == "FAIL"):
             new = REJECTED                           # official rejection or failed 檢核結果
-        elif has_acceptance_evidence(receipt):
-            new = CONFIRMED                          # receipt id or verbatim history entry: officially received
+        elif is_confirmed(receipt):
+            new = CONFIRMED                          # official acceptance evidence or a SUBMISSION_CONFIRMED check
         else:
             new = SUBMITTED_UNVERIFIED               # uploaded / validated / submitted, no acceptance evidence yet
         if st == NOT_READY and not reasons:
