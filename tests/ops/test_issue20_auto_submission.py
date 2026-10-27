@@ -268,12 +268,91 @@ def test_duplicate_history_before_upload_fails_closed(cfg, tmp_path):
     assert o.status == "FAIL_CLOSED" and "HISTORY_AMBIGUOUS" in o.reason and "upload" not in drv.calls
 
 
-def test_earlier_different_final_on_portal_is_replaced(cfg, tmp_path):
+def test_earlier_different_submission_on_portal_fails_closed(cfg, tmp_path):
+    """A row for T that is not this FINAL (e.g. an unrecorded manual submission) or whose review cannot be read:
+    never upload / submit over it -- a human checks (Owner: unknown -> read-only verify first, no blind action)."""
     c = comp(tmp_path)
     old = _doc_of(c) | {"orders": [{"ticker": "2330", "shares": 1000}]}
-    drv = Portal20(date=T, pre=_evidence(old), post=_evidence(_doc_of(c)))
-    o, _ = go20(c, drv, cfg)
+    for pre in (_evidence(old), _evidence(_doc_of(c), review=False)):
+        drv = Portal20(date=T, pre=pre, post=_evidence(_doc_of(c)))
+        o, _ = go20(c, drv, cfg)
+        assert o.status == "FAIL_CLOSED" and "HISTORY_ROW_EXISTS_UNCONFIRMED" in o.reason
+        assert "upload" not in drv.calls and "submit" not in drv.calls
+
+
+class FlowPortal(Portal20):
+    """Portal20 with the real driver's submit-flow guard (adapter statuses) and click tracking."""
+    def __init__(self, *, pending=(), **kw):
+        super().__init__(**kw)
+        self.pending = list(pending)
+
+    def submit_flow_pending(self):
+        return self.pending
+
+
+def test_unconfirmed_submit_flow_stops_after_server_validated(cfg, tmp_path):
+    drv = FlowPortal(date=T, pre=_evidence(None, rows=[]), pending=["submit_confirmation_modal", "submit_success"])
+    o, rec = go20(comp(tmp_path), drv, cfg)
+    assert o.status == "FAIL_CLOSED" and "SUBMIT_FLOW_UNCONFIRMED" in o.reason and "submit" not in drv.calls
+    assert [s for s, _ in rec] == ["file_uploaded", "server_validated"] and o.manual_action_required
+    assert AU.submission_status(o.status) == "BLOCKED"
+
+
+def test_submit_exception_after_click_is_verified_read_only(cfg, tmp_path):
+    c = comp(tmp_path)
+    drv = FlowPortal(date=T, pre=_evidence(None, rows=[]), post=_evidence(_doc_of(c)),
+                     submit_raises=RuntimeError("confirm dialog vanished"), raises_after_click=True)
+    o, rec = go20(c, drv, cfg)
     assert o.status == "SUBMISSION_CONFIRMED" and drv.calls.count("submit") == 1
+    assert "SUBMIT_RESULT_UNKNOWN" in rec[2][1]["message"] and rec[2][0] == "submitted"
+    drv2 = FlowPortal(date=T, pre=_evidence(None, rows=[]), post=_evidence(None, rows=[]),
+                      submit_raises=RuntimeError("timeout"), raises_after_click=True)
+    o2, rec2 = go20(comp(tmp_path), drv2, cfg)
+    assert o2.status == "SUBMITTED_UNVERIFIED" and drv2.calls.count("submit") == 1      # never clicked twice
+    assert rec2[-1][0] == "submitted" and rec2[-1][1]["official_status"] == "pending"
+
+
+def test_submit_refused_before_click_is_plain_fail_closed(cfg, tmp_path):
+    drv = FlowPortal(date=T, pre=_evidence(None, rows=[]), submit_raises=PD.UIUnexpected("SUBMIT_BUTTON_NOT_AVAILABLE"))
+    o, rec = go20(comp(tmp_path), drv, cfg)
+    assert o.status == "FAIL_CLOSED" and "SUBMIT_BUTTON_NOT_AVAILABLE" in o.reason
+    assert "submitted" not in [s for s, _ in rec]
+
+
+def _adapter_with(**status):
+    a = copy.deepcopy(PD.load_adapter())
+    for k, v in status.items():
+        if k in a["selectors"]:
+            a["selectors"][k]["status"] = v
+        else:
+            a["wording"][k] = {"status": v, "markers": ["<verbatim>"] if v == "CONFIRMED_REAL_E2E" else []}
+    return a
+
+
+def test_submit_flow_pending_on_real_adapter_lists_only_window_only_items():
+    assert PD.submit_flow_pending(PD.load_adapter()) == ["submit_confirmation_modal", "submit_confirm_button",
+                                                         "validation_pass", "submit_success"]
+    ok = dict(validation_pass="CONFIRMED_REAL_E2E", submit_success="CONFIRMED_REAL_E2E")
+    assert PD.submit_flow_pending(_adapter_with(submit_confirmation_modal="CONFIRMED_REAL_E2E",
+                                                submit_confirm_button="CONFIRMED_REAL_E2E", **ok)) == []
+    assert PD.submit_flow_pending(_adapter_with(submit_confirmation_modal=PD.NOT_PRESENT,
+                                                submit_confirm_button=PD.NOT_PRESENT, **ok)) == []
+    mixed = PD.submit_flow_pending(_adapter_with(submit_confirmation_modal=PD.NOT_PRESENT, **ok))
+    assert mixed == ["submit_confirm_button"]
+    assert PD.submit_flow_pending(_adapter_with(submit_confirmation_modal="OWNER_OBSERVED_LABEL",
+                                                submit_confirm_button="CONFIRMED_REAL_E2E", **ok))
+    no_markers = _adapter_with(submit_confirmation_modal=PD.NOT_PRESENT, submit_confirm_button=PD.NOT_PRESENT, **ok)
+    no_markers["wording"]["submit_success"]["markers"] = []
+    assert PD.submit_flow_pending(no_markers) == ["submit_success"]
+
+
+def test_real_driver_submit_refuses_unconfirmed_flow_before_any_click():
+    drv = PD.PlaywrightPortalDriver.__new__(PD.PlaywrightPortalDriver)
+    drv.adapter = PD.load_adapter()
+    drv.read_page_state = lambda: pytest.fail("must refuse before touching the page")
+    with pytest.raises(PD.UIUnexpected, match="SUBMIT_FLOW_UNCONFIRMED"):
+        drv.submit()
+    assert drv.submit_clicked is False
 
 
 def test_idempotency_key_local_receipt_blocks_before_browser(cfg, tmp_path):
@@ -493,7 +572,8 @@ class _State:
         return self.finals[-1] if self.finals else None
 
 
-def _morning(monkeypatch, tmp_path, st, *, summary=GOOD, submit=None, replace_ok=True, now="2026-10-28T07:30:00"):
+def _morning(monkeypatch, tmp_path, st, *, summary=GOOD, submit=None, replace_ok=True, now="2026-10-28T07:30:00",
+             portal=(True, "no portal submission for T")):
     import agent.ops.package_submission as PS
     from agent.submission import status as ST
     monkeypatch.setattr(MF, "LOG_DIR", tmp_path / "morning")
@@ -524,7 +604,7 @@ def _morning(monkeypatch, tmp_path, st, *, summary=GOOD, submit=None, replace_ok
         return rec
     prep = lambda *a, **k: {"datapack_status": "PASS (FRESH)", "blocked_reason": None, "cd_mode": "competition",  # noqa: E731
                             "extra_args": []}
-    rec = MF.run(now=at(now), cd_runner=cd, submit=sub, replace=rep, prepare=prep)
+    rec = MF.run(now=at(now), cd_runner=cd, submit=sub, replace=rep, prepare=prep, portal_check=lambda t, o: portal)
     return rec, calls
 
 
@@ -549,6 +629,26 @@ def test_morning_supersede_blocked_keeps_evening_final(monkeypatch, tmp_path):
     assert rec["active_final_sha256"] == PRIOR["sha256"] and calls["submit"] == 1
 
 
+@pytest.mark.parametrize("portal", [(False, "the portal already has 1 submission row(s) for T (NOT_CONFIRMED)"),
+                                    (False, "portal state unknown (['LOGIN_STATE_LOGIN_REQUIRED'])")])
+def test_morning_never_supersedes_a_final_that_may_be_on_the_portal(monkeypatch, tmp_path, portal):
+    st = _State()
+    rec, calls = _morning(monkeypatch, tmp_path, st, portal=portal)
+    assert not rec["superseded"] and not calls["replace"] and rec["active_final_sha256"] == PRIOR["sha256"]
+    assert rec["supersede_reason"].startswith("evening FINAL kept: ") and portal[1] in rec["supersede_reason"]
+
+
+def test_portal_clear_is_fail_closed(monkeypatch):
+    monkeypatch.setattr(C, "verify", lambda t, **k: {"status": "NOT_CONFIRMED", "reasons": ["LOGIN_STATE_UNKNOWN"]})
+    assert MF.portal_clear(T, {})[0] is False
+    monkeypatch.setattr(C, "verify", lambda t, **k: {"status": "NOT_CONFIRMED", "matching_rows": 1, "reasons": []})
+    assert MF.portal_clear(T, {})[0] is False
+    monkeypatch.setattr(C, "verify", lambda t, **k: (_ for _ in ()).throw(RuntimeError("browser")))
+    assert MF.portal_clear(T, {})[0] is False
+    monkeypatch.setattr(C, "verify", lambda t, **k: {"status": "NOT_CONFIRMED", "matching_rows": 0, "reasons": []})
+    assert MF.portal_clear(T, {}) == (True, "no portal submission for T")
+
+
 def test_morning_identical_decision_keeps_evening_final(monkeypatch, tmp_path):
     rec, calls = _morning(monkeypatch, tmp_path, _State(), summary=dict(GOOD, final_action="KEPT_IDENTICAL"))
     assert not rec["superseded"] and not calls["replace"] and rec["active_final_sha256"] == PRIOR["sha256"]
@@ -558,6 +658,12 @@ def test_morning_after_confirmed_submission_makes_no_decision(monkeypatch, tmp_p
     rec, calls = _morning(monkeypatch, tmp_path, _State(state="SUBMISSION_CONFIRMED"))
     assert calls["cd"] == 0 and calls["submit"] == 0 and rec["status"] == "SKIPPED"
     assert "ALREADY_SUBMITTED" in rec["blocked_reason"] and rec["submission_status"] == "SUBMISSION_CONFIRMED"
+
+
+def test_morning_with_unverified_submission_never_decides_and_only_verifies(monkeypatch, tmp_path):
+    rec, calls = _morning(monkeypatch, tmp_path, _State(state="SUBMITTED"))
+    assert calls["cd"] == 0 and not calls["replace"] and rec["status"] == "SKIPPED"
+    assert "SUBMISSION_UNVERIFIED" in rec["blocked_reason"] and calls["submit"] == 1     # read-only verify path
 
 
 def test_morning_after_0830_submits_existing_final_only(monkeypatch, tmp_path):
@@ -620,14 +726,93 @@ def test_quant_fingerprint_unchanged():
         "sha256:f34fa02e924011b20c52a4bd42e961169f97e1950e76e04b7e78dc43ac23d2e0"
 
 
+def test_observe_refuses_while_a_production_run_holds_the_profile(tmp_path, monkeypatch):
+    ops = {"paths": {"ops_logs_dir": str(tmp_path / "logs" / "ops")}}
+    assert PD.production_busy(ops) == []
+    lk = production_lock(tmp_path / "logs" / "locks", wait_s=1)
+    lk.acquire()
+    try:
+        monkeypatch.setattr(PD, "PlaywrightPortalDriver", lambda *a, **k: pytest.fail("no browser while busy"))
+        r = PD.observe(minutes=0.01, ops_cfg=ops)
+        assert r["status"] == "BUSY" and r["locks"] == ["competition_production.lock"]
+    finally:
+        lk.release()
+    assert PD.production_busy(ops) == []
+
+
 def test_observe_and_review_are_read_only():
     """observe() never clicks / types / uploads; open_review() clicks only the confirmed 回看 link and 關閉."""
     import inspect
-    ob = inspect.getsource(PD.observe)
-    for bad in (".click(", ".fill(", ".type(", "set_input_files", ".press(", "upload_file", "submit("):
+    ob = inspect.getsource(PD.observe) + PD._MUTATION_JS + PD._DRAIN_JS
+    for bad in (".click(", ".fill(", ".type(", "set_input_files", ".press(", "upload_file", "submit(", "accept(",
+                "cookie", "localStorage", "sessionStorage", ".value", "storage_state"):
         assert bad not in ob, bad
+    assert "dialog.dismiss()" in ob                      # a native confirm() is cancelled: nothing is ever submitted
     rv = inspect.getsource(PD.PlaywrightPortalDriver.open_review)
     assert rv.count(".click()") == 2 and "set_input_files" not in rv and "submit" not in rv
     a = PD.load_adapter()
     for name in ("history_review_link", "review_dialog", "review_content", "review_close_button", "dplan_section"):
         assert a["selectors"][name]["status"] == "CONFIRMED_REAL_E2E" and "Issue #20" in a["selectors"][name]["source"]
+
+
+# ---------------------------------------------------------------- 19:30 live observation -> adapter proposal
+def _snaps():
+    base = {"buttons": [{"text": "送出繳交", "disabled": True}], "dialogs": [], "alerts": [], "mutations": [],
+            "history": [], "dplan_status": "未繳交", "attempts": [0, 25], "window_status": "UNKNOWN",
+            "submit_button": {"visible": True, "enabled": False}}
+    return [
+        dict(base, at="t0", validation_panel="待上傳", evidence=["e/observe_000.png"]),
+        dict(base, at="t1", validation_panel="檢核通過 · 可送出", submit_button={"visible": True, "enabled": True},
+             evidence=["e/observe_001.png"]),
+        dict(base, at="t2", validation_panel="檢核通過 · 可送出", dialogs=["確認送出？ 送出後以此版本為準 取消 確認送出"],
+             buttons=[{"text": "送出繳交"}, {"text": "取消"}, {"text": "確認送出"}], evidence=["e/observe_002.png"]),
+        dict(base, at="t3", validation_panel="檢核通過 · 可送出", alerts=["繳交成功"], dplan_status="已繳交",
+             mutations=[{"kind": "added", "tag": "div", "role": None, "text": "繳交成功"}],
+             history=[{"text": "第 2\t2026-10-28\t已繳交\t2026-10-27 20:05\t回看"}], evidence=["e/observe_003.png"]),
+        {"at": "t4", "native_dialog": {"type": "confirm", "message": "確定要送出嗎？"}},
+    ]
+
+
+def test_observation_report_proposes_only_new_verbatim_wording(tmp_path):
+    from agent.submission import observation_report as R
+    res = R.candidates(_snaps(), PD.load_adapter())
+    texts = {k: [c["text"] for c in v] for k, v in res["items"].items()}
+    assert texts["validation_pass"] == ["檢核通過 · 可送出"]                         # 待上傳 is known wording
+    assert texts["submit_confirmation_modal"] == ["確認送出？ 送出後以此版本為準 取消 確認送出", "確定要送出嗎？"]
+    assert texts["submit_confirm_button"] == ["取消", "確認送出"]                     # a human picks the confirm one
+    assert texts["submit_success"] == ["繳交成功"]
+    assert res["items"]["validation_pass"][0]["evidence"] == ["e/observe_001.png"]
+    events = [t["event"] for t in res["timeline"]]
+    assert "submit_button" in events and "dplan_status" in events and "native_dialog" in events
+    d = tmp_path / "20261027_200000_observe"
+    d.mkdir()
+    (d / "observe.jsonl").write_text("\n".join(json.dumps(s, ensure_ascii=False) for s in _snaps()), encoding="utf-8")
+    R.report(d)
+    md = (d / "adapter_proposal.md").read_text(encoding="utf-8")
+    assert "PROPOSAL ONLY" in md and "## submit_success" in md and "繳交成功" in md
+
+
+def test_observation_report_never_writes_the_adapter():
+    import inspect
+
+    from agent.submission import observation_report as R
+    src = inspect.getsource(R)
+    assert "portal_adapter.yaml\", \"w\"" not in src and "yaml.safe_dump" not in src and "write_text" in src
+    assert all(x not in src for x in ("playwright", "cookie", ".click(", "set_input_files"))
+
+
+def test_window_only_items_need_live_observation_evidence():
+    """Every window-only item stays PENDING until confirmed; once confirmed it must cite a live observation folder
+    (the runner's submit step depends on all four: portal_driver.submit_flow_pending)."""
+    a = PD.load_adapter()
+    entries = {"validation_pass": a["wording"]["validation_pass"], "submit_success": a["wording"]["submit_success"],
+               "submit_confirmation_modal": a["selectors"]["submit_confirmation_modal"],
+               "submit_confirm_button": a["selectors"]["submit_confirm_button"]}
+    for name, e in entries.items():
+        if e["status"] in PD.PENDING:
+            assert name in PD.submit_flow_pending(a)
+            continue
+        assert e["status"] in ("CONFIRMED_REAL_E2E", PD.NOT_PRESENT), name
+        assert "_observe" in e.get("source", "") and "Issue #20" in e.get("source", ""), name
+        if name in ("validation_pass", "submit_success"):
+            assert e.get("markers"), name

@@ -66,12 +66,13 @@ REJ = {"text": f"10-26 08:06 {FNAME} 未通過", "accepted": False, "rejected": 
 class FakePortal(PD.PortalDriver):
     def __init__(self, *, login="LOGGED_IN", team=TEAM, date=T1, window="UNKNOWN", attempts=(0, 25), history=None,
                  after_submit=None, validation=("PASS", "檢核通過"), submit_result=("OK", "已送出"), upload_raises=None,
-                 submit_raises=None, dialogs=None, validation_timeout=None):
+                 submit_raises=None, dialogs=None, validation_timeout=None, raises_after_click=False):
         self.login, self.team, self.date, self.window, self.attempts = login, team, date, window, attempts
         self.history, self.after = history or [], after_submit
         self.validation, self.submit_result = validation, submit_result
         self.upload_raises, self.submit_raises, self.dialogs = upload_raises, submit_raises, dialogs or []
         self.validation_timeout, self.calls, self.closed = validation_timeout, [], False
+        self.raises_after_click = raises_after_click          # Issue #20: refused before the click vs result unknown
 
     def open_portal(self): self.calls.append("open")
     def check_login(self):                     # a list = successive answers (e.g. session expiring mid-run)
@@ -100,6 +101,7 @@ class FakePortal(PD.PortalDriver):
     def submit(self):
         self.calls.append("submit")
         if self.submit_raises:
+            self.submit_clicked = self.raises_after_click
             raise self.submit_raises
 
     def read_submit_result(self): return self.submit_result

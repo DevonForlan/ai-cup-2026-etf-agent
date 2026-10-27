@@ -14,6 +14,13 @@
 # stable data-* / id -> CSS fallback. The first strategy is the primary, the rest are fallbacks. No absolute XPath, no
 # nth-child-only selectors, no pixel / screen coordinates, no layout dependency.
 # Every entry records `source` (evidence) and `confidence` (HIGH / MEDIUM / LOW / NONE).
+# Issue #20 pre-window re-verification 2026-10-27 16:13 (data/portal_discovery/20261027_161339_issue20_prewindow, local; read-only, logged in): every
+# CONFIRMED_REAL_E2E element observable between windows resolved again (file input, 檢核結果 panel, 送出繳交 (disabled),
+# history table / row / 回看, D-Plan badge 未繳交, trade date 2026-10-28, TEAM_11442, 「今日已繳交 0 / 25 次」) and the 10/27
+# submission re-checked SUBMISSION_CONFIRMED (8/8). The review dialog / content / close resolve only while 回看 is open.
+# Submit step: portal_driver.submit_flow_pending() blocks 送出繳交 until validation_pass, submit_confirmation_modal,
+# submit_confirm_button and submit_success are confirmed from a live observation (docs/LIVE_OBSERVATION_1930.md); the
+# dialog pair may instead be CONFIRMED_NOT_PRESENT (observed absent in a real submit).
 # Action policy: upload / submit need CONFIRMED_REAL_E2E in COMPETITION; in --official-test (sealed test) they may use
 # OWNER_OBSERVED_LABEL / GENERIC_CANDIDATE. PENDING_* entries can never be used for anything -> fail closed.
 
@@ -72,12 +79,12 @@ selectors:
   upload_area:
     status: CONFIRMED_REAL_E2E
     strategies: [{by: text, text: "拖曳檔案至此，或點擊上傳", exact: true}]
-    source: "logged-in read-only discovery 2026-10-23 20:44 (data/portal_discovery/20261023_202917, local): D-Plan drop zone 「拖曳檔案至此，或點擊上傳 / 僅限 JSON · 2 MB 以內 · 一次一個檔案」 (the PDF zone reads 「拖曳 PDF 至此…」)"
+    source: "logged-in read-only discovery 2026-10-23 20:44 (data/portal_discovery/20261023_202917, local): D-Plan drop zone 「拖曳檔案至此，或點擊上傳 / 僅限 JSON · 2 MB 以內 · 一次一個檔案」 (the PDF zone reads 「拖曳 PDF 至此…」). Between windows (Issue #20, 2026-10-27 16:13, data/portal_discovery/20261027_161339_issue20_prewindow, local) the zone reads 「目前非上傳期間」 instead, so this text resolves only in an open window; the runner never uses it (upload = dplan_file_input)"
     confidence: HIGH
   upload_button:
     status: PENDING_WINDOW_ONLY
     strategies: []
-    source: "rehearsal upload probe 2026-10-23 23:28 (minimal test JSON; data/official_test_runs/20261027_rehearsal/probe/20261023_232824, local): selecting the JSON in the file input starts the official instant check by itself (no button click needed). logged-in read-only discovery 2026-10-23 20:44 (data/portal_discovery/20261023_202917, local): during the rehearsal the D-Plan button reads 「上傳試繳檔案」; the official-window label is not visible yet"
+    source: "rehearsal upload probe 2026-10-23 23:28 (minimal test JSON; data/official_test_runs/20261027_rehearsal/probe/20261023_232824, local): selecting the JSON in the file input starts the official instant check by itself (no button click needed). logged-in read-only discovery 2026-10-23 20:44 (data/portal_discovery/20261023_202917, local): during the rehearsal the D-Plan button reads 「上傳試繳檔案」; the official-window label is not visible yet. Issue #20 (2026-10-27 16:13, data/portal_discovery/20261027_161339_issue20_prewindow, local): between windows the D-Plan section shows a 「上傳檔案」 control; whether it is needed in the window is unobserved, so it stays pending and the runner only sets the file input"
     confidence: NONE
   history_rows:
     status: CONFIRMED_REAL_E2E
