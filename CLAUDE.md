@@ -95,20 +95,26 @@ format, DataPack / receipt parser) go through an Issue and record: timestamp, re
 - **Official API path:** the portal has no documented participant API. `OfficialPortalProvider` (extension point in
   `agent/submission/future_api.py`) stays `DISABLED_PENDING_OFFICIAL_PORTAL_VALIDATION` until an official mechanism
   exists and the Owner approves it.
-- **Browser upload / submission of the human UI** (Owner-logged-in automation profile) is allowed only when all hold:
-  1. an Owner-approved Issue plus an Owner Decision recorded on GitHub (`docs/CODE_CHANGE_GOVERNANCE.md` §6) for that
-     exact action or capability;
-  2. the official UI flow is validated: only selectors / wording marked `CONFIRMED_REAL_E2E` in
-     `config/portal_adapter.yaml` are used for actions; anything unconfirmed stops the run;
-  3. the competition safeguards hold: Team ID, trade date and FINAL SHA match; local validation passes; the 08:30 /
-     08:55 cutoffs; the attempt caps; same-SHA retry only; success only with evidence; any unknown → stop
-     and fall back to manual upload;
-  4. **competition auto-upload** (`config/ops.yaml auto_upload.enabled`) stays disabled until an official-window E2E
-     reaches official success and the Owner approves enabling it. The portal shows no "ACCEPTED" word: success is
-     **SUBMISSION_CONFIRMED** (Owner Decision 2026-10-27, Issue #20): unique history row 已繳交 for T, Team and trade
-     date match, 「回看」 content == the FINAL, no rejection / 檢核 failure (`agent/submission/confirmation.py`).
-     Never write ACCEPTED for it. A one-off action (e.g. the strategy-document
-     PDF upload, 2026-10-24, Issue #12) needs its own explicit Owner authorization and stays within that scope.
+- **Browser upload / submission of the human UI** (Owner-logged-in automation profile) is allowed when:
+  1. an Owner-approved Issue plus an Owner Decision recorded on GitHub authorizes the capability;
+  2. Team ID, trade date and FINAL SHA match; local validation and compliance pass; 08:30 / 08:55 cutoffs and attempt
+     caps hold; only the same FINAL SHA may be retried;
+  3. the submit flow follows the Owner Decision of 2026-10-27 (Issue #20): **best-effort unattended submission**.
+     Unknown modal wording, an unconfirmed confirmation dialog, or a minor selector change does not by itself require
+     Owner intervention. The runner captures evidence, uses bounded exploration by visible text / role / button label /
+     DOM structure, and retries only within configured caps. Before each retry it checks submission history / 「回看」;
+     if the portal record matches the FINAL, stop and mark **SUBMISSION_CONFIRMED**;
+  4. escalation to the Owner is reserved for login/session recovery that cannot be completed without credentials,
+     MFA / CAPTCHA, Team ID or trade-date mismatch, portal unavailability, account permission problems, Quant freeze
+     violations, or other security / destructive-operation boundaries. Do not escalate merely because a benign UI
+     element has not been seen before;
+  5. the portal shows no "ACCEPTED" word. Success is **SUBMISSION_CONFIRMED**: unique history row 已繳交 for T,
+     Team and trade date match, 「回看」 content == the FINAL, and no rejection / 檢核 failure
+     (`agent/submission/confirmation.py`). Never fabricate ACCEPTED.
+- **Competition operating priority:** minimize Owner time and prefer unattended best-effort operation over
+  mission-critical conservatism. A single failed submission, bounded retry, or even a missed competition day is an
+  acceptable operational outcome; preserve evidence and continue on the next available run instead of creating an
+  unnecessary manual gate.
 - Organisation policy: no customer data, credentials or confidential documents; AI-generated content is reviewed by a
   human before use.
 
