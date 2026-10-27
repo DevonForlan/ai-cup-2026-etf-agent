@@ -28,7 +28,8 @@ from agent.submission.portal_driver import UIUnexpected  # noqa: E402,F401  (re-
 
 OFFICIAL_DAILY_LIMIT = 25
 UPLOADABLE = ("READY_FOR_UPLOAD", "FILE_UPLOADED", "SERVER_VALIDATED")
-SUCCESS = ("ACCEPTED", "ALREADY_ACCEPTED")
+SUCCESS = ("ACCEPTED", "ALREADY_ACCEPTED", "SUBMISSION_CONFIRMED", "ALREADY_SUBMITTED")
+CONFIRMED_STATES = ("ACCEPTED", "SUBMISSION_CONFIRMED")   # status.py states that end the day's submission
 # §10 local validation (official_test.full_local_validation): every item must be present AND PASS; missing = UNKNOWN
 REQUIRED_CHECKS = ("json_parse", "schema", "ticker", "numeric", "team_id", "trade_date", "filename", "file_size",
                    "whole_lot", "holdings_20_30", "tsmc_le_25", "other_le_10", "cash_lt_25", "active_share_ge_15",
@@ -52,7 +53,8 @@ class Candidate:
 
 @dataclass
 class Outcome:
-    status: str     # ACCEPTED | ALREADY_ACCEPTED | SUBMITTED_UNVERIFIED | REJECTED | LOGIN_REQUIRED | WINDOW_CLOSED | FAIL_CLOSED
+    status: str     # SUBMISSION_CONFIRMED | ALREADY_SUBMITTED | ACCEPTED | ALREADY_ACCEPTED | SUBMITTED_UNVERIFIED |
+    #                 REJECTED | LOGIN_REQUIRED | WINDOW_CLOSED | FAIL_CLOSED
     reason: str
     steps: list = field(default_factory=list)
     portal: dict = field(default_factory=dict)
@@ -71,12 +73,19 @@ def cfg_auto(ops_cfg: dict) -> dict:
     a.setdefault("validation_timeout_s", 60)
     a.setdefault("acceptance_timeout_s", 120)
     a.setdefault("acceptance_poll_s", 10)
+    a.setdefault("lock_timeout_s", 10)
     return a
+
+
+def submission_status(outcome_status: str | None) -> str:
+    """Issue #20 SUBMISSION_STATUS (separate from PREDICTION_STATUS): CONFIRMED or BLOCKED (fail closed)."""
+    return "SUBMISSION_CONFIRMED" if outcome_status in SUCCESS else "BLOCKED"
 
 
 # ----------------------------------------------------------------------------- safety gate (pure)
 def gate(c: Candidate, *, now: datetime, ops_cfg: dict, run_mode: str, official_test: bool, attempts_used: int,
-         manual_e2e_done: bool, check_config: bool = True, prior_shas: tuple = ()) -> list[str]:
+         manual_e2e_done: bool, check_config: bool = True, prior_shas: tuple = (),
+         confirmed_shas: tuple = ()) -> list[str]:
     from agent.config import load_official_rules
     from agent.ops import submission_window as SW
     from agent.ops.team import resolve
@@ -97,6 +106,8 @@ def gate(c: Candidate, *, now: datetime, ops_cfg: dict, run_mode: str, official_
         f.append(f"TEAM_ID_MISMATCH ({c.team_id} vs configured {team['team_id']})")
     if c.state == "ACCEPTED":
         f.append("ALREADY_ACCEPTED (idempotent: never re-submit an accepted trade date)")
+    elif c.state == "SUBMISSION_CONFIRMED" or (c.sha256 and _norm_sha(c.sha256) in {_norm_sha(x) for x in confirmed_shas}):
+        f.append("ALREADY_SUBMITTED (idempotent: trade_date + TEAM_ID + FINAL_SHA already SUBMISSION_CONFIRMED)")
     elif c.state not in UPLOADABLE + ("SUBMITTED",):
         f.append(f"STATE_NOT_SUBMITTABLE ({c.state})")
     if not c.local_validation_ok:
@@ -143,17 +154,19 @@ def gate(c: Candidate, *, now: datetime, ops_cfg: dict, run_mode: str, official_
 # ----------------------------------------------------------------------------- runner
 def run(c: Candidate, driver, *, now_fn, ops_cfg: dict, run_mode: str, official_test: bool, attempts_used: int,
         manual_e2e_done: bool, record, check_config: bool = True, prior_shas: tuple = (),
-        portal: dict | None = None) -> Outcome:
+        portal: dict | None = None, confirmed_shas: tuple = ()) -> Outcome:
     """`driver` implements portal_driver.PortalDriver. `record(stage, **fields)` persists official-stage evidence.
     `portal` (optional) is filled with what the page showed (shared with the recorder for the audit rows)."""
     from agent.ops import submission_window as SW
     a = cfg_auto(ops_cfg)
     fails = gate(c, now=now_fn(), ops_cfg=ops_cfg, run_mode=run_mode, official_test=official_test,
                  attempts_used=attempts_used, manual_e2e_done=manual_e2e_done, check_config=check_config,
-                 prior_shas=prior_shas)
+                 prior_shas=prior_shas, confirmed_shas=confirmed_shas)
     if fails:
         if any(x.startswith("ALREADY_ACCEPTED") for x in fails):
             return Outcome("ALREADY_ACCEPTED", "; ".join(fails))
+        if any(x.startswith("ALREADY_SUBMITTED") for x in fails):
+            return Outcome("ALREADY_SUBMITTED", "; ".join(fails))
         if any(x.startswith("SUBMISSION_WINDOW_CLOSED") for x in fails):
             return Outcome("WINDOW_CLOSED", "; ".join(fails))
         return Outcome("FAIL_CLOSED", "; ".join(fails))
@@ -196,6 +209,17 @@ def run(c: Candidate, driver, *, now_fn, ops_cfg: dict, run_mode: str, official_
         o.portal.update(attempts_used=used, attempts_remaining=remaining)
         if used is None or remaining is None:
             raise UIUnexpected("ATTEMPTS_UNREADABLE")
+        pre = _portal_confirmation(c, driver)                        # Issue #20 idempotency (read-only)
+        if pre is not None:
+            o.portal["history_rows_for_date"] = pre["matching_rows"]
+            if pre["status"] == "SUBMISSION_CONFIRMED":
+                record("submitted", official_status="submitted", history_entry=pre["history_entry"],
+                       message="already submitted (history row + review content == FINAL)", confirmation=pre["checks"],
+                       evidence=ev("already_submitted"))
+                o.status, o.reason = "ALREADY_SUBMITTED", "portal history + review already show this FINAL"
+                return o
+            if pre["status"] == "AMBIGUOUS":
+                raise UIUnexpected(f"HISTORY_AMBIGUOUS ({pre['matching_rows']} rows for {c.trade_date})")
         hist = driver.read_history()
         mine = [r for r in hist if r.get("accepted") and (c.file.name in r.get("text", "") or c.sha256 in r.get("text", ""))]
         if mine:
@@ -280,7 +304,45 @@ def run(c: Candidate, driver, *, now_fn, ops_cfg: dict, run_mode: str, official_
         return o
 
 
+def _portal_confirmation(c, driver) -> dict | None:
+    """Read-only SUBMISSION_CONFIRMED check of this FINAL on the portal (None: the driver cannot read it)."""
+    from agent.submission.confirmation import evaluate
+    ev = driver.read_confirmation_evidence(c.trade_date)
+    if ev is None:
+        return None
+    try:
+        doc = json.loads(c.file.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        doc = None
+    return evaluate(ev, trade_date=c.trade_date, team_id=c.team_id, final_doc=doc,
+                    adapter=getattr(driver, "adapter", None))
+
+
 def _verify(c, driver, o, record, a, ev) -> Outcome:
+    """After the submit click (or a resumed SUBMITTED state): read-only verification, never a re-submit.
+    SUBMISSION_CONFIRMED only with the full Issue #20 evidence; anything else -> SUBMITTED_UNVERIFIED (manual
+    check, no blind retry)."""
+    import time as _t
+    first = _portal_confirmation(c, driver)
+    if first is not None:
+        res, end = first, _t.monotonic() + float(a["acceptance_timeout_s"])
+        while res["status"] == "NOT_CONFIRMED" and _t.monotonic() < end:
+            _t.sleep(float(a["acceptance_poll_s"]))
+            driver.open_portal()                                    # reload the page (read-only)
+            res = _portal_confirmation(c, driver)
+        o.portal["confirmation"] = res["checks"]
+        if res["status"] == "SUBMISSION_CONFIRMED":
+            record("submitted", official_status="submitted", validation_result="PASS",
+                   history_entry=res["history_entry"], message="SUBMISSION_CONFIRMED (history row + review == FINAL)",
+                   confirmation=res["checks"], evidence=ev("submission_confirmed"))
+            o.status, o.reason = "SUBMISSION_CONFIRMED", "portal history row + review content match the FINAL"
+            o.steps.append("SUBMISSION_CONFIRMED")
+        elif res["status"] == "AMBIGUOUS":
+            o.status, o.reason = "SUBMITTED_UNVERIFIED", f"MANUAL_CHECK_REQUIRED: ambiguous history ({res['reasons']})"
+        else:
+            ev("confirmation_missing")
+            o.status, o.reason = "SUBMITTED_UNVERIFIED", f"MANUAL_CHECK_REQUIRED: not confirmed ({res['reasons']})"
+        return o
     rows = driver.verify_acceptance(c.file.name, c.sha256, c.trade_date, float(a["acceptance_timeout_s"]),
                                     float(a["acceptance_poll_s"]))
     if len(rows) == 1:
@@ -321,13 +383,30 @@ def candidate_from_competition(trade_date: str, ops_cfg: dict) -> Candidate | No
     st = compute(trade_date, ops_cfg=ops_cfg)
     if not st.get("file"):
         return None
-    summ_p = ops_path(ops_cfg, "ops_logs_dir") / ymd(trade_date) / "competition_day_summary.json"
-    summary = json.loads(summ_p.read_text(encoding="utf-8")) if summ_p.exists() else None
+    summary = summary_for_final(trade_date, st.get("sha256"), ops_cfg)
     v = full_local_validation(trade_date, st.get("team_id") or "", Path(st["file"]), summary, ops_cfg,
                               active_final(trade_date, ops_cfg))
     return Candidate(trade_date, st.get("team_id") or "", Path(st["file"]), st.get("sha256") or "", st["state"],
                      v["ok"], "competition_final", st.get("mode"), v["checks"], _mtime(Path(st["file"])),
                      datetime.now(TPE).replace(microsecond=0).isoformat())
+
+
+def summary_for_final(trade_date: str, sha256: str | None, ops_cfg: dict) -> dict | None:
+    """competition_day summary of the run that produced the active FINAL: the day's latest summary if its sha256 is
+    the FINAL's, else the snapshot kept by the 07:30 run (logs/ops/<ymd>/summaries/<sha>.json). None -> the local
+    validation reports the compliance items as MISSING (fail closed)."""
+    from agent.ops.common import ops_path
+    day = ops_path(ops_cfg, "ops_logs_dir") / ymd(trade_date)
+    want = _norm_sha(sha256)
+    for p in (day / "competition_day_summary.json", day / "summaries" / f"{want.split(':')[-1]}.json"):
+        try:
+            s = json.loads(p.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            continue
+        own_run = s.get("final_run_id") in (None, s.get("run_id"))     # a KEPT run reports another run's FINAL
+        if want and _norm_sha(s.get("sha256")) == want and (own_run or p.parent.name == "summaries"):
+            return s
+    return None
 
 
 def _mtime(p: Path) -> str | None:
@@ -375,7 +454,7 @@ def manual_e2e_evidence(ops_cfg: dict) -> dict:
     from agent.ops.package_submission import active_final
     from agent.ops.team import resolve
     from agent.submission.official_test import _dir, dirs
-    from agent.submission.receipt import has_acceptance_evidence
+    from agent.submission.receipt import has_acceptance_evidence, is_confirmed
     team = resolve("COMPETITION", ops_cfg)
     team_id = team["team_id"] if team["status"] == "OK" else None
     ok, rejected = [], []
@@ -392,8 +471,9 @@ def manual_e2e_evidence(ops_cfg: dict) -> dict:
             if r.get("submission_method") not in MANUAL_PORTAL_METHODS or r.get("confirmed_by") in AUTOMATION_OPERATORS:
                 reject(src, r, f"not a manual portal submission ({r.get('submission_method')}, {r.get('confirmed_by')})")
                 continue
-            if not has_acceptance_evidence(r):
-                reject(src, r, "no official acceptance evidence (accepted + receipt id / history entry)")
+            if not is_confirmed(r):
+                reject(src, r, "no official acceptance evidence (accepted + receipt id / history entry) and no "
+                               "SUBMISSION_CONFIRMED check (history row + review == FINAL)")
                 continue
             if not team_id or r.get("team_id") != team_id:
                 reject(src, r, f"team {r.get('team_id')} != configured {team_id}")
@@ -469,6 +549,15 @@ def automated_attempts(trade_date: str, ops_cfg: dict, official_test: bool) -> i
     return sum(1 for r in _automation_rows(trade_date, ops_cfg, official_test) if r.get("stage") == "file_uploaded")
 
 
+def confirmed_shas(trade_date: str, team_id: str | None, ops_cfg: dict) -> tuple:
+    """Idempotency key trade_date + TEAM_ID + FINAL_SHA: SHAs with a confirmed / accepted receipt (any method)."""
+    from agent.submission.receipt import is_confirmed, receipts_path
+    p = receipts_path(trade_date, ops_cfg)
+    rows = [json.loads(x) for x in p.read_text(encoding="utf-8").splitlines() if x.strip()] if p.exists() else []
+    return tuple(sorted({_norm_sha(r.get("dplan_sha256")) for r in rows if r.get("trade_date") == trade_date
+                         and r.get("team_id") == team_id and is_confirmed(r)}))
+
+
 def prior_automation_shas(trade_date: str, ops_cfg: dict, official_test: bool) -> tuple:
     return tuple({r.get("sha256") or r.get("dplan_sha256") for r in _automation_rows(trade_date, ops_cfg, official_test)})
 
@@ -496,7 +585,7 @@ def recorder(c: Candidate, ops_cfg: dict, official_test: bool, audit_dir: Path |
 
     def rec(stage: str, *, official_status: str, message: str = "", validation_result: str | None = None,
             history_entry: str | None = None, submission_id: str | None = None, failure_reason: str | None = None,
-            evidence: list | None = None):
+            evidence: list | None = None, confirmation: dict | None = None):
         now = datetime.now(TPE).replace(microsecond=0).isoformat()
         if official_test:
             from agent.submission.official_test import record_upload
@@ -513,7 +602,8 @@ def recorder(c: Candidate, ops_cfg: dict, official_test: bool, audit_dir: Path |
                                    receipt_text=message, filename=c.file.name, stage=stage,
                                    server_validation_result=validation_result, history_entry=history_entry,
                                    failure_reason=failure_reason, evidence_files=list(evidence or []),
-                                   server_validated_at=now if stage == "server_validated" else None), ops_cfg)
+                                   server_validated_at=now if stage == "server_validated" else None,
+                                   confirmation=confirmation), ops_cfg)
         audit_dir.mkdir(parents=True, exist_ok=True)
         refs = [str(x) for x in (evidence or [])]
         row = {"at": now, f"{stage}_at": now, "generated_at": c.generated_at, "validated_at": c.validated_at,
@@ -521,7 +611,7 @@ def recorder(c: Candidate, ops_cfg: dict, official_test: bool, audit_dir: Path |
                "attempt_number": attempt, "stage": stage, "official_status": official_status,
                "validation_result": validation_result, "submit_result": message if stage == "submitted" else None,
                "history_entry": history_entry, "submission_id": submission_id, "receipt_text": message,
-               "failure_reason": failure_reason, "portal_state": dict(portal or {}),
+               "failure_reason": failure_reason, "portal_state": dict(portal or {}), "confirmation": confirmation,
                "screenshot_references": [x for x in refs if not x.endswith(".txt")],
                "page_text_references": [x for x in refs if x.endswith(".txt")],
                "environment": "OFFICIAL_TEST" if official_test else "COMPETITION"}
@@ -576,12 +666,42 @@ def manual_fallback(c: Candidate | None, outcome: Outcome, *, ops_cfg: dict, now
 
 
 # ----------------------------------------------------------------------------- orchestration
+def submission_lock(trade_date: str, ops_cfg: dict, timeout_s: float):
+    """One submission runner per trade date (19:30 / 07:30 / manual CLI never upload concurrently)."""
+    from agent.data.locks import FileLock
+    from agent.ops.common import ops_path
+    d = ops_path(ops_cfg, "ops_logs_dir").parent / "locks"
+    d.mkdir(parents=True, exist_ok=True)
+    stale = float((ops_cfg.get("locks") or {}).get("stale_after_sec", 120))
+    return FileLock(d / f"submission_{ymd(trade_date)}.lock", timeout=timeout_s, stale_after=stale)
+
+
 def execute(trade_date: str, *, official_test: bool, ops_cfg: dict | None = None, now_fn=None, driver_factory=None,
             run_mode: str | None = None, check_config: bool = True) -> dict:
-    """Gate -> driver -> evidence -> signals -> manual fallback. Used by the CLI and the 19:30 scheduler."""
+    """Lock -> gate -> driver -> evidence -> signals -> manual fallback. Used by the CLI, 19:30 and 07:30 runs.
+    A held lock (another runner on the same trade date) fails closed: LOCK_UNAVAILABLE, nothing uploaded."""
+    from agent.data.locks import LockTimeout
+    ops_cfg = ops_cfg or load_ops_config()
+    lk = submission_lock(trade_date, ops_cfg, float(cfg_auto(ops_cfg)["lock_timeout_s"]))
+    try:
+        lk.acquire()
+    except LockTimeout as e:
+        o = Outcome("FAIL_CLOSED", f"LOCK_UNAVAILABLE ({str(e)[:160]})")
+        return {"outcome": o.__dict__, "submission_status": submission_status(o.status),
+                "manual": manual_fallback(None, o, ops_cfg=ops_cfg, now=(now_fn or (lambda: datetime.now(TPE)))(),
+                                          attempts_used=automated_attempts(trade_date, ops_cfg, official_test),
+                                          trade_date=trade_date)}
+    try:
+        return _execute(trade_date, official_test=official_test, ops_cfg=ops_cfg, now_fn=now_fn,
+                        driver_factory=driver_factory, run_mode=run_mode, check_config=check_config)
+    finally:
+        lk.release()
+
+
+def _execute(trade_date: str, *, official_test: bool, ops_cfg: dict, now_fn=None, driver_factory=None,
+             run_mode: str | None = None, check_config: bool = True) -> dict:
     from agent.ops import signals
     from agent.ops.scheduled_run import run_mode as rm
-    ops_cfg = ops_cfg or load_ops_config()
     now_fn = now_fn or (lambda: datetime.now(TPE))
     mode = run_mode or rm(ops_cfg)
     c = candidate_from_official_test(trade_date, ops_cfg) if official_test else candidate_from_competition(trade_date, ops_cfg)
@@ -592,7 +712,8 @@ def execute(trade_date: str, *, official_test: bool, ops_cfg: dict | None = None
                                                                 trade_date=trade_date)}
     kw = dict(now_fn=now_fn, ops_cfg=ops_cfg, run_mode=mode, official_test=official_test, attempts_used=used,
               manual_e2e_done=manual_e2e_completed(ops_cfg), check_config=check_config,
-              prior_shas=prior_automation_shas(trade_date, ops_cfg, official_test))
+              prior_shas=prior_automation_shas(trade_date, ops_cfg, official_test),
+              confirmed_shas=() if official_test else confirmed_shas(trade_date, c.team_id, ops_cfg))
     pre = gate(c, now=now_fn(), **{k: v for k, v in kw.items() if k not in ("now_fn",)})
     if pre:
         o = run(c, None, record=lambda *a, **k: None, **kw)          # gate outcome only: no browser is started
@@ -611,8 +732,11 @@ def execute(trade_date: str, *, official_test: bool, ops_cfg: dict | None = None
                     drv.close()
                 except Exception:  # noqa: BLE001
                     pass
-    out = {"outcome": o.__dict__, "candidate": {"file": str(c.file), "sha256": c.sha256, "state": c.state}}
-    if o.status in SUCCESS:
+    out = {"outcome": o.__dict__, "candidate": {"file": str(c.file), "sha256": c.sha256, "state": c.state},
+           "submission_status": submission_status(o.status), "idempotency_key": [trade_date, c.team_id, c.sha256]}
+    if o.status in ("SUBMISSION_CONFIRMED", "ALREADY_SUBMITTED"):
+        signals.emit("SUBMISSION_CONFIRMED", trade_date, o.reason, ops_cfg=ops_cfg)
+    elif o.status in SUCCESS:
         signals.emit("SUBMISSION_ACCEPTED", trade_date, o.reason, ops_cfg=ops_cfg)
     else:
         if o.status in ("LOGIN_REQUIRED", "WINDOW_CLOSED"):
@@ -648,7 +772,8 @@ def main(argv=None) -> int:
             return 2
         f = gate(c, now=datetime.now(TPE), ops_cfg=ops, run_mode=run_mode(ops), official_test=a.official_test,
                  attempts_used=automated_attempts(a.date, ops, a.official_test), manual_e2e_done=manual_e2e_completed(ops),
-                 prior_shas=prior_automation_shas(a.date, ops, a.official_test))
+                 prior_shas=prior_automation_shas(a.date, ops, a.official_test),
+                 confirmed_shas=() if a.official_test else confirmed_shas(a.date, c.team_id, ops))
         print(json.dumps({"gate": "PASS" if not f else "FAIL_CLOSED", "failures": f}, ensure_ascii=False, indent=1))
         return 0 if not f else 2
     r = execute(a.date, official_test=a.official_test, ops_cfg=ops)

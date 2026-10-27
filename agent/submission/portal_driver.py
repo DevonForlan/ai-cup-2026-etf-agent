@@ -13,6 +13,10 @@ config/portal_adapter.yaml; anything not confirmed there is unusable (UIUnexpect
     .venv\\Scripts\\python.exe -m agent.submission.portal_driver readonly-test [--headless]
         read-only real-portal test: open -> login -> Team ID -> trade date -> window -> attempts -> history ->
         strategy document -> evidence. Prints PORTAL_READONLY_REAL_TEST = PASS | FAIL. Never uploads / submits.
+    ... -m agent.submission.portal_driver observe [--minutes 20]
+        Issue #20 read-only capture while the OWNER uploads / submits by hand in the opened automation-profile window:
+        every change of the validation panel, dialogs (e.g. a submit confirmation), buttons and history rows is saved
+        (text + screenshot) to data/portal_discovery/<timestamp>_observe/. Never clicks, types or uploads.
     .venv\\Scripts\\python.exe -m agent.submission.portal_driver inventory
 """
 from __future__ import annotations
@@ -139,6 +143,11 @@ class PortalDriver:
     def verify_acceptance(self, file_name: str, sha256: str, trade_date: str, timeout_s: float, poll_s: float) -> list[dict]: ...
     def capture_evidence(self, tag: str) -> list[str]: ...
     def close(self): ...
+
+    def read_confirmation_evidence(self, trade_date: str) -> dict | None:
+        """Issue #20: read-only SUBMISSION_CONFIRMED evidence (history rows, D-Plan status, 回看 review JSON).
+        None = this driver cannot read it (the runner then fails closed / uses the legacy acceptance path)."""
+        return None
 
     # names used by the operations brief (aliases of the methods above; same behaviour)
     def read_window_state(self) -> str:
@@ -273,7 +282,7 @@ class PlaywrightPortalDriver(PortalDriver):
 
     def read_window_status(self) -> str:
         body = self.page.inner_text("body", timeout=10000)
-        closed = wording_markers(self.adapter, "no_open_window") + wording_markers(self.adapter, "window_closed")
+        closed = wording_markers(self.adapter, "no_open_window") + wording_markers(self.adapter, "window_closed") +             wording_markers(self.adapter, "window_closed_inline")
         if any(m in body for m in closed):
             return "CLOSED"
         return "UNKNOWN"          # an explicit OPEN marker is PENDING_WINDOW_ONLY (never inferred)
@@ -349,6 +358,77 @@ class PlaywrightPortalDriver(PortalDriver):
 
     def read_strategy_document_status(self) -> str | None:
         return parse_doc_status(self._text("strategy_document_status"), self.adapter)
+
+    # --- Issue #20 read-only confirmation evidence ---------------------------------------------------------------
+    def read_history_cells(self) -> list[dict]:
+        """History rows as {"text", "cells"} (cells = visible td texts: 交易日 / 日期 / 每日上傳 JSON / 繳交時間 / 回看)."""
+        try:
+            if self._locate("history_rows") is None:
+                return []
+        except UIUnexpected:
+            return []
+        loc = self.page.locator(self._sel("history_rows")["strategies"][0].get("css", "tr"))
+        empty = wording_markers(self.adapter, "history_empty")
+        out = []
+        for i in range(loc.count()):
+            row = loc.nth(i)
+            text = (row.inner_text(timeout=3000) or "").strip()
+            if not text or any(m in text for m in empty):
+                continue
+            out.append({"text": text[:500], "cells": [(c or "").strip() for c in row.locator("td").all_inner_texts()]})
+        return out
+
+    def read_dplan_status(self) -> str | None:
+        """每日上傳（D-Plan） section badge for the page's current trade date (verbatim 已繳交 / 未繳交, else None)."""
+        lines = [x.strip() for x in (self._text("dplan_section") or "").splitlines() if x.strip()]
+        badge = lines[1] if len(lines) > 1 else None          # observed: 「每日上傳（D-Plan）\n未繳交」
+        return badge if badge in wording_markers(self.adapter, "dplan_status_values") else None
+
+    def open_review(self, trade_date: str) -> dict | None:
+        """Read-only: click 回看 on the ONE history row of `trade_date`, read the review dialog (header + JSON text),
+        close it. None when the row / link / dialog / content is not found (never guessed)."""
+        css = self._sel("history_rows")["strategies"][0].get("css", "tr")
+        rows = self.page.locator(css).filter(has_text=trade_date)
+        if rows.count() != 1:
+            return None
+        link_sel = self._sel("history_review_link")
+        if link_sel.get("status") not in READ_OK or not link_sel.get("strategies"):
+            raise UIUnexpected(f"{link_sel.get('status')}: history_review_link not usable")
+        link = rows.first.locator(link_sel["strategies"][0]["css"])
+        if link.count() != 1:
+            return None
+        link.first.click()
+        dlg = None
+        end = time.monotonic() + 15
+        while time.monotonic() < end:
+            dlg = self._locate("review_dialog")
+            if dlg is not None and dlg.is_visible():
+                break
+            time.sleep(0.5)
+        if dlg is None:
+            return None
+        pre = dlg.locator(self._sel("review_content")["strategies"][0]["css"])
+        content = None
+        end = time.monotonic() + 20                         # the JSON loads after the dialog opens (observed)
+        while time.monotonic() < end:
+            if pre.count() and (pre.first.inner_text(timeout=5000) or "").strip():
+                content = pre.first.inner_text(timeout=5000)
+                break
+            time.sleep(0.5)
+        header = (dlg.inner_text(timeout=5000) or "").split("{", 1)[0].strip()
+        try:
+            close = dlg.get_by_role("button", name=self._sel("review_close_button")["strategies"][0]["name"])
+            if close.count():
+                close.first.click()
+        except Exception:  # noqa: BLE001 - closing the read-only dialog never changes the outcome
+            pass
+        return {"header": header[:300], "json_text": content}
+
+    def read_confirmation_evidence(self, trade_date: str) -> dict | None:
+        body = self.page.inner_text("body", timeout=10000)
+        return {"team_id": self.read_team_id(), "page_trade_date": self.read_trade_date(),
+                "dplan_status": self.read_dplan_status(), "history_rows": self.read_history_cells(),
+                "review": self.open_review(trade_date), "page_text": body}
 
     # --- actions (guarded) -------------------------------------------------------------------------------------
     def upload_file(self, path: Path):
@@ -573,10 +653,44 @@ def discover(*, wait_login_s: int = 0, headless: bool = False, ops_cfg: dict | N
     return res
 
 
+def observe(*, minutes: float = 20.0, poll_s: float = 1.5, ops_cfg: dict | None = None) -> dict:
+    """Read-only observation of the Owner's manual upload / submit (Issue #20): a snapshot on every visible change."""
+    out_dir = ROOT / "data" / "portal_discovery" / (datetime.now(TPE).strftime("%Y%m%d_%H%M%S") + "_observe")
+    out_dir.mkdir(parents=True, exist_ok=True)
+    drv = PlaywrightPortalDriver(ops_cfg, evidence_dir=out_dir)
+    n, last = 0, None
+    try:
+        drv.open_portal()
+        end = time.monotonic() + minutes * 60
+        while time.monotonic() < end:
+            try:
+                btn = drv.page.get_by_role("button")
+                state = {"validation_panel": drv._text("validation_result_panel"), "dialogs": drv._dialogs(),
+                         "buttons": [_attrs(btn.nth(i)) for i in range(min(btn.count(), 40))],
+                         "dplan_section": drv._text("dplan_section"), "history": drv.read_history_cells(),
+                         "attempts": drv.read_attempts(), "trade_date": drv.read_trade_date()}
+            except Exception:  # noqa: BLE001 - page in transition; look again
+                state = None
+            key = json.dumps(state, ensure_ascii=False, sort_keys=True, default=str)
+            if state is not None and key != last:
+                last = key
+                snap = {"at": datetime.now(TPE).isoformat(), **state, "evidence": drv.capture_evidence(f"observe_{n:03d}")}
+                n += 1
+                with open(out_dir / "observe.jsonl", "a", encoding="utf-8") as f:
+                    f.write(json.dumps(snap, ensure_ascii=False, default=str) + "\n")
+            time.sleep(poll_s)
+    finally:
+        drv.close()
+    return {"out_dir": str(out_dir), "snapshots": n,
+            "note": "READ-ONLY observation: the agent never clicked, typed or uploaded; evidence local only"}
+
+
 def main(argv=None) -> int:
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")
     ap = argparse.ArgumentParser()
     sp = ap.add_subparsers(dest="cmd", required=True)
+    ob = sp.add_parser("observe")
+    ob.add_argument("--minutes", type=float, default=20.0)
     d = sp.add_parser("discover")
     d.add_argument("--wait-login", type=int, default=0, help="seconds to wait for the Owner's manual login")
     d.add_argument("--headless", action="store_true")
@@ -584,6 +698,9 @@ def main(argv=None) -> int:
     r_ = sp.add_parser("readonly-test")
     r_.add_argument("--headless", action="store_true")
     a = ap.parse_args(argv)
+    if a.cmd == "observe":
+        print(json.dumps(observe(minutes=a.minutes), ensure_ascii=False, indent=1))
+        return 0
     if a.cmd == "inventory":
         print(json.dumps(selector_inventory(load_adapter()), ensure_ascii=False, indent=1))
         return 0

@@ -140,8 +140,10 @@ def test_adapter_unconfirmed_entries_are_pending_and_never_guessed():
                  "submission_history_table", "history_rows", "strategy_document_status", "datapack_download",
                  "nav_docs_link", "no_window_marker", "server_validation_fail_marker"):
         assert inv[name]["status"] == "CONFIRMED_REAL_E2E" and inv[name]["usable_for_read"], name
-    # the submit action is still unconfirmed -> COMPETITION can never submit through the adapter yet
-    assert not inv["submit_button"]["usable_for_action_competition"]
+    # Issue #20 (2026-10-27): the 送出繳交 <button> is confirmed on the real DOM (read-only discovery + the Owner's real
+    # submit that produced the 10/27 history row) -> usable; the confirmation modal / its button are still unseen
+    assert inv["submit_button"]["usable_for_action_competition"]
+    assert "Issue #20" in PD.load_adapter()["selectors"]["submit_button"]["confirmed"]
     assert not inv["submit_confirm_button"]["usable_for_action_competition"]
     a = PD.load_adapter()
     for w in ("validation_pass", "history_accepted", "submit_success"):           # validation_fail: confirmed 10-23
@@ -166,8 +168,12 @@ def test_driver_refuses_pending_selectors_for_actions():
     d.adapter, d.official_test = PD.load_adapter(), False
     with pytest.raises(PD.UIUnexpected, match="PENDING_"):
         d._locate("upload_button", action=True)
+    import copy                                                   # Issue #20 confirmed the real 送出繳交 button; the rule
+    d.adapter = copy.deepcopy(d.adapter)                          # itself is still tested on an OWNER_OBSERVED_LABEL entry
+    d.adapter["selectors"]["submit_button"]["status"] = "OWNER_OBSERVED_LABEL"
     with pytest.raises(PD.UIUnexpected, match="OWNER_OBSERVED_LABEL"):
         d._locate("submit_button", action=True)                  # COMPETITION needs CONFIRMED_REAL_E2E
+    d.adapter = PD.load_adapter()
     d.official_test = True
     with pytest.raises(PD.UIUnexpected, match="PENDING_"):
         d._locate("submit_confirm_button", action=True)

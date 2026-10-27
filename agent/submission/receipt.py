@@ -33,6 +33,24 @@ def has_acceptance_evidence(r: dict) -> bool:
     return (r.get("official_status") == "accepted" and r.get("stage") in (None, "submitted", "accepted")
             and bool(r.get("official_receipt_id") or r.get("history_entry")))
 
+
+# Issue #20 Owner Decision 2026-10-27: the portal never shows an "ACCEPTED" word. A submission is CONFIRMED when the
+# read-only portal check (agent/submission/confirmation.py) proves every item below; the record keeps them verbatim.
+CONFIRMATION_KEYS = ("submitted_marker_present", "unique_matching_history_row", "trade_date_match", "team_match",
+                     "review_content_present", "review_content_matches_final", "no_rejection_marker",
+                     "no_validation_failure_marker")
+
+
+def has_submission_confirmation(r: dict) -> bool:
+    c = r.get("confirmation") or {}
+    return (r.get("official_status") == "submitted" and r.get("stage") == "submitted"
+            and all(c.get(k) is True for k in CONFIRMATION_KEYS) and bool(r.get("history_entry")))
+
+
+def is_confirmed(r: dict) -> bool:
+    """Official acceptance evidence (legacy) OR a SUBMISSION_CONFIRMED read-only portal check."""
+    return has_acceptance_evidence(r) or has_submission_confirmation(r)
+
 RECEIPT_SCHEMA = {
     "$schema": "https://json-schema.org/draft/2020-12/schema", "title": "SubmissionReceipt", "type": "object",
     "required": ["trade_date", "team_id", "dplan_sha256", "submitted_at", "submission_method", "confirmed_by"],
@@ -43,7 +61,7 @@ RECEIPT_SCHEMA = {
         "submitted_at": {"type": "string"},
         "submission_method": {"enum": ["manual_web", "manual_email", "official_api", "browser_automation", "other"]},
         "official_receipt_id": {"type": ["string", "null"]},
-        "official_status": {"enum": ["accepted", "rejected", "pending", "unknown"]},
+        "official_status": {"enum": ["accepted", "submitted", "rejected", "pending", "unknown"]},
         "screenshot_reference": {"type": ["string", "null"]},
         "confirmed_by": {"type": "string", "minLength": 1},
         "notes": {"type": ["string", "null"]},
@@ -57,6 +75,7 @@ RECEIPT_SCHEMA = {
         "uploaded_at": {"type": ["string", "null"]},
         "server_validated_at": {"type": ["string", "null"]},
         "history_entry": {"type": ["string", "null"]},        # verbatim official history row (acceptance evidence)
+        "confirmation": {"type": ["object", "null"]},         # SUBMISSION_CONFIRMED checks (CONFIRMATION_KEYS)
     },
     "additionalProperties": False,
 }
@@ -84,6 +103,7 @@ class Receipt:
     uploaded_at: str | None = None
     server_validated_at: str | None = None
     history_entry: str | None = None
+    confirmation: dict | None = None
 
     def validate(self) -> list[str]:
         import jsonschema
@@ -120,7 +140,7 @@ def effective_submission(receipts: list[dict], trade_date: str, max_daily: int =
                and datetime.fromisoformat(r["submitted_at"]) <= cut]
     order = {id(r): i for i, r in enumerate(on_time)}       # equal timestamps: the later record wins
     key = lambda r: (datetime.fromisoformat(r["submitted_at"]), order[id(r)])  # noqa: E731
-    ok = sorted((r for r in on_time if has_acceptance_evidence(r)), key=key)   # evidence-backed acceptances only
+    ok = sorted((r for r in on_time if is_confirmed(r)), key=key)   # evidence-backed acceptances / confirmations only
     last_upload = max(on_time, key=key, default=None)
     return {"effective": ok[-1] if ok else None, "last_upload": last_upload,
             "last_upload_is_effective": bool(ok) and last_upload is ok[-1],
@@ -141,7 +161,8 @@ def main(argv=None) -> int:
     ap.add_argument("--method", default="manual_web", choices=["manual_web", "manual_email", "official_api", "other"])
     ap.add_argument("--submitted-at", default=None)
     ap.add_argument("--receipt-id", default=None)
-    ap.add_argument("--official-status", default="unknown", choices=["accepted", "rejected", "pending", "unknown"])
+    ap.add_argument("--official-status", default="unknown", choices=["accepted", "rejected", "pending", "unknown"],
+                    help="'submitted' + confirmation is written only by agent.submission.confirmation")
     ap.add_argument("--screenshot", default=None)
     ap.add_argument("--confirmed-by", required=True)
     ap.add_argument("--notes", default=None)
