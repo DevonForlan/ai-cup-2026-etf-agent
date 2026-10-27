@@ -220,6 +220,9 @@ def run(c: Candidate, driver, *, now_fn, ops_cfg: dict, run_mode: str, official_
                 return o
             if pre["status"] == "AMBIGUOUS":
                 raise UIUnexpected(f"HISTORY_AMBIGUOUS ({pre['matching_rows']} rows for {c.trade_date})")
+            if pre["matching_rows"]:                                 # a row for T exists but is not this FINAL /
+                ev("history_row_unconfirmed")                        # its review could not be read: never re-submit
+                raise UIUnexpected(f"HISTORY_ROW_EXISTS_UNCONFIRMED ({pre['reasons']}; manual check)")
         hist = driver.read_history()
         mine = [r for r in hist if r.get("accepted") and (c.file.name in r.get("text", "") or c.sha256 in r.get("text", ""))]
         if mine:
@@ -285,8 +288,22 @@ def run(c: Candidate, driver, *, now_fn, ops_cfg: dict, run_mode: str, official_
         if SW.phase(c.trade_date, now_fn(), ops_cfg) == "SUBMISSION_WINDOW_CLOSED":
             o.status, o.reason = "WINDOW_CLOSED", "08:55 reached before submit (stopped)"
             return o
-        driver.submit()
-        sres, stext = driver.read_submit_result()
+        pending = driver.submit_flow_pending() if hasattr(driver, "submit_flow_pending") else []
+        if pending:                                                  # never a blind click into an unseen dialog
+            ev("submit_flow_unconfirmed")
+            o.status = "FAIL_CLOSED"
+            o.reason = f"SUBMIT_FLOW_UNCONFIRMED {pending} (SERVER_VALIDATED, not submitted; manual submit required)"
+            return o
+        try:
+            driver.submit()
+            sres, stext = driver.read_submit_result()
+        except Exception as e:  # noqa: BLE001 - the click may have happened: verify read-only, never click again
+            if getattr(driver, "submit_clicked", True) is False:     # refused before any click: plain fail closed
+                raise
+            record("submitted", official_status="pending", validation_result="PASS",
+                   message=f"SUBMIT_RESULT_UNKNOWN ({type(e).__name__}: {str(e)[:120]})", evidence=ev("submit_unknown"))
+            o.steps.append("SUBMIT_RESULT_UNKNOWN")
+            return _verify(c, driver, o, record, a, ev)
         if sres == "FAIL":
             record("rejected", official_status="rejected", validation_result="PASS", message=stext, failure_reason=stext,
                    evidence=ev("submit_fail"))

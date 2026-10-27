@@ -5,12 +5,14 @@ StartWhenAvailable=True, WakeToRun=False). For T = today (a trading day):
 
   lock (agent/ops/production_lock.py, shared with the 19:30 run)
   -> T already SUBMISSION_CONFIRMED / ACCEPTED: no new decision (competition_day refuses one too); verify only
+  -> T SUBMITTED (submit result unknown): no new decision; the runner verifies read-only, never re-submits
   -> before 08:30: the SAME competition command as 19:30 (agent/competition_day.py --mode competition, refresh of
      the latest legal data, freshness / DataPack / validation / compliance gates unchanged) -> a candidate
        * no FINAL yet            -> competition_day marks it (MARKED)
        * KEPT_IDENTICAL          -> the evening FINAL stays (same decisions)
        * KEPT_DIFFERENT          -> supersede ONLY if supersede_decision() passes (same T, data health PASS,
-                                    validation PASS, every compliance item PASS, before 08:30) via final.replace_final
+                                    validation PASS, every compliance item PASS, before 08:30) AND a read-only portal
+                                    check shows no submission for T yet (portal_clear) via final.replace_final
                                     (prior / new sha, reason and evidence kept; exactly one active FINAL)
   -> 08:30 .. 08:55: no decision; the EXISTING FINAL may still be uploaded / submitted / verified
   -> downstream submission runner (scheduled_run.submission_stage -> agent/submission/auto_upload.py, fail closed)
@@ -144,8 +146,10 @@ def _run_competition_day(trade_date: str, team: str, pre: dict, started: str) ->
         return None, err or "no competition_day summary"
 
 
-def run(now: datetime | None = None, *, cd_runner=None, submit=None, replace=None, prepare=None) -> dict:
-    """`cd_runner` / `submit` / `replace` / `prepare` are injectable for tests (defaults: the production calls)."""
+def run(now: datetime | None = None, *, cd_runner=None, submit=None, replace=None, prepare=None,
+        portal_check=None) -> dict:
+    """`cd_runner` / `submit` / `replace` / `prepare` / `portal_check` are injectable for tests (defaults: the
+    production calls)."""
     from agent.data.locks import LockTimeout
     from agent.ops.production_lock import production_lock
     from agent.ops.scheduled_run import holidays, run_mode
@@ -168,12 +172,28 @@ def run(now: datetime | None = None, *, cd_runner=None, submit=None, replace=Non
         rec.update(status="BLOCKED", blocked_reason="LOCK_UNAVAILABLE", error_message=str(e)[:300])
         return _finish(rec)
     try:
-        return _locked(rec, now, ops, cd_runner=cd_runner, submit=submit, replace=replace, prepare=prepare)
+        return _locked(rec, now, ops, cd_runner=cd_runner, submit=submit, replace=replace, prepare=prepare,
+                       portal_check=portal_check)
     finally:
         lk.release()
 
 
-def _locked(rec: dict, now: datetime, ops: dict, *, cd_runner, submit, replace, prepare) -> dict:
+def portal_clear(trade_date: str, ops: dict) -> tuple[bool, str]:
+    """Read-only: no submission for T on the portal yet (e.g. an evening MANUAL submission not recorded locally).
+    Unknown (login, page, adapter) -> False: the evening FINAL is kept (fail closed)."""
+    from agent.submission.confirmation import verify
+    try:
+        r = verify(trade_date, ops_cfg=ops)
+    except Exception as e:  # noqa: BLE001
+        return False, f"portal state unknown ({type(e).__name__}: {str(e)[:120]})"
+    if "matching_rows" not in r:
+        return False, f"portal state unknown ({r.get('reasons')})"
+    if r["matching_rows"]:
+        return False, f"the portal already has {r['matching_rows']} submission row(s) for T ({r['status']})"
+    return True, "no portal submission for T"
+
+
+def _locked(rec: dict, now: datetime, ops: dict, *, cd_runner, submit, replace, prepare, portal_check=None) -> dict:
     from agent.ops.final import replace_final
     from agent.ops.package_submission import active_final
     from agent.ops.scheduled_run import RunLog, competition_preparation, submission_stage
@@ -191,6 +211,8 @@ def _locked(rec: dict, now: datetime, ops: dict, *, cd_runner, submit, replace, 
     rec["submission_state"] = sub["state"]
     if sub["state"] in DONE:
         rec.update(status="SKIPPED", blocked_reason="ALREADY_SUBMITTED (no new decision after a confirmed submission)")
+    elif sub["state"] == "SUBMITTED":                  # submit result unknown: verify read-only, never supersede
+        rec.update(status="SKIPPED", blocked_reason="SUBMISSION_UNVERIFIED (no new decision; read-only verify first)")
     elif rec["action"] == "SUBMIT_EXISTING_ONLY":
         rec.update(status="SKIPPED", blocked_reason="DECISION_WINDOW_CLOSED")
     else:
@@ -214,6 +236,10 @@ def _locked(rec: dict, now: datetime, ops: dict, *, cd_runner, submit, replace, 
                 rec["status"] = "PASS"
                 if s.get("final_action") == "KEPT_DIFFERENT":
                     ok, why = supersede_decision(s, prior, trade_date=t, now=datetime.now(TPE), ops_cfg=ops)
+                    if ok:                      # never replace a FINAL that may already be on the portal
+                        clear, pwhy = (portal_check or portal_clear)(t, ops)
+                        if not clear:
+                            ok, why = False, f"evening FINAL kept: {pwhy}"
                     rec["supersede_reason"] = why
                     if ok:
                         res = (replace or replace_final)(t, team, s["run_id"], reason=f"Issue #20 07:30: {why}",
