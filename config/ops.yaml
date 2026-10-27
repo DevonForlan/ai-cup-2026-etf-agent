@@ -138,10 +138,11 @@ submission:
 
 # Guarded automated upload (Issue #4). NO documented participant API exists (portal uses SSO session + CSRF on a
 # private /api) -> only normal browser automation of the human UI may ever be used, after a successful manual E2E.
-# Disabled until the Owner enables it after a sealed-test automatic run reaches an official accepted state.
+# Owner Decision 2026-10-27 (Issue #20): enabled after the Day-1 manual E2E reached SUBMISSION_CONFIRMED (the portal
+# shows no "accepted" word; agent/submission/confirmation.py). Every run still needs the full fail-closed gate.
 auto_upload:
-  enabled: false
-  method: none                    # none | browser   (official API: not available)
+  enabled: true
+  method: browser                 # none | browser   (official API: not available)
   max_automated_attempts: 3       # internal cap per trade date (official limit 25 is never exhausted)
   browser_profile_dir: data/browser_profiles/fundaiagent   # gitignored; the Owner logs in interactively once
   selectors: {}                   # filled ONLY from the observed UI after the manual E2E; empty -> fail closed
