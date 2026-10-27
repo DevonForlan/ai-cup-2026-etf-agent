@@ -69,7 +69,9 @@ def cfg_auto(ops_cfg: dict) -> dict:
     a = dict(ops_cfg.get("auto_upload") or {})
     a.setdefault("enabled", False)
     a.setdefault("method", "none")
-    a.setdefault("max_automated_attempts", 3)
+    a.setdefault("max_automated_attempts", 4)       # Owner Decision 2026-10-27: a few retries of the same FINAL
+    a.setdefault("retries_per_run", 2)              # extra attempts inside one 19:30 / 07:30 run
+    a.setdefault("retry_wait_s", 30)
     a.setdefault("validation_timeout_s", 60)
     a.setdefault("acceptance_timeout_s", 120)
     a.setdefault("acceptance_poll_s", 10)
@@ -116,7 +118,7 @@ def gate(c: Candidate, *, now: datetime, ops_cfg: dict, run_mode: str, official_
     missing = [k for k in REQUIRED_CHECKS if k not in (c.validation_checks or {})]
     if missing:
         f.append(f"LOCAL_VALIDATION_UNKNOWN {missing}")
-    if any(s and s != c.sha256 for s in prior_shas):
+    if official_test and any(s and s != c.sha256 for s in prior_shas):
         f.append("DIFFERENT_SHA_RETRY_BLOCKED (retries only for the same FINAL sha256)")
     fz = ops_cfg["freeze"]
     h = sha256_file(ROOT / fz["strategy_config"])
@@ -146,7 +148,7 @@ def gate(c: Candidate, *, now: datetime, ops_cfg: dict, run_mode: str, official_
         f.append("WINDOW_NOT_OPEN")
     elif ph == "SUBMISSION_WINDOW_CLOSED":
         f.append("SUBMISSION_WINDOW_CLOSED (08:55: submit forbidden)")
-    if attempts_used >= int(a["max_automated_attempts"]) and c.state != "SUBMITTED":
+    if attempts_used >= int(a["max_automated_attempts"]) and c.state != "SUBMITTED":   # verifying is not an attempt
         f.append(f"MAX_AUTOMATED_ATTEMPTS ({attempts_used}/{a['max_automated_attempts']})")
     return f
 
@@ -195,7 +197,7 @@ def run(c: Candidate, driver, *, now_fn, ops_cfg: dict, run_mode: str, official_
         page = driver.read_page_state()
         o.portal.update(window_status=page.get("window_status"), url=page.get("url"))
         if page.get("unexpected_dialogs"):
-            raise UIUnexpected(f"UNEXPECTED_MODAL {page['unexpected_dialogs'][:1]}")
+            page = _try_dismiss(driver, o, ev)
         if page.get("window_status") == "CLOSED":
             o.status, o.reason = "WINDOW_CLOSED", "portal shows the submission window as closed"
             return o
@@ -220,9 +222,9 @@ def run(c: Candidate, driver, *, now_fn, ops_cfg: dict, run_mode: str, official_
                 return o
             if pre["status"] == "AMBIGUOUS":
                 raise UIUnexpected(f"HISTORY_AMBIGUOUS ({pre['matching_rows']} rows for {c.trade_date})")
-            if pre["matching_rows"]:                                 # a row for T exists but is not this FINAL /
-                ev("history_row_unconfirmed")                        # its review could not be read: never re-submit
-                raise UIUnexpected(f"HISTORY_ROW_EXISTS_UNCONFIRMED ({pre['reasons']}; manual check)")
+            if pre["matching_rows"]:                                 # a row for T that is not (provably) this FINAL:
+                ev("history_row_unconfirmed")                        # best effort -> submit this FINAL (last counts)
+                o.steps.append(f"HISTORY_ROW_NOT_THIS_FINAL {pre['reasons']}")
         hist = driver.read_history()
         mine = [r for r in hist if r.get("accepted") and (c.file.name in r.get("text", "") or c.sha256 in r.get("text", ""))]
         if mine:
@@ -230,14 +232,16 @@ def run(c: Candidate, driver, *, now_fn, ops_cfg: dict, run_mode: str, official_
                    evidence=ev("already_accepted"))
             o.status, o.reason = "ALREADY_ACCEPTED", "official history already shows this FINAL as accepted"
             return o
-        if c.state == "SUBMITTED":                                   # idempotent: verify only, never resubmit
-            return _verify(c, driver, o, record, a, ev)
+        if c.state == "SUBMITTED":                                   # unknown earlier result: verify read-only;
+            if attempts_used >= int(a["max_automated_attempts"]) or pre is None:   # cap reached / no 回看 reader
+                return _verify(c, driver, o, record, a, ev)          # -> verify only, never another click
+            o.steps.append("PREVIOUS_SUBMIT_NOT_CONFIRMED -> retry")   # history + 回看 read above: not confirmed
         if remaining <= 0:
             raise UIUnexpected("OFFICIAL_ATTEMPT_LIMIT_REACHED")
         validated_on_page = False
         if c.state in ("FILE_UPLOADED", "SERVER_VALIDATED"):          # resume: the page may still hold the result
             res, text = driver.read_validation_result()
-            validated_on_page = res == "PASS"
+            validated_on_page = res in VALIDATED
             if validated_on_page and c.state == "FILE_UPLOADED":
                 record("server_validated", official_status="pending", validation_result="PASS", message=text,
                        evidence=ev("server_validated_resume"))
@@ -265,11 +269,13 @@ def run(c: Candidate, driver, *, now_fn, ops_cfg: dict, run_mode: str, official_
                 o.status, o.reason = "REJECTED", f"檢核結果 FAIL: {text}"
                 o.steps.append("REJECTED")
                 return o
-            if res != "PASS":
+            if res not in VALIDATED:
                 ev("validation_unknown")
                 raise UIUnexpected(f"VALIDATION_RESULT_UNKNOWN ({text[:120]!r})")
             record("server_validated", official_status="pending", validation_result="PASS", message=text,
-                   evidence=ev("server_validated"))
+                   evidence=ev("server_validated" if res == "PASS" else "server_validated_inferred"))
+            if res != "PASS":
+                o.steps.append("VALIDATION_PASS_INFERRED")
             o.steps.append("SERVER_VALIDATED")
         # pre-submit re-check: session, page identity, same FINAL bytes, validation still PASS, no modal, < 08:55
         if driver.check_login() != "LOGGED_IN":
@@ -280,22 +286,24 @@ def run(c: Candidate, driver, *, now_fn, ops_cfg: dict, run_mode: str, official_
             raise UIUnexpected("PAGE_IDENTITY_CHANGED_BEFORE_SUBMIT")
         if sha256_file(c.file) != c.sha256:
             raise UIUnexpected("FINAL_SHA_CHANGED_BEFORE_SUBMIT")
-        if driver.read_validation_result()[0] != "PASS":
+        if driver.read_validation_result()[0] not in VALIDATED:
             raise UIUnexpected("VALIDATION_NOT_PASS_BEFORE_SUBMIT")
         page = driver.read_page_state()
         if page.get("unexpected_dialogs"):
-            raise UIUnexpected(f"UNEXPECTED_MODAL {page['unexpected_dialogs'][:1]}")
+            _try_dismiss(driver, o, ev)
         if SW.phase(c.trade_date, now_fn(), ops_cfg) == "SUBMISSION_WINDOW_CLOSED":
             o.status, o.reason = "WINDOW_CLOSED", "08:55 reached before submit (stopped)"
             return o
         pending = driver.submit_flow_pending() if hasattr(driver, "submit_flow_pending") else []
-        if pending:                                                  # never a blind click into an unseen dialog
+        if pending:                                                  # only the 送出繳交 button itself can block
             ev("submit_flow_unconfirmed")
             o.status = "FAIL_CLOSED"
-            o.reason = f"SUBMIT_FLOW_UNCONFIRMED {pending} (SERVER_VALIDATED, not submitted; manual submit required)"
+            o.reason = f"SUBMIT_FLOW_UNCONFIRMED {pending} (SERVER_VALIDATED, not submitted)"
             return o
         try:
-            driver.submit()
+            explored = driver.submit()                               # bounded exploration (portal_driver.submit)
+            if isinstance(explored, dict):
+                o.portal["submit_exploration"] = explored.get("log")
             sres, stext = driver.read_submit_result()
         except Exception as e:  # noqa: BLE001 - the click may have happened: verify read-only, never click again
             if getattr(driver, "submit_clicked", True) is False:     # refused before any click: plain fail closed
@@ -319,6 +327,46 @@ def run(c: Candidate, driver, *, now_fn, ops_cfg: dict, run_mode: str, official_
     except Exception as e:  # noqa: BLE001 - any driver error is fail-closed, never a blind retry
         o.status, o.reason = "FAIL_CLOSED", f"{type(e).__name__}: {str(e)[:200]}"
         return o
+
+
+VALIDATED = ("PASS", "PASS_INFERRED")
+
+
+def _try_dismiss(driver, o, ev) -> dict:
+    """Unknown notice dialog before the submit: capture it, close it through its one dismiss button, continue.
+    Still there afterwards -> UIUnexpected (retryable)."""
+    ev("unexpected_dialog")
+    if hasattr(driver, "dismiss_dialogs"):
+        log: list = []
+        driver.dismiss_dialogs(log)
+        o.portal.setdefault("dismissed_dialogs", []).extend(log)
+    page = driver.read_page_state()
+    if page.get("unexpected_dialogs"):
+        raise UIUnexpected(f"UNEXPECTED_MODAL {page['unexpected_dialogs'][:1]}")
+    return page
+
+
+# Owner Decision 2026-10-27: escalate to the Owner only for what automation cannot fix itself
+OWNER_ONLY = ("LOGIN_", "LOGIN_STATE", "PAGE_TEAM_ID", "PAGE_TRADE_DATE", "TEAM_ID_MISMATCH", "FILE_TEAM_MISMATCH",
+              "TRADE_DATE_MISMATCH", "QUANT_FREEZE_FAIL", "PLAYWRIGHT_NOT_INSTALLED", "PORTAL_UNAVAILABLE")
+NOT_RETRYABLE = OWNER_ONLY + ("WINDOW", "MAX_AUTOMATED_ATTEMPTS", "AUTO_UPLOAD_DISABLED", "MANUAL_E2E_NOT_COMPLETED",
+                              "NOT_A_COMPETITION_FINAL", "PRECOMPETITION", "LOCAL_VALIDATION", "SHA_MISMATCH",
+                              "FILE_", "OFFICIAL_ATTEMPT_LIMIT", "LOCK_UNAVAILABLE", "STATE_NOT_SUBMITTABLE",
+                              "NO_CANDIDATE", "DIFFERENT_SHA")
+
+
+def owner_action_required(o) -> bool:
+    if o.status in SUCCESS:
+        return False
+    if o.status == "LOGIN_REQUIRED":
+        return True
+    return any(k in (o.reason or "") for k in OWNER_ONLY)
+
+
+def retryable(o) -> bool:
+    if o.status in SUCCESS or o.status in ("LOGIN_REQUIRED", "WINDOW_CLOSED", "REJECTED"):
+        return False
+    return not any(k in (o.reason or "") for k in NOT_RETRYABLE)
 
 
 def _portal_confirmation(c, driver) -> dict | None:
@@ -640,7 +688,7 @@ def recorder(c: Candidate, ops_cfg: dict, official_test: bool, audit_dir: Path |
 
 
 def manual_fallback(c: Candidate | None, outcome: Outcome, *, ops_cfg: dict, now: datetime, attempts_used: int,
-                    trade_date: str | None = None) -> dict:
+                    trade_date: str | None = None, signal: bool = True) -> dict:
     """MANUAL_UPLOAD_REQUIRED instructions with every fact the operator needs (written locally + signal)."""
     from agent.ops import signals
     from agent.ops import submission_window as SW
@@ -678,7 +726,9 @@ def manual_fallback(c: Candidate | None, outcome: Outcome, *, ops_cfg: dict, now
     d = evidence_dir(t, ops_cfg) if t else evidence_dir("1970-01-01", ops_cfg).parent
     d.mkdir(parents=True, exist_ok=True)
     write_json(d / "MANUAL_UPLOAD_REQUIRED.json", info)
-    signals.emit("MANUAL_UPLOAD_REQUIRED", t, outcome.reason, ops_cfg=ops_cfg)
+    if signal:                                   # best-effort failures keep the file (evidence), no Owner signal
+        signals.emit("MANUAL_UPLOAD_REQUIRED", t, outcome.reason, ops_cfg=ops_cfg)
+    info["owner_action_required"] = signal
     return info
 
 
@@ -716,17 +766,56 @@ def execute(trade_date: str, *, official_test: bool, ops_cfg: dict | None = None
 
 
 def _execute(trade_date: str, *, official_test: bool, ops_cfg: dict, now_fn=None, driver_factory=None,
-             run_mode: str | None = None, check_config: bool = True) -> dict:
+             run_mode: str | None = None, check_config: bool = True, sleep=None) -> dict:
+    """Owner Decision 2026-10-27 (best-effort): up to 1 + retries_per_run attempts in this run (each re-reads the
+    FINAL state, the portal history / 回看 and the daily cap first); stop on success or a non-retryable cause."""
+    import time as _time
     from agent.ops import signals
     from agent.ops.scheduled_run import run_mode as rm
     now_fn = now_fn or (lambda: datetime.now(TPE))
+    sleep = sleep or _time.sleep
     mode = run_mode or rm(ops_cfg)
+    a = cfg_auto(ops_cfg)
+    tries: list = []
+    for i in range(1 + int(a["retries_per_run"])):
+        c, o, used = _attempt(trade_date, official_test=official_test, ops_cfg=ops_cfg, now_fn=now_fn,
+                              driver_factory=driver_factory, mode=mode, check_config=check_config)
+        tries.append({"attempt": i + 1, "status": o.status, "reason": o.reason[:300], "steps": o.steps})
+        if c is None or not retryable(o) or i == int(a["retries_per_run"]):
+            break
+        sleep(float(a["retry_wait_s"]))
+    if c is None:
+        out = {"outcome": o.__dict__, "tries": tries, "owner_action_required": False,
+               "manual": manual_fallback(None, o, ops_cfg=ops_cfg, now=now_fn(), attempts_used=used,
+                                         trade_date=trade_date)}
+        return out
+    out = {"outcome": o.__dict__, "candidate": {"file": str(c.file), "sha256": c.sha256, "state": c.state},
+           "submission_status": submission_status(o.status), "idempotency_key": [trade_date, c.team_id, c.sha256],
+           "tries": tries, "owner_action_required": owner_action_required(o)}
+    if o.status in ("SUBMISSION_CONFIRMED", "ALREADY_SUBMITTED"):
+        signals.emit("SUBMISSION_CONFIRMED", trade_date, o.reason, ops_cfg=ops_cfg)
+    elif o.status in SUCCESS:
+        signals.emit("SUBMISSION_ACCEPTED", trade_date, o.reason, ops_cfg=ops_cfg)
+    else:
+        if o.status in ("LOGIN_REQUIRED", "WINDOW_CLOSED"):
+            signals.emit(o.status, trade_date, o.reason, ops_cfg=ops_cfg)
+        out["manual"] = manual_fallback(c, o, ops_cfg=ops_cfg, now=now_fn(), attempts_used=used,
+                                        signal=out["owner_action_required"])
+        if not out["owner_action_required"]:        # best effort: recorded, no Owner action; the next run retries
+            signals.emit("SUBMISSION_BEST_EFFORT_FAILED", trade_date, f"{o.status}: {o.reason}"[:300], ops_cfg=ops_cfg)
+    d = evidence_dir(trade_date, ops_cfg)
+    d.mkdir(parents=True, exist_ok=True)
+    write_json(d / "auto_upload_last.json", out)
+    return out
+
+
+def _attempt(trade_date: str, *, official_test: bool, ops_cfg: dict, now_fn, driver_factory, mode: str,
+             check_config: bool):
+    from agent.ops import signals
     c = candidate_from_official_test(trade_date, ops_cfg) if official_test else candidate_from_competition(trade_date, ops_cfg)
     used = automated_attempts(trade_date, ops_cfg, official_test)
     if c is None:
-        o = Outcome("FAIL_CLOSED", "NO_CANDIDATE (no validated FINAL for this trade date)")
-        return {"outcome": o.__dict__, "manual": manual_fallback(None, o, ops_cfg=ops_cfg, now=now_fn(), attempts_used=used,
-                                                                trade_date=trade_date)}
+        return None, Outcome("FAIL_CLOSED", "NO_CANDIDATE (no validated FINAL for this trade date)"), used
     kw = dict(now_fn=now_fn, ops_cfg=ops_cfg, run_mode=mode, official_test=official_test, attempts_used=used,
               manual_e2e_done=manual_e2e_completed(ops_cfg), check_config=check_config,
               prior_shas=prior_automation_shas(trade_date, ops_cfg, official_test),
@@ -743,26 +832,15 @@ def _execute(trade_date: str, *, official_test: bool, ops_cfg: dict, now_fn=None
             o = run(c, drv, record=recorder(c, ops_cfg, official_test, portal=live), portal=live, **kw)
         except UIUnexpected as e:
             o = Outcome("FAIL_CLOSED", str(e))
+        except Exception as e:  # noqa: BLE001 - browser could not start at all
+            o = Outcome("FAIL_CLOSED", f"BROWSER_START_FAILED ({type(e).__name__}: {str(e)[:160]})")   # retryable
         finally:
             if drv is not None:
                 try:
                     drv.close()
                 except Exception:  # noqa: BLE001
                     pass
-    out = {"outcome": o.__dict__, "candidate": {"file": str(c.file), "sha256": c.sha256, "state": c.state},
-           "submission_status": submission_status(o.status), "idempotency_key": [trade_date, c.team_id, c.sha256]}
-    if o.status in ("SUBMISSION_CONFIRMED", "ALREADY_SUBMITTED"):
-        signals.emit("SUBMISSION_CONFIRMED", trade_date, o.reason, ops_cfg=ops_cfg)
-    elif o.status in SUCCESS:
-        signals.emit("SUBMISSION_ACCEPTED", trade_date, o.reason, ops_cfg=ops_cfg)
-    else:
-        if o.status in ("LOGIN_REQUIRED", "WINDOW_CLOSED"):
-            signals.emit(o.status, trade_date, o.reason, ops_cfg=ops_cfg)
-        out["manual"] = manual_fallback(c, o, ops_cfg=ops_cfg, now=now_fn(), attempts_used=used)
-    d = evidence_dir(trade_date, ops_cfg)
-    d.mkdir(parents=True, exist_ok=True)
-    write_json(d / "auto_upload_last.json", out)
-    return out
+    return c, o, used
 
 
 def _default_driver(ops_cfg: dict, official_test: bool):

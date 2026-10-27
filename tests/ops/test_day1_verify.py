@@ -63,5 +63,6 @@ def test_config_checks_on_current_config_report_real_values():
     assert names["team_id"]["status"] == ("PASS" if bound else "FAIL")
     assert names["run_mode_competition"]["status"] == ("PASS" if ops.get("run_mode") == "COMPETITION" else "FAIL")
     assert names["quant_fingerprint"]["status"] == "PASS"
-    assert names["auto_upload_disabled"]["status"] == "PASS"
+    # Day-1 requirement (auto_upload off on 2026-10-27); Issue #20 enables it afterwards -> the check reports the real value
+    assert names["auto_upload_disabled"]["status"] == ("FAIL" if ops["auto_upload"]["enabled"] else "PASS")
     assert names["plan_1930_targets_day1"]["detail"].startswith("plan at 2026-10-26T19:30:00+08:00")

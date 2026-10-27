@@ -75,6 +75,7 @@ selectors:
     status: CONFIRMED_REAL_E2E
     strategies: [{by: role, role: button, name: "下載資料包"}, {by: text, text: "下載資料包"}]
     source: "logged-in read-only discovery 2026-10-23 20:44 (data/portal_discovery/20261023_202917, local): button 下載資料包 (not clicked)"
+    confirmed: "Issue #23 live download 2026-10-27 20:47 (data/portal_discovery/20261027_204740_datapack_probe, local): one click in the Owner-logged-in profile starts a browser download DataPack_304_2026-10-28.json (TEAM_11442, trade_date 2026-10-28, as_of 2026-10-27; gate FRESH / PASS); content identical to the Owner's manual download 20:11 except generated_at"
     confidence: HIGH
   upload_area:
     status: CONFIRMED_REAL_E2E
@@ -142,8 +143,8 @@ selectors:
     strategies: [{by: text, text: "文件檢查未通過"}]
     source: "rehearsal upload probe 2026-10-23 23:28 (minimal test JSON; data/official_test_runs/20261027_rehearsal/probe/20261023_232824, local): 「文件檢查未通過 / 缺少下列項目：… / 請修正後重新上傳；本次未存檔，也不計入當日繳交次數。」"
     confidence: HIGH
-  submit_confirmation_modal: {status: PENDING_WINDOW_ONLY, strategies: [], source: "appears only after pressing 送出繳交", confidence: NONE}
-  submit_confirm_button:     {status: PENDING_WINDOW_ONLY, strategies: [], source: "appears only after pressing 送出繳交", confidence: NONE}
+  submit_confirmation_modal: {status: PENDING_WINDOW_ONLY, strategies: [], source: "appears only after pressing 送出繳交. NOT resolved by the 2026-10-27 21:04 observation (data/portal_discovery/20261027_205804_observe): no dialog / new button seen, but 5 s passed between snapshots and the DOM-mutation hook was broken (fixed in this PR), so a short dialog cannot be ruled out -> stays pending (never CONFIRMED_NOT_PRESENT without proof)", confidence: NONE}
+  submit_confirm_button:     {status: PENDING_WINDOW_ONLY, strategies: [], source: "appears only after pressing 送出繳交; not resolved on 2026-10-27 (see submit_confirmation_modal)", confidence: NONE}
   accepted_history_marker:   {status: PENDING_WINDOW_ONLY, strategies: [], source: "needs an accepted submission", confidence: NONE}
   rejected_marker:           {status: PENDING_WINDOW_ONLY, strategies: [], source: "needs a rejected submission", confidence: NONE}
 
@@ -154,9 +155,10 @@ wording:
   attempt_limit:     {status: CONFIRMED_PUBLIC_BUNDLE, markers: ["今日繳交次數已用盡，已收件的版本不受影響。"], source: "public bundle", confidence: HIGH}
   auth_loop:         {status: CONFIRMED_PUBLIC_BUNDLE, markers: ["登入後仍無法通過驗證，請聯繫主辦單位。"], source: "public bundle", confidence: HIGH}
   file_too_large:    {status: CONFIRMED_PUBLIC_BUNDLE, markers: ["檔案超過大小上限，請縮小後重新上傳。"], source: "public bundle", confidence: HIGH}
-  validation_pass:   {status: PENDING_WINDOW_ONLY, markers: [], source: "needs a file that passes the instant check (impossible before the window: C6)", confidence: NONE}
+  validation_pass:   {status: CONFIRMED_REAL_E2E, markers: ["檢核通過，待送出"], source: "Issue #20 live observation 2026-10-27 21:04 (data/portal_discovery/20261027_205804_observe, local): the Owner's real upload + submit of the 10/28 FINAL (sha256 5d286242…8dbf); 檢核結果 panel sequence 「結構檢查通過 / 檢核中…」 21:04:25 -> 「檢核通過，待送出 / ✓ 收件層檢核全數通過」 21:04:26 (送出繳交 enabled) -> 「已收件」 21:04:31 (D-Plan 已繳交, 今日已繳交 1 / 25, history row 第 2 · 2026-10-28 · 已繳交 · 21:04); read-only check 21:06 SUBMISSION_CONFIRMED 8/8 (20261027_210617_issue20_confirm_live). 「結構檢查通過」 alone is an intermediate state (followed by 檢核中…) and is NOT a pass", confidence: HIGH}
+  validation_in_progress: {status: CONFIRMED_REAL_E2E, markers: ["檢核中…"], source: "Issue #20 live observation 2026-10-27 21:04 (data/portal_discovery/20261027_205804_observe, local): the Owner's real upload + submit of the 10/28 FINAL (sha256 5d286242…8dbf); 檢核結果 panel sequence 「結構檢查通過 / 檢核中…」 21:04:25 -> 「檢核通過，待送出 / ✓ 收件層檢核全數通過」 21:04:26 (送出繳交 enabled) -> 「已收件」 21:04:31 (D-Plan 已繳交, 今日已繳交 1 / 25, history row 第 2 · 2026-10-28 · 已繳交 · 21:04); read-only check 21:06 SUBMISSION_CONFIRMED 8/8 (20261027_210617_issue20_confirm_live)", confidence: HIGH}
   validation_fail:   {status: CONFIRMED_REAL_E2E, markers: ["文件檢查未通過"], source: "rehearsal upload probe 2026-10-23 23:28 (minimal test JSON; data/official_test_runs/20261027_rehearsal/probe/20261023_232824, local)", confidence: HIGH}
-  submit_success:    {status: PENDING_WINDOW_ONLY, markers: [], source: "shown only after a submit", confidence: NONE}
+  submit_success:    {status: CONFIRMED_REAL_E2E, markers: ["已收件"], scope: validation_result_panel_line, source: "Issue #20 live observation 2026-10-27 21:04 (data/portal_discovery/20261027_205804_observe, local): the Owner's real upload + submit of the 10/28 FINAL (sha256 5d286242…8dbf); 檢核結果 panel sequence 「結構檢查通過 / 檢核中…」 21:04:25 -> 「檢核通過，待送出 / ✓ 收件層檢核全數通過」 21:04:26 (送出繳交 enabled) -> 「已收件」 21:04:31 (D-Plan 已繳交, 今日已繳交 1 / 25, history row 第 2 · 2026-10-28 · 已繳交 · 21:04); read-only check 21:06 SUBMISSION_CONFIRMED 8/8 (20261027_210617_issue20_confirm_live). Matched only as a WHOLE LINE of the 檢核結果 panel: the attempt-limit text 「今日繳交次數已用盡，已收件的版本不受影響。」 also contains 已收件", confidence: HIGH}
   history_accepted:  {status: PENDING_WINDOW_ONLY, markers: [], source: "the portal shows no 'accepted' wording (Issue #20 Owner Decision 2026-10-27: success = SUBMISSION_CONFIRMED, agent/submission/confirmation.py); never matched", confidence: NONE}
   history_submitted: {status: CONFIRMED_REAL_E2E, markers: ["已繳交"], source: "Issue #20 (data/portal_discovery/20261027_091337_issue20_review + 20261027_091444_issue20_review; live confirmation 20261027_094708_issue20_confirm_live, local): 每日上傳 JSON cell of the real 10/27 history row", confidence: HIGH}
   dplan_status_values: {status: CONFIRMED_REAL_E2E, markers: ["已繳交", "未繳交"], source: "Issue #20: 已繳交 in the open window 01:19 (data/portal_discovery/20261027_011902_readonly, local); 未繳交 for the next trade date 09:13 (data/portal_discovery/20261027_091337_issue20_review + 20261027_091444_issue20_review; live confirmation 20261027_094708_issue20_confirm_live, local)", confidence: HIGH}

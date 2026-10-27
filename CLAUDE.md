@@ -98,11 +98,16 @@ format, DataPack / receipt parser) go through an Issue and record: timestamp, re
 - **Browser upload / submission of the human UI** (Owner-logged-in automation profile) is allowed only when all hold:
   1. an Owner-approved Issue plus an Owner Decision recorded on GitHub (`docs/CODE_CHANGE_GOVERNANCE.md` §6) for that
      exact action or capability;
-  2. the official UI flow is validated: only selectors / wording marked `CONFIRMED_REAL_E2E` in
-     `config/portal_adapter.yaml` are used for actions; anything unconfirmed stops the run;
-  3. the competition safeguards hold: Team ID, trade date and FINAL SHA match; local validation passes; the 08:30 /
-     08:55 cutoffs; the attempt caps; same-SHA retry only; success only with evidence; any unknown → stop
-     and fall back to manual upload;
+  2. the official UI flow is validated: upload and 送出繳交 use selectors marked `CONFIRMED_REAL_E2E` in
+     `config/portal_adapter.yaml`. Best-effort exception (Owner Decision 2026-10-27, Issue #20): after 送出繳交
+     the runner may explore an unconfirmed confirmation dialog (`portal_driver.submit`: one clearly confirm-labelled
+     button, otherwise stop; at most 2 confirmations; evidence for every step), infer a validation pass from an
+     enabled 送出繳交 with no failure wording, and close a notice dialog through its one dismiss button;
+  3. the competition safeguards hold: Team ID, trade date and FINAL SHA match; local validation and compliance
+     pass; the 08:30 / 08:55 cutoffs; at most `max_automated_attempts` (4) per trade date, each preceded by a
+     portal history / 回看 check (a match → stop, SUBMISSION_CONFIRMED); success only with evidence. A failure is
+     acceptable: it is recorded and the next run retries; only login / MFA / CAPTCHA, a Team ID or trade-date
+     mismatch, a portal / browser that cannot be used, or permissions escalate to the Owner;
   4. **competition auto-upload** (`config/ops.yaml auto_upload.enabled`) stays disabled until an official-window E2E
      reaches official success and the Owner approves enabling it. The portal shows no "ACCEPTED" word: success is
      **SUBMISSION_CONFIRMED** (Owner Decision 2026-10-27, Issue #20): unique history row 已繳交 for T, Team and trade

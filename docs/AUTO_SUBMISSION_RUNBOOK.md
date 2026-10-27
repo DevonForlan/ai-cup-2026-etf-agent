@@ -40,23 +40,15 @@ read-only discovery on 2026-10-27 (local evidence under `data/portal_discovery/`
 |---|---|
 | Gate | Requires all of: COMPETITION, Team ID, trade date, one active FINAL with a verified SHA, local validation and compliance PASS, Quant fingerprint, window open and before 08:55, the manual-E2E prerequisite, and `auto_upload.enabled` with `method: browser`. |
 | Idempotency | Key = trade_date + TEAM_ID + FINAL_SHA. A confirmed local receipt stops the run before the browser starts. A portal history row whose 回看 content equals the FINAL also stops it (`ALREADY_SUBMITTED`). |
-| Unknown submit result | Read-only verification only; the runner never clicks submit a second time. An exception after the 送出繳交 click is recorded as `submitted` / `SUBMIT_RESULT_UNKNOWN` and verified read-only. A later run in the `SUBMITTED` state only verifies, and the 07:30 run makes no new decision for it. |
-| Existing portal row | A history row for T that is not this FINAL, or whose 回看 cannot be read, fails closed (`HISTORY_ROW_EXISTS_UNCONFIRMED`): nothing is uploaded or submitted over it. |
-| Submit flow | 送出繳交 is pressed only when `portal_driver.submit_flow_pending()` is empty: `validation_pass`, `submit_confirmation_modal`, `submit_confirm_button` and `submit_success` are all confirmed from a live observation. Otherwise the run stops after `SERVER_VALIDATED` with `SUBMIT_FLOW_UNCONFIRMED` and the Owner submits by hand. |
-| Retry | At most `max_automated_attempts` (3) per date, and only for the same SHA. Each run re-checks receipts, portal history, the FINAL SHA and the clock. |
+| Unknown submit result | No second click in the same attempt. The next attempt first reads the portal history and 回看: equal to the FINAL → `SUBMISSION_CONFIRMED`, stop. Otherwise, while under the daily cap, it uploads and submits again; at the cap it only verifies. |
+| Existing portal row | A row for T whose 回看 equals the FINAL → stop (`ALREADY_SUBMITTED`). A row that is not provably this FINAL (older content or unreadable 回看) → this FINAL is submitted (the last successful submission counts), and the step is recorded. |
+| Submit flow | **Best effort (Owner Decision 2026-10-27).** Only an unknown 送出繳交 button blocks. After the click, `portal_driver.submit` explores for up to 25 s: a success line (`已收件`) or failure wording ends it. A dialog (role dialog / alertdialog, or a native `confirm()`) is captured and confirmed through its **one** confirm-labelled button (`choose_button`; ambiguous or unknown buttons → stop, nothing clicked), at most 2 confirmations. Every step is logged in `portal.submit_exploration` with screenshots. A validation pass is inferred (`PASS_INFERRED`) from an enabled 送出繳交 with no failure or checking wording. A notice dialog before the submit is closed through its one dismiss button. |
+| Retry | At most `max_automated_attempts` (**4**) per trade date (any SHA: a superseding 07:30 FINAL is not a retry). Inside one run, up to 1 + `retries_per_run` (2) attempts, `retry_wait_s` (30 s) apart, only for retryable causes. Each attempt re-reads the FINAL state, the portal history / 回看 and the cap. |
 | Lock | `logs/locks/submission_<ymd>.lock` covers the runner. `logs/locks/competition_production.lock` is shared by 19:30 and 07:30. A held lock gives `LOCK_UNAVAILABLE`, and the run stops. |
 | Status | `PREDICTION_STATUS` and `SUBMISSION_STATUS` are separate. A blocked submission never fails the prediction. |
-| Fail closed | Anything unknown, mismatched or missing → `SUBMISSION_STATUS = BLOCKED` and `MANUAL_ACTION_REQUIRED` (`data/submission_evidence/<ymd>/MANUAL_UPLOAD_REQUIRED.json`). |
+| Failures and escalation | A failure is acceptable (best effort): it is recorded (`auto_upload_last.json`, `MANUAL_UPLOAD_REQUIRED.json` as information only, signal `SUBMISSION_BEST_EFFORT_FAILED`) and the next run retries. **Owner action (`MANUAL_UPLOAD_REQUIRED` signal, `manual_action_required`) only for:** login / session expired, MFA / CAPTCHA, page Team ID or trade-date mismatch, FINAL team or date mismatch, Quant freeze failure, and Playwright not installed. Not retried: those causes, REJECTED (a 檢核 failure of the file), the window closing, and the cap. |
 
-**Still unconfirmed (stays fail-closed):**
-- The official 檢核 *pass* wording (`validation_pass`).
-- The submit confirmation modal and its confirm button.
-- The submit success text.
-
-These appear only during an upload / submit in an open window. Until they are captured, an automated run uploads the
-file, saves the 檢核 panel evidence, and stops before 送出繳交 with `MANUAL_UPLOAD_REQUIRED`. Never guess them: add them
-to the adapter only from real evidence, in a reviewed PR. See `docs/LIVE_OBSERVATION_1930.md` for the live capture
-(`portal_driver observe`) and the adapter-update path (`agent.submission.observation_report`).
+**Window-only evidence (2026-10-27 21:04):** `validation_pass` = `檢核通過，待送出` and `submit_success` = `已收件` are confirmed. The confirmation dialog (if any) is handled by bounded exploration. The local browser fixture (`tests/ops/test_issue20_submit_exploration_browser.py`) covers a DOM dialog, a native confirm, no dialog, an unknown dialog (nothing clicked), failure wording and a pre-submit notice.
 
 ## The 07:30 supersede rule (`agent/ops/morning_final.py`)
 
