@@ -213,10 +213,18 @@ def default_runner(cmd: list[str], stdin_text: str, cwd: str, env: dict, timeout
             rec["cleanup"] = "terminated"
         except Exception:  # noqa: BLE001
             if os.name == "nt":
-                subprocess.run(["taskkill", "/PID", str(p.pid), "/T", "/F"], capture_output=True, timeout=30)
+                try:
+                    subprocess.run(["taskkill", "/PID", str(p.pid), "/T", "/F"], capture_output=True, timeout=30)
+                except (subprocess.TimeoutExpired, OSError):  # taskkill itself stalled (machine under load, #23)
+                    rec["taskkill_failed"] = True
+                    p.kill()                                    # TerminateProcess on the direct child
             else:
                 os.killpg(p.pid, signal.SIGKILL)
-            out, err = p.communicate(timeout=30)
+            try:
+                out, err = p.communicate(timeout=30)
+            except subprocess.TimeoutExpired:                   # never hang the run: report, do not raise
+                p.kill()
+                out, err = b"", b""
             rec["cleanup"] = "killed_tree"
     rec.update(stop=time.time(), exit_code=p.returncode, stdout=out.decode("utf-8", "replace"),
                stderr=err.decode("utf-8", "replace"))

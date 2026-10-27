@@ -61,7 +61,22 @@ def append_manifest(day_dir: Path, entry: ManifestEntry) -> None:
         entries.append(asdict(entry))
         tmp = mf.with_suffix(f".tmp{os.getpid()}")
         tmp.write_text(json.dumps(entries, ensure_ascii=False, indent=1), encoding="utf-8")
-        os.replace(tmp, mf)
+        replace_with_retry(tmp, mf)
+
+
+def replace_with_retry(src: Path, dst: Path, attempts: int = 8, delay_s: float = 0.25) -> None:
+    """os.replace, retried on PermissionError: on Windows a scanner / indexer briefly opening `dst` makes the rename
+    fail with WinError 5 (Issue #23). Any other error, or the last attempt, is raised unchanged."""
+    import os
+    import time
+    for i in range(attempts):
+        try:
+            os.replace(src, dst)
+            return
+        except PermissionError:
+            if i == attempts - 1:
+                raise
+            time.sleep(delay_s * (i + 1))
 
 
 def read_manifest(day_dir: Path) -> list[dict]:
