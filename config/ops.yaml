@@ -112,6 +112,16 @@ team:
 
 # Market-data coverage gate (P-2): a date is usable only when every market of the universe is present with at least
 # this share of its universe tickers priced, and every holding (and ordered ticker) has a valid price.
+# Issue #23 (Owner priority update 2026-10-27): the 19:30 / 07:30 COMPETITION runs download the official DataPack
+# themselves when the gate does not pass: confirmed 下載資料包 button in the Owner-logged-in profile, quarantine,
+# the same gate validation, atomic install + provenance (agent/ops/datapack_acquire.py). No API / cookies / login.
+datapack:
+  auto_download:
+    enabled: true
+    max_attempts: 3               # only STALE / not yet published / download failure are retried
+    retry_wait_s: 300             # the portal refreshes the DataPack after 19:00
+    download_timeout_s: 60
+
 market_coverage:
   min_market_share: 0.95
 

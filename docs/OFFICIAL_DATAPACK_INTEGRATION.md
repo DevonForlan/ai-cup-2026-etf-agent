@@ -1,7 +1,7 @@
 # Official DataPack Integration（官方資料包介接）
 
 > AI 產生內容，需人工審閱。依據：`research/official_updates/DataPack_規格書_v4.3.md`（官網 2026-10-12）。
-> **Official portal auto-download: PENDING_REAL_DATAPACK_AVAILABILITY**（目前不登入、不下載、不猜 URL / API、不讀 cookie）。
+> **Official portal auto-download（Issue #23，Owner priority update 2026-10-27）：ENABLED via the confirmed portal UI** — `agent/ops/datapack_acquire.py`（見 §10）。仍然不登入、不猜 URL / API、不讀 cookie / token / CSRF。
 
 ## 1. DataPack purpose
 主辦方系統在每個交易日結算後產生的 JSON：本隊 `as_of_date`（前一交易日）收盤結算後的 `account`（cash、nav_tradable、
@@ -75,3 +75,32 @@ NAV 恆等式 `nav_tradable = cash + Σ shares × close_price`（容差 1 元）
 | D3 | 向主辦方確認官方 portal 是否允許合法程式化下載（書面） |
 | D4 | 獲准後才實作 `OfficialPortalProvider`（只用官方文件化方式；不 reverse engineer、不繞過 CSRF） |
 | D5 | end-to-end：portal → download → validation → settlement state → Agent → D-Plan |
+
+## 10. Automatic acquisition (Issue #23, 2026-10-27)
+
+The 19:30 and 07:30 COMPETITION runs call `scheduled_run.competition_preparation`. When the DataPack gate does not pass
+and `config/ops.yaml datapack.auto_download.enabled` is true, `agent/ops/datapack_acquire.py` runs:
+
+1. **Already present:** a DataPack for T that passes the gate is in `data\official_datapack\` → `ALREADY_PRESENT`; no
+   browser is opened.
+2. **Session and page checks** in the Owner-logged-in automation profile (the Owner logs in; the agent never does):
+   - login must be `LOGGED_IN`;
+   - page Team ID and 本次繳交對應交易日 must equal the team and T.
+
+   Otherwise `LOGIN_REQUIRED` / `PAGE_MISMATCH`: no download, no retry.
+3. **Download:** press the confirmed **下載資料包** button (`portal_adapter.yaml datapack_download`, confirmed by a live
+   download on 2026-10-27 20:47). The browser download is saved into the quarantine folder
+   `data\official_datapack\.incoming\<ts>\`. No URL / API is built and no request is made by the agent.
+4. **Validation:** the same `datapack_gate` the run uses (team, trade date, as_of = previous trading day, `missing`,
+   schema, numbers).
+5. **Install:** on PASS, an atomic `os.replace` into `data\official_datapack\` plus a provenance record
+   (`provenance\<file>.json`: sha256, bytes, time, suggested filename, page identity, gate) and
+   `provenance\acquisition_log.jsonl`. An identical file is not duplicated, and a different file with the same name
+   is never overwritten.
+6. **Failures:**
+   - STALE / not yet published / download failure → bounded retry (`max_attempts` 3, `retry_wait_s` 300);
+   - INVALID → stays in quarantine with `QUARANTINED.json`, and the run stays BLOCKED;
+   - no fallback to non-official data.
+
+Manual run: `.venv\Scripts\python.exe -m agent.ops.datapack_acquire --date T [--force]`. Manual download (§7) still
+works, and the gate always picks the latest valid file.

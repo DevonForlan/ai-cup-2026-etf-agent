@@ -75,6 +75,7 @@ selectors:
     status: CONFIRMED_REAL_E2E
     strategies: [{by: role, role: button, name: "下載資料包"}, {by: text, text: "下載資料包"}]
     source: "logged-in read-only discovery 2026-10-23 20:44 (data/portal_discovery/20261023_202917, local): button 下載資料包 (not clicked)"
+    confirmed: "Issue #23 live download 2026-10-27 20:47 (data/portal_discovery/20261027_204740_datapack_probe, local): one click in the Owner-logged-in profile starts a browser download DataPack_304_2026-10-28.json (TEAM_11442, trade_date 2026-10-28, as_of 2026-10-27; gate FRESH / PASS); content identical to the Owner's manual download 20:11 except generated_at"
     confidence: HIGH
   upload_area:
     status: CONFIRMED_REAL_E2E

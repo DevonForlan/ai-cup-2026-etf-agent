@@ -68,3 +68,18 @@ def ex42():
 @pytest.fixture
 def ex43():
     return copy.deepcopy(load_example("043"))
+
+
+@pytest.fixture(autouse=True)
+def _no_real_portal(monkeypatch):
+    """Issue #23: no test may open the real portal / automation profile or download a real DataPack. The
+    production acquisition hook is a no-op in tests and the real browser driver refuses to start; a test that
+    exercises the hook restores it explicitly (tests/ops/test_issue23_datapack_acquire.py)."""
+    import agent.ops.scheduled_run as S
+    import agent.submission.auto_upload as AU
+    monkeypatch.setattr(S, "_acquire_datapack", lambda *a, **k: None)
+    monkeypatch.setattr(S, "_ensure_internal_settlement", lambda *a, **k: "SKIPPED_IN_TESTS")
+
+    def _refuse(*a, **k):
+        raise RuntimeError("real portal driver is forbidden in tests")
+    monkeypatch.setattr(AU, "_default_driver", _refuse)
