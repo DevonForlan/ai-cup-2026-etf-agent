@@ -349,10 +349,13 @@ def submission_stage(trade_date: str, mode: str, rec: dict, *, executor=None, op
     o = r["outcome"]
     portal = o.get("portal") or {}
     ok = o["status"] in AU.SUCCESS
+    # Owner Decision 2026-10-27 (best effort): only Owner-only causes need a person; other failures are retried
+    # by the next run (07:30) and recorded
     rec.update(auto_upload_status=o["status"], login_state=portal.get("login_state"),
                portal_state=portal.get("window_status"), attempts_used=portal.get("attempts_used"),
-               attempts_remaining=portal.get("attempts_remaining"), manual_action_required=not ok,
-               last_error=None if ok else o.get("reason"))
+               attempts_remaining=portal.get("attempts_remaining"),
+               manual_action_required=bool(r.get("owner_action_required", not ok)),
+               submission_tries=r.get("tries"), last_error=None if ok else o.get("reason"))
     return rec
 
 

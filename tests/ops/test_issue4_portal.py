@@ -638,7 +638,10 @@ def test_execute_stage_signals_audit_and_fallback_fields(cfg, tmp_path, monkeypa
                    driver_factory=lambda o, t: drv)
     assert r["outcome"]["status"] == "SUBMITTED_UNVERIFIED"
     names = [s["signal"] for s in signals.read(T1, cfg)]
-    for sig in ("AUTO_UPLOAD_RUNNING", "FILE_UPLOADED", "SERVER_VALIDATED", "SUBMITTED", "MANUAL_UPLOAD_REQUIRED"):
+    # Owner Decision 2026-10-27 (best effort): an unverified submit is not an Owner action -> no MANUAL_UPLOAD_REQUIRED
+    # signal, the instructions file is still written (r["manual"]) and SUBMISSION_BEST_EFFORT_FAILED is raised instead
+    assert r["owner_action_required"] is False and "MANUAL_UPLOAD_REQUIRED" not in names
+    for sig in ("AUTO_UPLOAD_RUNNING", "FILE_UPLOADED", "SERVER_VALIDATED", "SUBMITTED", "SUBMISSION_BEST_EFFORT_FAILED"):
         assert sig in names, sig
     rows = [json.loads(x) for x in (AU.evidence_dir(T1, cfg) / "audit.jsonl").read_text(encoding="utf-8").splitlines()]
     assert rows[0]["file_uploaded_at"] and rows[1]["server_validated_at"] and rows[2]["submitted_at"]

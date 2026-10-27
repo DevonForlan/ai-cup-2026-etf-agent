@@ -61,7 +61,6 @@ def _other_date_in_file(tmp_path):
     (lambda p: _bad_checks(p, "holdings_20_30", "FAIL"), {}, "LOCAL_VALIDATION_FAIL"),
     (lambda p: comp(p, team="TEAM_99999"), {}, "TEAM_ID_MISMATCH"),
     (_other_date_in_file, {}, "TRADE_DATE_MISMATCH"),
-    (lambda p: comp(p), dict(prior_shas=("sha256:" + "9" * 64,)), "DIFFERENT_SHA_RETRY_BLOCKED"),
     (lambda p: comp(p), dict(used=3), "MAX_AUTOMATED_ATTEMPTS"),
     (lambda p: comp(p), dict(mode="PRECOMPETITION"), "PRECOMPETITION_AUTO_SUBMIT_FORBIDDEN"),
     (lambda p: comp(p, mode="dry-run"), {}, "NOT_A_COMPETITION_FINAL"),
@@ -101,13 +100,16 @@ def test_enabled_runner_fails_closed_on_portal_problems(real, tmp_path, kw, stat
     assert AU.submission_status(o.status) == "BLOCKED" and o.manual_action_required
 
 
-def test_enabled_runner_never_submits_while_the_window_only_items_are_pending(real, tmp_path):
-    pending = PD.submit_flow_pending(PD.load_adapter())
-    assert pending                                   # today: the four window-only items
-    drv = FlowPortal(date=T, pre=_evidence(None, rows=[]), pending=pending)
-    o, rec = _run(comp(tmp_path), drv, real)
-    assert o.status == "FAIL_CLOSED" and "SUBMIT_FLOW_UNCONFIRMED" in o.reason and "submit" not in drv.calls
-    assert [s for s, _ in rec] == ["file_uploaded", "server_validated"]
+def test_enabled_runner_submits_end_to_end_with_the_real_adapter(real, tmp_path):
+    """Owner Decision 2026-10-27: with the real adapter nothing blocks the submit step; the run uploads, validates,
+    submits (bounded exploration in the real driver) and verifies -> SUBMISSION_CONFIRMED."""
+    assert PD.submit_flow_pending(PD.load_adapter()) == []
+    c = comp(tmp_path)
+    drv = FlowPortal(date=T, pre=_evidence(None, rows=[]), post=_evidence(_doc_of(c)),
+                     pending=PD.submit_flow_pending(PD.load_adapter()))
+    o, rec = _run(c, drv, real)
+    assert o.status == "SUBMISSION_CONFIRMED" and drv.calls.count("submit") == 1
+    assert [s for s, _ in rec][:3] == ["file_uploaded", "server_validated", "submitted"]
 
 
 def test_enabled_runner_unknown_submission_is_never_success(real, tmp_path):

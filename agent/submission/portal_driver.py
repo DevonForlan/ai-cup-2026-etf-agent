@@ -85,20 +85,51 @@ def submit_result_from(body: str, panel: str, adapter: dict) -> tuple[str, str]:
 
 
 def submit_flow_pending(adapter: dict) -> list[str]:
-    """Elements of the submit flow not yet confirmed from a real submission ([] = the runner may press 送出繳交).
-    The dialog / its confirm button may instead be CONFIRMED_NOT_PRESENT (both together), never assumed absent."""
+    """Elements that BLOCK the submit step. Owner Decision 2026-10-27 (Issue #20, best-effort unattended submission):
+    only the 送出繳交 button itself must be known; an unconfirmed confirmation dialog / confirm button / wording is
+    handled by bounded exploration (PlaywrightPortalDriver.submit) instead of blocking."""
+    st = ((adapter.get("selectors") or {}).get("submit_button") or {})
+    return [] if st.get("status") == "CONFIRMED_REAL_E2E" and st.get("strategies") else ["submit_button"]
+
+
+def submit_flow_unconfirmed(adapter: dict) -> list[str]:
+    """Informational: submit-flow elements not yet confirmed from a real submit (explored at run time, logged)."""
     sel, wd = adapter.get("selectors") or {}, adapter.get("wording") or {}
-    st = {k: (sel.get(k) or {}).get("status") for k in SUBMIT_FLOW_SELECTORS}
-    out = [] if st["submit_button"] == "CONFIRMED_REAL_E2E" else ["submit_button"]
-    modal, confirm = st["submit_confirmation_modal"], st["submit_confirm_button"]
-    if not ((modal == confirm == NOT_PRESENT) or (modal == confirm == "CONFIRMED_REAL_E2E")):
-        out += [k for k, v in (("submit_confirmation_modal", modal), ("submit_confirm_button", confirm))
-                if v not in ("CONFIRMED_REAL_E2E", NOT_PRESENT)] or ["submit_confirmation_modal/submit_confirm_button"]
-    for k in SUBMIT_FLOW_WORDING:
-        w = wd.get(k) or {}
-        if w.get("status") != "CONFIRMED_REAL_E2E" or not [m for m in (w.get("markers") or []) if m]:
-            out.append(k)
-    return out
+    out = [k for k in SUBMIT_FLOW_SELECTORS if (sel.get(k) or {}).get("status") not in ("CONFIRMED_REAL_E2E", NOT_PRESENT)]
+    return out + [k for k in SUBMIT_FLOW_WORDING if (wd.get(k) or {}).get("status") != "CONFIRMED_REAL_E2E"]
+
+
+# bounded exploration vocabulary (Owner Decision 2026-10-27): labels a confirmation / dismiss button may carry
+CONFIRM_LABELS = ("確認送出", "確定送出", "確認繳交", "確定繳交", "送出繳交", "確認", "確定", "送出", "繳交", "是", "OK",
+                  "Ok", "Yes", "Confirm", "Submit")
+CANCEL_LABELS = ("取消", "關閉", "返回", "否", "不要", "稍後", "Cancel", "Close", "No", "Back", "×", "✕")
+DISMISS_LABELS = ("我知道了", "知道了", "關閉", "確定", "OK", "Ok", "Close", "×", "✕")
+
+
+def choose_button(labels: list[str], wanted: tuple, avoid: tuple = (), strong: int = 5) -> str | None:
+    """The ONE button to press: distinct visible labels matching any `wanted` word and nothing in `avoid`.
+    One candidate -> it. Several -> only a unique match of the `strong` (compound, e.g. 確認送出) entries; otherwise
+    None: never a guess between two plausible buttons."""
+    clean = {(lab or "").strip() for lab in labels} - {""}
+    hits = sorted(lab for lab in clean if any(w == lab or w in lab for w in wanted) and not any(a in lab for a in avoid))
+    if len(hits) == 1:
+        return hits[0]
+    strong_hits = [lab for lab in hits if any(w == lab or w in lab for w in wanted[:strong])]
+    return strong_hits[0] if len(strong_hits) == 1 else None
+
+
+def infer_validation(panel: str, submit_enabled: bool | None, adapter: dict) -> str:
+    """Owner Decision 2026-10-27 (unknown wording must not stop the run): when the verbatim classification is
+    UNKNOWN, a panel that left the idle / checking state, shows no failure wording and has 送出繳交 ENABLED is taken
+    as PASS_INFERRED (logged as such). Anything else stays UNKNOWN."""
+    c = classify(panel, adapter, "validation_pass", "validation_fail")
+    if c != "UNKNOWN":
+        return c
+    idle = (wording_markers(adapter, "validation_pending") + wording_markers(adapter, "validation_not_uploaded")
+            + wording_markers(adapter, "validation_in_progress"))
+    if not panel or any(m in panel for m in idle) or not submit_enabled:
+        return "UNKNOWN"
+    return "PASS_INFERRED"
 
 
 def selector_inventory(adapter: dict) -> list[dict]:
@@ -516,7 +547,7 @@ class PlaywrightPortalDriver(PortalDriver):
             raise UIUnexpected("VALIDATION_PANEL_NOT_FOUND")
         end = time.monotonic() + timeout_s
         while True:
-            if self.read_validation_result()[0] in ("PASS", "FAIL"):
+            if self.read_validation_result()[0] in ("PASS", "FAIL", "PASS_INFERRED"):
                 return
             if time.monotonic() >= end:
                 raise TimeoutError(f"no confirmed validation result within {timeout_s:.0f}s")
@@ -524,38 +555,132 @@ class PlaywrightPortalDriver(PortalDriver):
 
     def read_validation_result(self) -> tuple[str, str]:
         text = self._text("validation_result_panel") or ""
-        return classify(text, self.adapter, "validation_pass", "validation_fail"), text
+        c = classify(text, self.adapter, "validation_pass", "validation_fail")
+        if c == "UNKNOWN":
+            c = infer_validation(text, self._submit_enabled(), self.adapter)
+        return c, text
+
+    def _submit_button(self):
+        """Confirmed selector first; fallback by role + visible label (Owner Decision 2026-10-27: UI resilience)."""
+        import re
+        try:
+            btn = self._locate("submit_button", action=True)
+        except UIUnexpected:
+            btn = None
+        if btn is None:
+            loc = self.page.get_by_role("button", name=re.compile("送出繳交|送出"))
+            btn = loc.first if loc.count() == 1 else None
+        return btn
+
+    def _submit_enabled(self) -> bool | None:
+        try:
+            b = self._submit_button()
+            return None if b is None else b.is_enabled()
+        except Exception:  # noqa: BLE001
+            return None
+
+    def _buttons_in(self, root) -> list:
+        loc = root.get_by_role("button")
+        return [loc.nth(i) for i in range(min(loc.count(), 20))]
+
+    def _open_dialogs(self) -> list:
+        """Visible dialogs (role dialog / alertdialog), except the read-only 回看 review dialog."""
+        out = []
+        for role in ("dialog", "alertdialog"):
+            loc = self.page.get_by_role(role)
+            for i in range(loc.count()):
+                d = loc.nth(i)
+                try:
+                    if d.is_visible() and "繳交內容回看" not in (d.inner_text(timeout=2000) or ""):
+                        out.append(d)
+                except Exception:  # noqa: BLE001
+                    continue
+        return out
+
+    def dismiss_dialogs(self, log: list | None = None) -> int:
+        """Before 送出繳交: an unexpected notice dialog is captured, then closed with its ONE dismiss button."""
+        n = 0
+        for d in self._open_dialogs()[:3]:
+            text = (d.inner_text(timeout=2000) or "").strip()[:300]
+            btns = self._buttons_in(d)
+            labels = [(b.inner_text(timeout=2000) or "").strip() for b in btns]
+            pick = choose_button(labels, DISMISS_LABELS, avoid=("送出", "繳交"))
+            self.capture_evidence(f"pre_submit_dialog_{n}")
+            (log if log is not None else []).append({"step": "pre_submit_dialog", "text": text, "buttons": labels,
+                                                     "clicked": pick})
+            if pick is None:
+                continue
+            btns[labels.index(pick)].click()
+            n += 1
+            time.sleep(0.5)
+        return n
 
     def submit_flow_pending(self) -> list[str]:
-        """Issue #20: the submit step runs only when every element of it is confirmed from real evidence."""
+        """Blocking elements only (see module function); the rest is explored at run time."""
         return submit_flow_pending(self.adapter)
 
-    def submit(self):
+    def submit(self, explore_s: float = 25.0, max_confirms: int = 2) -> dict:
+        """Owner Decision 2026-10-27 (Issue #20): press 送出繳交, then BOUNDED EXPLORATION for up to `explore_s`:
+        a result (success line / failure wording) ends it; a confirmation dialog (role dialog / alertdialog, or a
+        native confirm()) is captured and confirmed through its ONE confirm-labelled button (choose_button; ties ->
+        stop); at most `max_confirms` confirmations, never a second 送出繳交 click. Every step leaves evidence in
+        self.submit_log + screenshots. The runner then verifies read-only (history + 回看 == FINAL)."""
         self.submit_clicked = False
-        if self.submit_flow_pending():
-            raise UIUnexpected(f"SUBMIT_FLOW_UNCONFIRMED {self.submit_flow_pending()}")
-        st = self.read_page_state()
-        if st["unexpected_dialogs"]:
-            raise UIUnexpected(f"UNEXPECTED_MODAL {st['unexpected_dialogs'][:1]}")
-        btn = self._locate("submit_button", action=True)
+        log: list = []
+        self.submit_log = log
+        if self.read_page_state()["unexpected_dialogs"]:
+            self.dismiss_dialogs(log)
+            if self.read_page_state()["unexpected_dialogs"]:
+                raise UIUnexpected(f"UNEXPECTED_MODAL {self.read_page_state()['unexpected_dialogs'][:1]}")
+        btn = self._submit_button()
         if btn is None or not btn.is_enabled():
             raise UIUnexpected("SUBMIT_BUTTON_NOT_AVAILABLE")
+
+        def on_native(dialog):                         # a native confirm() is part of the submit flow -> accept it
+            entry = {"step": "native_dialog", "type": dialog.type, "message": dialog.message}
+            ok = dialog.type in ("confirm", "alert") and not any(c in (dialog.message or "") for c in ("取消", "失敗"))
+            entry["accepted"] = ok
+            log.append(entry)
+            try:
+                dialog.accept() if ok else dialog.dismiss()
+            except Exception:  # noqa: BLE001
+                pass
+        self.page.on("dialog", on_native)
         self.submit_clicked = True                     # from here on the result is unknown until verified read-only
         btn.click()
-        if self._sel("submit_confirmation_modal").get("status") == NOT_PRESENT:
-            return
-        end, modal = time.monotonic() + 15, None
-        while time.monotonic() < end:                  # the confirmed dialog must appear; never clicked blind
-            modal = self._locate("submit_confirmation_modal")
-            if modal is not None and modal.is_visible():
-                break
-            time.sleep(0.5)
-        if modal is None:
-            raise UIUnexpected("SUBMIT_CONFIRMATION_MODAL_NOT_SHOWN")
-        c = self._locate("submit_confirm_button", action=True)
-        if c is None:
-            raise UIUnexpected("SUBMIT_CONFIRM_BUTTON_NOT_FOUND")
-        c.click()
+        log.append({"step": "clicked_submit", "at": time.time()})
+        self.capture_evidence("after_submit_click")
+        confirms, end = 0, time.monotonic() + explore_s
+        try:
+            while time.monotonic() < end:
+                body = self.page.inner_text("body", timeout=10000)
+                res = submit_result_from(body, self._text("validation_result_panel") or "", self.adapter)
+                if res[0] != "UNKNOWN":
+                    log.append({"step": "result", "result": res[0], "text": res[1]})
+                    break
+                dlgs = self._open_dialogs()
+                if dlgs and confirms < max_confirms:
+                    d = dlgs[0]
+                    text = (d.inner_text(timeout=2000) or "").strip()[:400]
+                    btns = self._buttons_in(d)
+                    labels = [(b.inner_text(timeout=2000) or "").strip() for b in btns]
+                    pick = choose_button(labels, CONFIRM_LABELS, avoid=CANCEL_LABELS)
+                    self.capture_evidence(f"submit_dialog_{confirms}")
+                    log.append({"step": "dialog", "text": text, "buttons": labels, "clicked": pick})
+                    if pick is None:                   # unknown dialog without one clear confirm button: stop here
+                        break
+                    btns[labels.index(pick)].click()
+                    confirms += 1
+                    time.sleep(1.0)
+                    continue
+                time.sleep(0.3)
+        finally:
+            try:
+                self.page.remove_listener("dialog", on_native)
+            except Exception:  # noqa: BLE001
+                pass
+            self.capture_evidence("submit_explored")
+        return {"log": log, "confirms": confirms}
 
     def read_submit_result(self) -> tuple[str, str]:
         body = self.page.inner_text("body", timeout=10000)
