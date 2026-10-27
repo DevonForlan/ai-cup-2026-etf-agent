@@ -592,6 +592,8 @@ def competition_preparation(mode: str, trade_date: str, team: str, log: RunLog, 
         first = str(load_official_rules().raw["official_rules"].get("first_trade_date") or "")
         initial = trade_date == first
         g = datapack_gate(trade_date, team, provider=provider, initial=initial, ops_cfg=ops_cfg)
+        if g["status"] != "PASS" and provider is None:    # Issue #23: fetch it through the confirmed portal UI
+            g = _acquire_datapack(trade_date, team, initial, log, ops_cfg) or g
         out.update(label="COMPETITION", datapack_status=g["status"] if g["status"] != "PASS" else
                    f"PASS ({g['freshness']})", datapack_date=g["settlement_date"], datapack_source="ManualFileProvider",
                    datapack_file=g["file"], cd_mode="competition",
@@ -608,6 +610,29 @@ def competition_preparation(mode: str, trade_date: str, team: str, log: RunLog, 
                settlement_source="PRECOMPETITION_PAPER_LEDGER" if start["source"].startswith("CHAIN") else "INITIAL_CAPITAL",
                extra_args=["--replay-run", start["ledger"]] if start["source"].startswith("CHAIN") else ["--initial"])
     return out
+
+
+def _acquire_datapack(trade_date: str, team: str, initial: bool, log: RunLog, ops_cfg: dict | None,
+                      acquirer=None) -> dict | None:
+    """Issue #23: automatic official DataPack download (agent/ops/datapack_acquire.py) when the gate does not pass
+    and `datapack.auto_download.enabled`. Returns the re-evaluated gate, or None (disabled / failed: keep the first
+    gate result -> BLOCKED). Never a fallback to non-official data."""
+    from agent.ops import datapack_acquire as DA
+    from agent.ops.datapack import datapack_gate
+    ops = ops_cfg or load_ops_config()
+    if not DA.cfg_acquire(ops)["enabled"]:
+        return None
+    try:
+        r = (acquirer or DA.acquire)(trade_date, team, ops_cfg=ops)
+    except Exception as e:  # noqa: BLE001 - acquisition problems never crash the run; the gate stays BLOCKED
+        log.w("DATAPACK_ACQUIRE", f"FAILED {type(e).__name__}: {str(e)[:200]}")
+        return None
+    last = (r.get("attempts") or [{}])[-1]
+    log.w("DATAPACK_ACQUIRE", f"{r.get('status')} attempts={len(r.get('attempts') or [])} file={r.get('file')} "
+                              f"{last.get('detail') or ''}")
+    if r.get("status") not in ("INSTALLED", "ALREADY_PRESENT"):
+        return None
+    return datapack_gate(trade_date, team, initial=initial, ops_cfg=ops_cfg)
 
 
 def backfill_gaps(trade_date: str, log: RunLog) -> list[str]:

@@ -390,6 +390,26 @@ class PlaywrightPortalDriver(PortalDriver):
     def read_strategy_document_status(self) -> str | None:
         return parse_doc_status(self._text("strategy_document_status"), self.adapter)
 
+    def download_datapack(self, dest_dir: Path, timeout_s: float = 60.0) -> dict:
+        """Issue #23 (Owner priority update 2026-10-27): press the CONFIRMED 下載資料包 button in the Owner-logged-in
+        session and save the file the browser downloads (Playwright download event). No URL, API or request is
+        built by the agent; nothing is typed. No download within `timeout_s` -> UIUnexpected (fail closed)."""
+        btn = self._locate("datapack_download", action=True)
+        if btn is None or not btn.is_enabled():
+            raise UIUnexpected("DATAPACK_DOWNLOAD_BUTTON_NOT_AVAILABLE")
+        dest_dir = Path(dest_dir)
+        dest_dir.mkdir(parents=True, exist_ok=True)
+        try:
+            with self.page.expect_download(timeout=timeout_s * 1000) as info:
+                btn.click()
+            dl = info.value
+        except Exception as e:  # noqa: BLE001
+            raise UIUnexpected(f"DATAPACK_DOWNLOAD_NOT_STARTED ({type(e).__name__})") from e
+        name = Path(dl.suggested_filename or "datapack.json").name
+        target = dest_dir / name
+        dl.save_as(str(target))
+        return {"suggested_filename": dl.suggested_filename, "path": str(target)}
+
     # --- Issue #20 read-only confirmation evidence ---------------------------------------------------------------
     def read_history_cells(self) -> list[dict]:
         """History rows as {"text", "cells"} (cells = visible td texts: 交易日 / 日期 / 每日上傳 JSON / 繳交時間 / 回看)."""
