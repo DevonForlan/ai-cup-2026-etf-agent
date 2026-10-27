@@ -8,6 +8,7 @@ from pathlib import Path
 
 import pytest
 
+import agent.ops.final  # noqa: F401  (bound to the real active_final before any test patches it)
 from agent.ops import morning_final as MF
 from agent.ops import scheduled_run as S
 from agent.ops.production_lock import production_lock
