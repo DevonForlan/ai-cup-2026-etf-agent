@@ -153,7 +153,7 @@ submission:
 auto_upload:
   enabled: true
   method: browser                 # none | browser   (official API: not available)
-  max_automated_attempts: 3       # internal cap per trade date (official limit 25 is never exhausted)
+  max_automated_attempts: 4       # cap per trade date (Owner Decision 2026-10-27; official limit 25 is never exhausted)
   browser_profile_dir: data/browser_profiles/fundaiagent   # gitignored; the Owner logs in interactively once
   selectors: {}                   # filled ONLY from the observed UI after the manual E2E; empty -> fail closed
   accepted_markers: []            # verbatim official history wording meaning accepted (e.g. from the E2E); empty -> never ACCEPTED

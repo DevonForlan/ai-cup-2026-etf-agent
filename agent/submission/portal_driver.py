@@ -485,13 +485,16 @@ class PlaywrightPortalDriver(PortalDriver):
         """Read-only: click 回看 on the ONE history row of `trade_date`, read the review dialog (header + JSON text),
         close it. None when the row / link / dialog / content is not found (never guessed)."""
         css = self._sel("history_rows")["strategies"][0].get("css", "tr")
-        rows = self.page.locator(css).filter(has_text=trade_date)
-        if rows.count() != 1:
+        # the 日期 cell (2nd td) is the trade date; a row's 繳交時間 may carry the same date (the T+1 upload made on day T)
+        loc = self.page.locator(css)
+        rows = [loc.nth(i) for i in range(loc.count())
+                if [c.strip() for c in loc.nth(i).locator("td").all_inner_texts()][1:2] == [trade_date]]
+        if len(rows) != 1:
             return None
         link_sel = self._sel("history_review_link")
         if link_sel.get("status") not in READ_OK or not link_sel.get("strategies"):
             raise UIUnexpected(f"{link_sel.get('status')}: history_review_link not usable")
-        link = rows.first.locator(link_sel["strategies"][0]["css"])
+        link = rows[0].locator(link_sel["strategies"][0]["css"])
         if link.count() != 1:
             return None
         link.first.click()

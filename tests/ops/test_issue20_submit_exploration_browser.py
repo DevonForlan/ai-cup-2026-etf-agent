@@ -121,3 +121,32 @@ def test_pre_submit_notice_dialog_is_dismissed_then_submitted(browser, tmp_path)
     pre = [x for x in out["log"] if x["step"] == "pre_submit_dialog"]
     assert pre and pre[0]["clicked"] == "我知道了"
     assert out["confirms"] == 1 and _result(d) == ("OK", "已收件")
+
+
+HISTORY = """<!doctype html><html><head><meta charset="utf-8"></head><body>
+<table><thead><tr><th>交易日</th><th>日期</th><th>每日上傳 JSON</th><th>繳交時間</th><th>回看</th></tr></thead><tbody>
+<tr><td>第 2</td><td>2026-10-28</td><td>已繳交</td><td>2026-10-27 21:04</td><td><a onclick="rv('2026-10-28')">回看</a></td></tr>
+<tr><td>第 1</td><td>2026-10-27</td><td>已繳交</td><td>2026-10-27 01:16</td><td><a onclick="rv('2026-10-27')">回看</a></td></tr>
+</tbody></table>
+<script>
+function rv(d){
+  const g = document.createElement('div'); g.setAttribute('role', 'dialog'); g.setAttribute('aria-label', '繳交內容回看');
+  g.innerHTML = '<p>' + d + '</p><button>關閉</button><pre>{"trade_date": "' + d + '"}</pre>';
+  g.querySelector('button').onclick = () => g.remove(); document.body.appendChild(g);
+}
+</script></body></html>"""
+
+
+def test_review_picks_the_row_by_its_date_cell_not_the_submit_time(browser, tmp_path):
+    """Real portal 2026-10-28: row 第 2 (trade date 10/28) was submitted 「2026-10-27 21:04」, so a text match on
+    2026-10-27 hits two rows. 回看 must open the row whose 日期 cell is the trade date."""
+    html = tmp_path / "history.html"
+    html.write_text(HISTORY, encoding="utf-8")
+    page = browser.new_page()
+    page.goto(html.as_uri())
+    d = PD.PlaywrightPortalDriver.__new__(PD.PlaywrightPortalDriver)
+    d.adapter, d.page = PD.load_adapter(), page
+    for t in ("2026-10-27", "2026-10-28"):
+        r = d.open_review(t)
+        assert r is not None and r["json_text"] == '{"trade_date": "' + t + '"}' and t in r["header"]
+    assert d.open_review("2026-10-29") is None

@@ -61,7 +61,7 @@ def _other_date_in_file(tmp_path):
     (lambda p: _bad_checks(p, "holdings_20_30", "FAIL"), {}, "LOCAL_VALIDATION_FAIL"),
     (lambda p: comp(p, team="TEAM_99999"), {}, "TEAM_ID_MISMATCH"),
     (_other_date_in_file, {}, "TRADE_DATE_MISMATCH"),
-    (lambda p: comp(p), dict(used=3), "MAX_AUTOMATED_ATTEMPTS"),
+    (lambda p: comp(p), dict(used=4), "MAX_AUTOMATED_ATTEMPTS"),   # cap 4 (Owner Decision 2026-10-27)
     (lambda p: comp(p), dict(mode="PRECOMPETITION"), "PRECOMPETITION_AUTO_SUBMIT_FORBIDDEN"),
     (lambda p: comp(p, mode="dry-run"), {}, "NOT_A_COMPETITION_FINAL"),
 ])
