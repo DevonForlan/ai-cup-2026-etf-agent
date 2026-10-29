@@ -153,6 +153,7 @@ def run(now: datetime | None = None, *, cd_runner=None, submit=None, replace=Non
     from agent.data.locks import LockTimeout
     from agent.ops.production_lock import production_lock
     from agent.ops.scheduled_run import holidays, run_mode
+    clock_injected = now is not None
     now = now or datetime.now(TPE)
     ops = load_ops_config()
     p = plan(now, holidays(ops), ops)
@@ -173,7 +174,7 @@ def run(now: datetime | None = None, *, cd_runner=None, submit=None, replace=Non
         return _finish(rec)
     try:
         return _locked(rec, now, ops, cd_runner=cd_runner, submit=submit, replace=replace, prepare=prepare,
-                       portal_check=portal_check)
+                       portal_check=portal_check, clock_injected=clock_injected)
     finally:
         lk.release()
 
@@ -193,7 +194,8 @@ def portal_clear(trade_date: str, ops: dict) -> tuple[bool, str]:
     return True, "no portal submission for T"
 
 
-def _locked(rec: dict, now: datetime, ops: dict, *, cd_runner, submit, replace, prepare, portal_check=None) -> dict:
+def _locked(rec: dict, now: datetime, ops: dict, *, cd_runner, submit, replace, prepare, portal_check=None,
+            clock_injected: bool = False) -> dict:
     from agent.ops.final import replace_final
     from agent.ops.package_submission import active_final
     from agent.ops.scheduled_run import RunLog, competition_preparation, submission_stage
@@ -235,7 +237,8 @@ def _locked(rec: dict, now: datetime, ops: dict, *, cd_runner, submit, replace, 
             else:
                 rec["status"] = "PASS"
                 if s.get("final_action") == "KEPT_DIFFERENT":
-                    ok, why = supersede_decision(s, prior, trade_date=t, now=datetime.now(TPE), ops_cfg=ops)
+                    ok, why = supersede_decision(s, prior, trade_date=t, now=now if clock_injected else datetime.now(TPE),
+                                                       ops_cfg=ops)   # production: the real clock at decision time
                     if ok:                      # never replace a FINAL that may already be on the portal
                         clear, pwhy = (portal_check or portal_clear)(t, ops)
                         if not clear:
