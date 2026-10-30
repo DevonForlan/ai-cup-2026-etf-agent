@@ -30,6 +30,7 @@ from agent.config import D  # noqa: E402
 from agent.ops.common import TPE, load_ops_config, sha256_file, ymd  # noqa: E402
 
 LABEL = "PRECOMPETITION_PAPER_RUN"
+OFFICIAL_LABEL = "COMPETITION_DAY_ESTIMATE"     # start = the competition settlement ledger (official DataPack)
 LEDGER = ROOT / "data" / "paper_ledger"                 # sim-run layout: <LEDGER>/settlement/<date>.json
 REPORT_DIR = ROOT / "reports" / "daily_evaluations"
 LOG_DIR = ROOT / "logs" / "evaluation"
@@ -168,6 +169,13 @@ def evaluate(ev_date: str, *, ops_cfg: dict | None = None, store=None, paths: Pa
     cands = []
     if paths.settlement(prev_date).exists():
         cands.append(("PAPER_LEDGER", Settlement.load(paths.settlement(prev_date))))
+    try:      # COMPETITION: the prediction starts from the settlement ledger (official DataPack accepted by reconcile)
+        from agent.ops.settlement import load_internal
+        official = load_internal(prev_date, ops_cfg)
+    except Exception:  # noqa: BLE001
+        official = None
+    if official is not None:
+        cands.append(("OFFICIAL_SETTLEMENT", official))
     cands.append(("INITIAL_CASH", Settlement.initial(prev_date, rb.rules.initial_cash)))
     want = meta.get("settlement_hash")
     match = next(((src, s) for src, s in cands if settlement_hash(s) == want), None)
@@ -176,6 +184,8 @@ def evaluate(ev_date: str, *, ops_cfg: dict | None = None, store=None, paths: Pa
         return rec
     start_src, prev = match
     rec.update(start_source=start_src, previous_date=prev_date)
+    if start_src == "OFFICIAL_SETTLEMENT":
+        rec["label"] = OFFICIAL_LABEL
     # every held ticker needs a valid close, every ordered ticker a valid vwap/volume, on the evaluation date
     hcov = day_coverage(store, ev_date, holdings=[t for t, n in prev.holdings.items() if int(n) > 0],
                         order_tickers=need, ops_cfg=ops_cfg)
@@ -228,12 +238,13 @@ def evaluate(ev_date: str, *, ops_cfg: dict | None = None, store=None, paths: Pa
     expl = sum(r["contribution"] for r in rows) - float((s.fees + s.tax) / prev.nav)
     rec["return_attribution_check"] = "PASS" if abs(expl - rec["daily_return"]) < 1e-6 else f"DIFF {expl - rec['daily_return']:.2e}"
     # 7. persist ledger (old copy kept if superseded) + report
-    dst = paths.settlement(ev_date)
-    dst.parent.mkdir(parents=True, exist_ok=True)
-    if dst.exists():
-        dst.replace(dst.with_name(f"{ev_date}_superseded_{datetime.now(TPE):%Y%m%d_%H%M%S}.json.bak"))
-    s.save(dst)
-    rec["ledger_file"] = str(dst)
+    if start_src != "OFFICIAL_SETTLEMENT":        # a competition-day estimate never enters the PAPER ledger
+        dst = paths.settlement(ev_date)
+        dst.parent.mkdir(parents=True, exist_ok=True)
+        if dst.exists():
+            dst.replace(dst.with_name(f"{ev_date}_superseded_{datetime.now(TPE):%Y%m%d_%H%M%S}.json.bak"))
+        s.save(dst)
+        rec["ledger_file"] = str(dst)
     rec["report_file"] = str(write_report(rec, paths))
     rec["status"] = "PASS" if rec["compliance"] == "PASS" else "BLOCKED"
     if rec["status"] == "BLOCKED":
@@ -252,8 +263,12 @@ def write_report(r: dict, paths: Paths) -> Path:
 
     def pct(x):
         return "-" if x is None else f"{x:+.2%}"
-    L = [f"# Daily Evaluation — {r['evaluation_date']}（{LABEL}）", "",
-         f"> **{LABEL}** — 賽前紙上交易驗證，**不是正式比賽成績**。只驗證前一晚的決策，不修改策略。AI 產生內容，需人工審閱。", "",
+    label = r.get("label") or LABEL
+    banner = ("賽前紙上交易驗證，**不是正式比賽成績**。只驗證前一晚的決策，不修改策略。" if label == LABEL else
+              "正式比賽日預估：起點為官方 DataPack 結算（settlement ledger），以收盤價與同一套模擬器推算，"
+              "**不是官方結算**（官方結算以下一份 DataPack 為準，不寫入 paper ledger）。只驗證已提交的決策，不修改策略。")
+    L = [f"# Daily Evaluation — {r['evaluation_date']}（{label}）", "",
+         f"> **{label}** — {banner}AI 產生內容，需人工審閱。", "",
          "## Previous prediction", "", "| 項目 | 值 |", "|---|---|",
          f"| Prediction file | `reports/daily_predictions/{r['evaluation_date']}_prediction.md` |",
          f"| D-Plan file | `{r['prediction_file']}`（v{r.get('dplan_version')}） |",
@@ -338,7 +353,7 @@ def run(now: datetime | None = None, paths: Paths | None = None, ev_date: str | 
             "settlement", "nav", "daily_return", "cumulative_return", "mdd", "turnover", "fees", "tax",
             "compliance", "active_share", "report_file", "status", "blocked_reason", "error_message"]
     with open(log, "a", encoding="utf-8") as f:
-        f.write(f"{'LABEL':<20} {LABEL}\n")
+        f.write(f"{'LABEL':<20} {rec.get('label') or LABEL}\n")
         for k in keys:
             f.write(f"{k.upper():<20} {rec.get(k, '-') if rec.get(k) is not None else '-'}\n")
     slim = {k: v for k, v in rec.items() if k != "holdings_result"}

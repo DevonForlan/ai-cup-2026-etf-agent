@@ -141,3 +141,44 @@ def test_paper_start_chain_or_reset(tmp_path, monkeypatch):
     paths.settlement("2026-10-13").write_text("{}", encoding="utf-8")
     st = S.paper_start("2026-10-14", log)
     assert st["source"] == "CHAIN:2026-10-13" and st["ledger"] == str(paths.ledger)
+
+
+# ---------------------------------------------------------------- competition-day start (settlement ledger)
+def test_evaluation_starts_from_the_competition_settlement_ledger(predicted, ops_cfg, fixture_store, monkeypatch):
+    """COMPETITION: the prediction starts from the settlement ledger (official DataPack accepted by reconcile), not
+    from a paper ledger. The evaluator matches it by settlement_hash like the other starting points, labels the result
+    a competition-day ESTIMATE and never writes the PAPER ledger."""
+    from agent.competition_day import settlement_hash
+    from agent.ops import settlement as OS
+    from agent.ops.package_submission import active_final
+    from agent.sim.calendar import TradingCalendar
+    from agent.sim.models import Settlement
+    _, paths = predicted
+    rec = active_final(T1, ops_cfg)
+    meta_p = Path(ops_cfg["paths"]["submissions_dir"]) / "20261026" / "candidates" / rec["run_id"] / "run_metadata.json"
+    meta = json.loads(meta_p.read_text(encoding="utf-8"))
+    start = Settlement.initial(TradingCalendar(fixture_store.dates("daily_prices")).prev(T1), 1_000_000_000)
+    meta["settlement_hash"] = settlement_hash(start)          # built from "the official settlement"
+    meta_p.write_text(json.dumps(meta), encoding="utf-8")
+    monkeypatch.setattr(OS, "load_internal", lambda d, cfg=None: start)
+    r = DE.evaluate(T1, ops_cfg=ops_cfg, store=fixture_store, paths=paths)
+    assert r["status"] == "PASS" and r["start_source"] == "OFFICIAL_SETTLEMENT" and r["label"] == "COMPETITION_DAY_ESTIMATE"
+    assert not paths.settlement(T1).exists() and "ledger_file" not in r        # never the PAPER ledger
+    txt = Path(r["report_file"]).read_text(encoding="utf-8")
+    assert "COMPETITION_DAY_ESTIMATE" in txt and "不是官方結算" in txt and "賽前紙上交易驗證" not in txt
+
+
+def test_official_ledger_with_a_different_hash_still_blocks(predicted, ops_cfg, fixture_store, monkeypatch):
+    from agent.ops import settlement as OS
+    from agent.sim.models import Settlement
+    from agent.ops.package_submission import active_final
+    _, paths = predicted
+    rec = active_final(T1, ops_cfg)
+    meta_p = Path(ops_cfg["paths"]["submissions_dir"]) / "20261026" / "candidates" / rec["run_id"] / "run_metadata.json"
+    meta = json.loads(meta_p.read_text(encoding="utf-8"))
+    meta["settlement_hash"] = "sha256:" + "0" * 64            # prediction built from some other starting point
+    meta_p.write_text(json.dumps(meta), encoding="utf-8")
+    other = Settlement.initial("2026-10-23", 999_000_000)       # the ledger is present but is not that starting point
+    monkeypatch.setattr(OS, "load_internal", lambda d, cfg=None: other)
+    r = DE.evaluate(T1, ops_cfg=ops_cfg, store=fixture_store, paths=paths)
+    assert r["status"] == "BLOCKED" and r["blocked_reason"] == "SETTLEMENT_CHAIN_MISMATCH"
