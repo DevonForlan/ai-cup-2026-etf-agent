@@ -28,6 +28,7 @@ import socket
 import subprocess
 import sys
 import time
+import urllib.error
 import urllib.request
 from datetime import date, datetime, timedelta
 from pathlib import Path
@@ -186,6 +187,8 @@ def _probe(name: str, target: str) -> bool:
         req = urllib.request.Request(target, method="HEAD", headers={"User-Agent": "Mozilla/5.0"})
         with urllib.request.urlopen(req, timeout=15) as r:
             return r.status < 500
+    except urllib.error.HTTPError as e:
+        return e.code < 500   # any HTTP answer (e.g. a CDN's 403 to HEAD) proves the host is reachable
     except Exception:  # noqa: BLE001
         return False
 

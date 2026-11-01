@@ -98,3 +98,22 @@ def test_run_skips_without_side_effects_when_already_passed(monkeypatch, tmp_pat
     assert (tmp_path / "latest_status.json").exists() and "OVERALL_STATUS" in open(r["log_file"], encoding="utf-8").read()
     r = S.run(now=datetime(2026, 10, 14, 0, 20, tzinfo=TPE))           # catch-up for a date that already PASSED
     assert r["status"] == "SKIPPED" and r["blocked_reason"] == "SKIP_ALREADY_PASSED"
+
+def test_probe_treats_a_cdn_403_as_reachable_but_5xx_and_timeouts_as_down(monkeypatch):
+    import io
+    import urllib.error
+
+    def raiser(code):
+        def f(req, timeout=0):
+            raise urllib.error.HTTPError(req.full_url, code, "x", {}, io.BytesIO(b""))
+        return f
+    monkeypatch.setattr(S.urllib.request, "urlopen", raiser(403))
+    assert S._probe("ESUN", "https://esun-ai-challenge.tw/") is True
+    monkeypatch.setattr(S.urllib.request, "urlopen", raiser(503))
+    assert S._probe("ESUN", "https://esun-ai-challenge.tw/") is False
+
+    def boom(req, timeout=0):
+        raise OSError("timeout")
+    monkeypatch.setattr(S.urllib.request, "urlopen", boom)
+    assert S._probe("ESUN", "https://esun-ai-challenge.tw/") is False
+
