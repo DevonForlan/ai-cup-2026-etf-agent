@@ -79,6 +79,16 @@ def cfg_auto(ops_cfg: dict) -> dict:
     return a
 
 
+def _publish_shared_state() -> None:
+    """Issue #31: downstream observability only. Publishes confirmed FINALs to the shared-state branch; any failure is
+    swallowed (recorded as sync-pending) and can never change, retry or replace the submission."""
+    try:
+        from agent.ops import shared_state_sync
+        shared_state_sync.sweep()
+    except Exception:  # noqa: BLE001
+        pass
+
+
 def submission_status(outcome_status: str | None) -> str:
     """Issue #20 SUBMISSION_STATUS (separate from PREDICTION_STATUS): CONFIRMED or BLOCKED (fail closed)."""
     return "SUBMISSION_CONFIRMED" if outcome_status in SUCCESS else "BLOCKED"
@@ -794,6 +804,7 @@ def _execute(trade_date: str, *, official_test: bool, ops_cfg: dict, now_fn=None
            "tries": tries, "owner_action_required": owner_action_required(o)}
     if o.status in ("SUBMISSION_CONFIRMED", "ALREADY_SUBMITTED"):
         signals.emit("SUBMISSION_CONFIRMED", trade_date, o.reason, ops_cfg=ops_cfg)
+        _publish_shared_state()
     elif o.status in SUCCESS:
         signals.emit("SUBMISSION_ACCEPTED", trade_date, o.reason, ops_cfg=ops_cfg)
     else:

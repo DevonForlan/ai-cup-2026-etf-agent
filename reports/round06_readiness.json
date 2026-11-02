@@ -1,28 +1,28 @@
 {
- "level": "DRY_RUN_READY",
+ "level": "NOT_READY",
  "items": [
   {
    "item": "all tests pass",
    "ok": true,
-   "detail": "324 passed in 234.94s (0:03:54)",
+   "detail": "n passed",
    "required_for": "DEV_READY"
   },
   {
    "item": "Quant v1 W5 baseline reproduced",
-   "ok": true,
-   "detail": "1014240575.839861741934859718",
+   "ok": false,
+   "detail": "missing",
    "required_for": "DEV_READY"
   },
   {
    "item": "24-day dress rehearsal PASS",
-   "ok": true,
-   "detail": "clock-sim 24/24 (clock-sim_20260828_20261005_132800); replay 24/24 (replay_20260828_20261005_132158)",
+   "ok": false,
+   "detail": "none",
    "required_for": "DRY_RUN_READY"
   },
   {
    "item": "24-day rehearsal in competition mode (clock-sim)",
-   "ok": true,
-   "detail": "clock-sim PASS",
+   "ok": false,
+   "detail": "missing",
    "required_for": "DRY_RUN_READY"
   },
   {
@@ -46,19 +46,19 @@
   {
    "item": "NC-1 official settlement path confirmed",
    "ok": false,
-   "detail": "NC-1 unknown",
+   "detail": "NC-1 partially_confirmed",
    "required_for": "COMPETITION_READY"
   },
   {
    "item": "NC-1 official submission path confirmed",
    "ok": false,
-   "detail": "NC-1 unknown; ManualSubmissionProvider only",
+   "detail": "NC-1 partially_confirmed; ManualSubmissionProvider only",
    "required_for": "COMPETITION_READY"
   },
   {
    "item": "first trading day confirmed (NC-15)",
-   "ok": false,
-   "detail": "unknown",
+   "ok": true,
+   "detail": "confirmed",
    "required_for": "COMPETITION_READY"
   },
   {
@@ -78,24 +78,27 @@
   },
   {
    "item": "latest real preflight not BLOCK",
-   "ok": true,
-   "detail": "20261006: WARN",
+   "ok": false,
+   "detail": "-: None",
    "required_for": "COMPETITION_READY"
   }
  ],
  "blockers": [
-  "NC-1 official settlement path confirmed: NC-1 unknown",
-  "NC-1 official submission path confirmed: NC-1 unknown; ManualSubmissionProvider only",
-  "first trading day confirmed (NC-15): unknown"
+  "Quant v1 W5 baseline reproduced: missing",
+  "24-day dress rehearsal PASS: none",
+  "24-day rehearsal in competition mode (clock-sim): missing",
+  "NC-1 official settlement path confirmed: NC-1 partially_confirmed",
+  "NC-1 official submission path confirmed: NC-1 partially_confirmed; ManualSubmissionProvider only",
+  "latest real preflight not BLOCK: -: None"
  ],
- "nc1_status": "unknown",
+ "nc1_status": "partially_confirmed",
  "cap_reason": "NC-1 unresolved -> max DRY_RUN_READY",
- "real_llm": "BLOCKED_NO_API_KEY",
+ "real_llm": "KEY_PRESENT",
  "real_llm_role": "OPTIONAL_CAPABILITY",
  "llm_runtime": "CLAUDE_CLI_PRODUCTION_CANDIDATE",
  "llm_fallback": "template",
  "llm_keys_present": {
-  "GEMINI_API_KEY": "ABSENT",
+  "GEMINI_API_KEY": "PRESENT",
   "GOOGLE_API_KEY": "ABSENT",
   "OPENAI_API_KEY": "ABSENT",
   "ANTHROPIC_API_KEY": "ABSENT"
