@@ -1,0 +1,37 @@
+{
+ "D1_BREADTH_TREND": {
+  "actual_oos_ex_subset": -0.0029845650361978037,
+  "placebo_mean": -0.0035782081002979985,
+  "placebo_p": 0.35
+ },
+ "D2_VOL": {
+  "actual_oos_ex_subset": -0.00836346758109284,
+  "placebo_mean": -0.0036036257441092365,
+  "placebo_p": 1.0
+ },
+ "D3_SOX": {
+  "actual_oos_ex_subset": -0.0012330776918578756,
+  "placebo_mean": -0.0021138285878931668,
+  "placebo_p": 0.3
+ },
+ "D4_ANY": {
+  "actual_oos_ex_subset": -0.0075109123877391505,
+  "placebo_mean": -0.006004066918030327,
+  "placebo_p": 0.75
+ },
+ "R1_F2a": {
+  "actual_oos_ex_subset": 0.002046867769119367,
+  "placebo_mean": -0.014929650637630654,
+  "placebo_p": 0.0
+ },
+ "R1_F3a": {
+  "actual_oos_ex_subset": -0.0013796258280293872,
+  "placebo_mean": -0.014891758796348704,
+  "placebo_p": 0.0
+ },
+ "R1_F9b": {
+  "actual_oos_ex_subset": 0.011644688027122867,
+  "placebo_mean": -0.017724128210077777,
+  "placebo_p": 0.0
+ }
+}

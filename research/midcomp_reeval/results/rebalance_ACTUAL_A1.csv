@@ -1,0 +1,2 @@
+set,start,end,days,period,freq,run_id,ret,mdd,turnover,cost,avg_cash,violations,validation_failures,n_days,runtime
+ACTUAL,2026-10-27,2026-11-02,5,ACTUAL,1,A1__2026-10-27,-0.044141497669765196,0.07631017775237423,0.9827296807487195,1597822.430481722,0.11260155653551637,0,0,5,1.9
