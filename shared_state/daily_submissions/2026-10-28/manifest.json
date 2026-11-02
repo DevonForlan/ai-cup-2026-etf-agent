@@ -1,0 +1,13 @@
+{
+ "trade_date": "2026-10-28",
+ "team_id": "TEAM_11442",
+ "final_path": "shared_state/daily_submissions/2026-10-28/FINAL.json",
+ "final_sha256": "5d286242dd979197453dffca5e319650d58b83638cbc7fb830da791c616a8dbf",
+ "source_final_path": "submissions/20261028/FINAL/D-Plan_TEAM_11442_2026-10-28.json",
+ "submission_status": "SUBMISSION_CONFIRMED",
+ "submitted_at": "2026-10-27T21:06:55.409666+08:00",
+ "confirmed_at": "2026-10-28T01:06:55.444144+08:00",
+ "synced_at": "2026-11-02T12:11:58+08:00",
+ "idempotency_key": "2026-10-28|TEAM_11442|5d286242dd979197453dffca5e319650d58b83638cbc7fb830da791c616a8dbf",
+ "supersedes": []
+}
