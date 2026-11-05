@@ -318,10 +318,22 @@ class _Lock:
         self.p.unlink(missing_ok=True)
 
 
+def _publish_shared_state() -> None:
+    """Issues #31 / #33: downstream observability only. Publishes completed evaluations (and any pending submitted FINAL) to the
+    shared-state branch; every failure is swallowed and can never change the evaluation, the portfolio or a submission."""
+    try:
+        from agent.ops import shared_state_evaluations, shared_state_sync
+        shared_state_evaluations.sweep()
+        shared_state_sync.sweep()
+    except Exception:  # noqa: BLE001
+        pass
+
+
 def run(now: datetime | None = None, paths: Paths | None = None, ev_date: str | None = None,
         force: bool = False) -> dict:
     from agent.ops.scheduled_run import holidays
     now = now or datetime.now(TPE)
+    production_paths = paths is None
     paths = paths or Paths()
     paths.logs.mkdir(parents=True, exist_ok=True)
     log = paths.logs / f"evaluation_{now:%Y%m%d_%H%M%S}.log"
@@ -361,6 +373,8 @@ def run(now: datetime | None = None, paths: Paths | None = None, ev_date: str | 
     paths.latest.write_text(json.dumps(slim, ensure_ascii=False, indent=1, default=str), encoding="utf-8")
     with open(paths.history, "a", encoding="utf-8") as f:
         f.write(json.dumps(slim, ensure_ascii=False, default=str) + "\n")
+    if production_paths and rec["status"] == "PASS":
+        _publish_shared_state()
     return rec
 
 

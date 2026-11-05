@@ -31,3 +31,25 @@ Reader flow: read `latest.json` -> follow `final_path` -> verify SHA256 against 
 - Not copied: receipts, screenshots, cookies, tokens, browser profile, DataPacks, logs.
 
 Competition impact: Frozen Quant none; investment behaviour none; FINAL generation none; submission semantics none.
+
+## Daily evaluations (Issue #33)
+
+`shared_state/daily_evaluations/` on the same `shared-state` branch, same safe pattern (dedicated worktree, production checkout never touched):
+
+```
+latest.json                              trade_date, evaluation_type, is_official_settlement, nav, daily_return_pct, cumulative_return_pct,
+                                         mdd_pct, cash_weight_pct, holdings_count, active_share_pct, compliance, evaluation_path, summary_path,
+                                         source_report, source_sha256, synced_at
+<date>/evaluation.json                   full snapshot parsed from reports/daily_evaluations/<date>_evaluation.md (+ contributors, holdings)
+<date>/summary.md                        concise summary; states that COMPETITION_DAY_ESTIMATE is NOT the official settlement
+<date>/superseded/<sha8>/                earlier versions of a corrected evaluation (audit); `supersedes` chain in evaluation.json
+```
+
+- Source of every value is the evaluation report; missing optional fields are `null` (never invented).
+- Published only when the report is complete: `Overall: READY`, compliance / NAV reconciliation / return attribution PASS, a competition
+  label (`COMPETITION_DAY_ESTIMATE`), date >= 2026-10-27. BLOCKED / partial / paper-run reports are skipped.
+- Trigger: `daily_evaluation.run()` calls `_publish_shared_state()` after a PASS (also retries pending FINAL syncs). Manual / backfill:
+  `python -m agent.ops.shared_state_evaluations [--report <file>] [--root <production root>]`.
+- Idempotent on `date | report sha256`; a corrected report archives the previous version. `latest.json` only moves forward.
+- Failure: swallowed, `logs/shared_state/pending_evaluations.json`, retried by the next sweep; never changes the evaluation, portfolio or a submission.
+- Reader flow: `latest.json` -> (same date as requested?) answer NAV / daily / cumulative; read `daily_submissions/latest.json` only for holdings / orders.
