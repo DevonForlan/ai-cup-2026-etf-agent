@@ -134,3 +134,33 @@ format, DataPack / receipt parser) go through an Issue and record: timestamp, re
 PR stays OPEN (draft → ready for review). Blocking comments: fix or give a concrete technical rebuttal. Non-blocking: fix now, open a follow-up Issue, or record why not. After fixes: push to the same branch, wait for CI, and reply per item (review item → resolution → file → commit → test result).
 
 For normal PRs, Owner merge remains required. For a PR that qualifies for **LOW_RISK_OPS_AUTOMERGE**, Claude Code may perform its own final review, record every gate result in the PR, and merge after all required checks are green. Self-review is not permission to waive a gate. If classification or risk is ambiguous, escalate to Owner instead of merging.
+
+
+## 11. COMPETITION_HIGH_AUTONOMY — Owner Decision 2026-11-05
+
+For the remainder of AI CUP 2026, this section supersedes conflicting human-approval requirements in §§1, 4, 5, 7 and 10 for competition work.
+
+Claude Code is authorised to complete the normal competition engineering loop end-to-end without waiting for Owner or ChatGPT review:
+**Issue → branch → implement/research → test → PR → self-review → CI → self-merge → production deploy → verify → rollback if needed → evidence → close**.
+
+This autonomy covers technical, operational, data, scheduler, observability, model/prompt and investment-strategy work. PRs remain required for auditability, but may be created, reviewed and merged in the same Claude Code session. Claude Code should minimise repeated approval loops and complete as much safe work as possible in one round.
+
+### Strategy changes
+
+Recent losses alone are not evidence for a strategy change. Claude Code may autonomously create and promote a new strategy version (v2+) only when it preserves Quant v1 as an immutable baseline and records a new fingerprint, pre-registers the change where practical, compares against production with OOS/rolling windows, includes costs/turnover/compliance/Active Share, tests drawdown recovery/recent regimes and simple/placebo baselines, documents before/after behaviour, preserves rollback, and passes the repository test/validation/security gates. Never overwrite Quant v1 history.
+
+When evidence is mixed, prefer the smallest reversible risk-control change over a wholesale strategy rewrite.
+
+### Hard boundaries that remain
+
+Claude Code must still never extract credentials/cookies/tokens/session/MFA material, bypass login/MFA/CAPTCHA, use guessed/private/unauthorised APIs, perform illegal or clearly unauthorised actions, incur paid third-party costs or financial commitments without Owner approval, delete/rewrite audit history, force-push protected/release branches, weaken tests/compliance checks, fabricate evidence/submission success/settlement, expose confidential/customer data, or knowingly violate competition rules.
+
+If a competition-rule ambiguity could reasonably cause disqualification and there is no clearly compliant conservative path, escalate to Owner. Otherwise choose the conservative compliant path, record the reasoning, and continue.
+
+### Self-merge and deployment gates
+
+Before self-merge: PR current/mergeable, targeted tests PASS, full pytest PASS (unless a documented unrelated environment-only suite failure is proven), validate PASS, secret scan PASS, version/freeze gate PASS, no unresolved blocking review, and impact/rollback evidence present.
+
+After merge: production checkout clean, pull latest master, verify production HEAD == origin/master, verify schedulers point to production root, run smoke checks, verify relevant Shared State/submission/evaluation outputs, and automatically roll back the just-deployed change if an objective regression is detected and rollback is safe.
+
+Owner may override or revoke this mode at any time. Otherwise it remains active until the competition ends.
