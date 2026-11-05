@@ -160,3 +160,43 @@ merge 仍以 squash 優先；禁止 force push、rewrite history。
 完成一項工作後可以：修 CI、處理 review、補測試、文件、不改行為的整理、分析、提案、整理證據。不得自行開始（需要
 Issue + Owner 核准）：新的 Quant 研究、新策略、架構替換、breaking schema、新部署模式、security 模型變更、新資料供應者、
 啟用比賽 auto-upload、切換 COMPETITION `run_mode`。協作工具與治理文件的變更不得改變投資行為。
+
+
+## 7. COMPETITION_HIGH_AUTONOMY（Owner Decision 2026-11-05）
+
+本節於 AI CUP 2026 競賽期間優先於前述需要逐次 Owner/ChatGPT 核准的流程。Owner 已授權 Claude Code 在不碰觸下列硬邊界的前提下，將競賽工作一次完成到可運行狀態。
+
+預設流程：
+Issue → branch → implement/research → tests → PR → self-review → CI → self-merge → production deploy → verify → safe rollback if needed → evidence → close。
+
+PR 保留作為稽核與回退邊界，但不再要求人工等待 review/merge。Claude Code 可在同一輪完成 PR、自審、合併、部署與驗證。
+
+### 7.1 策略／投資行為也可自治，但必須證據化
+
+近期虧損本身不得作為改策略的充分理由。若要改選股、產業配置、因子、權重、rebalance、cash、risk overlay、order sizing 或 decision prompt/model，Claude Code 可以自行研究與升版，但必須：
+- 保留 Frozen Quant v1 為不可改寫歷史基準；
+- 新建 v2+ 與新 fingerprint；
+- 可行時先 pre-register；
+- 與現行 production 做 OOS / rolling-window 比較；
+- 納入成本、換手、compliance、Active Share；
+- 檢查 drawdown recovery、近期 regime slice、簡單 baseline/placebo；
+- 保留負面與不顯著結果；
+- 保留一鍵 rollback 到前一版；
+- 完成 full pytest / validate / secret scan / version/freeze gate；
+- 把 before/after、原因、證據、新 fingerprint、部署與回退紀錄寫回 GitHub。
+
+證據混合時，優先採用範圍較小、可逆的 risk-control，而不是大幅換策略。
+
+### 7.2 仍然保留的硬邊界
+
+不得擷取 credential/cookie/token/session/MFA、不得繞過 login/MFA/CAPTCHA、不得使用猜測/私有/未授權 API、不得違法或明顯未授權、不得未經 Owner 產生付費/財務承諾、不得刪除或改寫稽核歷史、不得 force push 受保護分支、不得弱化 tests/compliance、不得偽造送件成功/結算/證據、不得外洩機密或客戶資料、不得明知違反競賽規則。
+
+若競賽規則存在足以造成 DQ 的重大歧義，且無明確保守合規路徑，才升級 Owner；其餘情況採保守合規方案並記錄後繼續。
+
+### 7.3 自動合併／部署 gate
+
+Self-merge 前：PR 必須 current + mergeable、targeted tests PASS、full pytest PASS（除非可證明為無關環境問題）、validate PASS、secret scan PASS、version/freeze gate PASS、無 unresolved blocking review、且 impact/rollback evidence 完整。
+
+Merge 後：production checkout clean、pull latest master、確認 production HEAD == origin/master、確認 scheduler 指向 production root、執行 smoke checks、驗證相關 Shared State / submission / evaluation；若出現客觀 regression 且安全可回退，立即自動 rollback。
+
+本模式持續至競賽結束或 Owner 明確撤銷。
