@@ -26,7 +26,7 @@ Method: `PRE_REGISTRATION.md` (committed before any result). Replays: 90 windows
 - G2 FAIL (significant in the wrong direction). G3 partial: caps / floor / hybrid improve the *worst window* by ≈ 2–3 pp and mean MDD by 0.3–0.8 pp (a real tail benefit), but the 2026H2 recent-6 slice shows a *worse* worst window (−5.9 vs −4.2) — the benefit is not regime-stable.
 - G4: placebo P_CHASE (−0.68) behaves like the milder caps, i.e. most of the cost is just "selling the book's own highest-ranked names"; P_RANDOM_CAP ≈ 0 shows the loss is specific to the TECH sleeve being where the Quant's alpha is.
 - G5: cost add 0.02–0.12 % NAV per window (OK); official violations: D_N8 3 windows, E_HYBRID65 4 windows (B) ⇒ excluded.
-- G6 FAIL: negative in every calendar half-year (2024H2 … 2026H2), most negative in 2026H1/H2 (−1.0 … −1.8 pp for B_CAP60/70, D_FLOOR30, E).
+- G6 FAIL: B_CAP60/70 and D_FLOOR30 are negative in every calendar half-year (2024H2 … 2026H2; E_HYBRID65 is +0.02 pp in 2024H2 only), most negative in 2026H1/H2 (−1.0 … −1.8 pp).
 - G7/G8 (live Active Share, recovery after −5 % drawdown): not evaluated — the pre-registered G1 gate had already failed; evaluating further after the fact would only invite cherry-picking.
 - Caveat: sector map is today's ISIN classification applied to the full history (not point-in-time); caps are binding in ~80–100 % of windows because the frozen book holds ≈ 72 % of NAV in TECH.
 
