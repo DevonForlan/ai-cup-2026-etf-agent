@@ -67,7 +67,7 @@
   receipt parser）：依 Issue 處理，附本機 `scripts\ci\local_freeze_regression.py` 結果，證明 Quant 不變。
 - **Research ≠ production**：研究結果升級正式策略只能經由 PROMOTION Issue（production 設計 → 實作 → regression →
   freeze 比較 → PR → ChatGPT Review → Owner 決策）。負面結果必須保留。
-- **Merge**：只有 Owner 能決定 merge（squash 優先）。不 auto-merge、不 force push、不 rewrite 歷史。
+- **Merge**：預設仍由 Owner 決定 merge（squash 優先）。但符合 §6.4 `LOW_RISK_OPS_AUTOMERGE` 全部條件的低風險 OPS-only PR，Claude Code 可自行完成 final review 並 merge。不得 force push、不得 rewrite 歷史。
 - 比賽期間的 D-Plan、DataPack、receipt、log 等原始證據留在本機。Git 只保留 metadata（hash、時間、路徑、版本）。
 
 ## 6. Owner Decision、Merge 邊界、Scope（2026-10-23 起；GitHub Shared State 見 `docs/COLLABORATION_WORKFLOW.md` §7）
@@ -119,8 +119,33 @@ Owner approval source:              (e.g. "Owner reply in Claude Code session 20
 
 ### 6.4 Merge 邊界
 
-Claude Code、ChatGPT、任何 agent / worker 都不 merge；只有 Owner merge。PR 技術上可 merge 時加 `agent:merge-ready`，
-並留下：
+預設仍是 Owner merge。唯一例外為 `LOW_RISK_OPS_AUTOMERGE`：Claude Code 可自行 final review 並 merge，但必須全部符合下列 gate：
+
+1. Issue 已由 Owner 核准，或明確落在已核准 OPS scope。
+2. Frozen Quant / frozen paths 無變更，Quant fingerprint 完全一致。
+3. 無選股、排序、因子、權重、rebalance、現金政策、order sizing、decision prompt/model 等投資行為變更。
+4. 無 submission semantics、portal action policy、cutoff/window、attempt cap、success definition 變更。
+5. 無 security/privacy/credential/auth/session/MFA/CAPTCHA 邊界變更。
+6. 無 breaking API/schema、部署架構、destructive operation、付費/第三方服務、外部資料源政策、競賽規則解讀變更。
+7. full pytest、validate、secret-scan、quant-freeze-check 全部 PASS。
+8. PR mergeable、已更新到最新 master、production checkout clean，PR 內有 impact / rollback / evidence。
+9. 任何一項為 false、unknown 或 ambiguous，都不得 self-merge，必須回 Owner。
+
+符合時 PR 留下：
+
+```
+IMPLEMENTATION_STATUS = COMPLETE
+SELF_REVIEW = PASS
+LOW_RISK_OPS_AUTOMERGE = PASS
+QUANT_FREEZE = PASS
+TESTS = PASS
+SECRET_SCAN = PASS
+VALIDATE = PASS
+MERGEABILITY = PASS
+SELF_MERGE = AUTHORIZED_BY_POLICY
+```
+
+不符合時沿用：
 
 ```
 IMPLEMENTATION_STATUS = COMPLETE
@@ -128,8 +153,50 @@ CHATGPT_REVIEW_STATUS = APPROVED | APPROVED_WITH_FOLLOW_UP
 OWNER_MERGE_DECISION = PENDING
 ```
 
+merge 仍以 squash 優先；禁止 force push、rewrite history。
+
 ### 6.5 不得自行擴張重大 scope
 
 完成一項工作後可以：修 CI、處理 review、補測試、文件、不改行為的整理、分析、提案、整理證據。不得自行開始（需要
 Issue + Owner 核准）：新的 Quant 研究、新策略、架構替換、breaking schema、新部署模式、security 模型變更、新資料供應者、
 啟用比賽 auto-upload、切換 COMPETITION `run_mode`。協作工具與治理文件的變更不得改變投資行為。
+
+
+## 7. COMPETITION_HIGH_AUTONOMY（Owner Decision 2026-11-05）
+
+本節於 AI CUP 2026 競賽期間優先於前述需要逐次 Owner/ChatGPT 核准的流程。Owner 已授權 Claude Code 在不碰觸下列硬邊界的前提下，將競賽工作一次完成到可運行狀態。
+
+預設流程：
+Issue → branch → implement/research → tests → PR → self-review → CI → self-merge → production deploy → verify → safe rollback if needed → evidence → close。
+
+PR 保留作為稽核與回退邊界，但不再要求人工等待 review/merge。Claude Code 可在同一輪完成 PR、自審、合併、部署與驗證。
+
+### 7.1 策略／投資行為也可自治，但必須證據化
+
+近期虧損本身不得作為改策略的充分理由。若要改選股、產業配置、因子、權重、rebalance、cash、risk overlay、order sizing 或 decision prompt/model，Claude Code 可以自行研究與升版，但必須：
+- 保留 Frozen Quant v1 為不可改寫歷史基準；
+- 新建 v2+ 與新 fingerprint；
+- 可行時先 pre-register；
+- 與現行 production 做 OOS / rolling-window 比較；
+- 納入成本、換手、compliance、Active Share；
+- 檢查 drawdown recovery、近期 regime slice、簡單 baseline/placebo；
+- 保留負面與不顯著結果；
+- 保留一鍵 rollback 到前一版；
+- 完成 full pytest / validate / secret scan / version/freeze gate；
+- 把 before/after、原因、證據、新 fingerprint、部署與回退紀錄寫回 GitHub。
+
+證據混合時，優先採用範圍較小、可逆的 risk-control，而不是大幅換策略。
+
+### 7.2 仍然保留的硬邊界
+
+不得擷取 credential/cookie/token/session/MFA、不得繞過 login/MFA/CAPTCHA、不得使用猜測/私有/未授權 API、不得違法或明顯未授權、不得未經 Owner 產生付費/財務承諾、不得刪除或改寫稽核歷史、不得 force push 受保護分支、不得弱化 tests/compliance、不得偽造送件成功/結算/證據、不得外洩機密或客戶資料、不得明知違反競賽規則。
+
+若競賽規則存在足以造成 DQ 的重大歧義，且無明確保守合規路徑，才升級 Owner；其餘情況採保守合規方案並記錄後繼續。
+
+### 7.3 自動合併／部署 gate
+
+Self-merge 前：PR 必須 current + mergeable、targeted tests PASS、full pytest PASS（除非可證明為無關環境問題）、validate PASS、secret scan PASS、version/freeze gate PASS、無 unresolved blocking review、且 impact/rollback evidence 完整。
+
+Merge 後：production checkout clean、pull latest master、確認 production HEAD == origin/master、確認 scheduler 指向 production root、執行 smoke checks、驗證相關 Shared State / submission / evaluation；若出現客觀 regression 且安全可回退，立即自動 rollback。
+
+本模式持續至競賽結束或 Owner 明確撤銷。
