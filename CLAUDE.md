@@ -8,12 +8,13 @@ AI CUP 2026 玉山人工智慧公開挑戰賽 — **Agent 基金經理人**. Eac
 
 | Role | Responsibilities | Never |
 |---|---|---|
-| **Owner** | product direction, Issue / Sprint approval, research promotion, **the only merge decision**, releases, investment-behaviour changes during the competition, third-party services, what data may go to GitHub | — |
-| **Claude Code** | analyse Issues, design, implement, test, regression, debug, docs, branch / commit / push / PR, fix CI, answer reviews, reproducibility, change log | merge PRs, enable auto-merge, push daily work to `master`, force push, rewrite history, delete protected / release branches |
-| **ChatGPT** | independent reviewer / architect on GitHub PRs: architecture, diff, tests, regression, evidence, security / data exposure, reproducibility; blocking vs non-blocking comments; review recommendation | merge |
+| **Owner** | product direction, Issue / Sprint approval, research promotion, releases, investment-behaviour changes during the competition, third-party services, what data may go to GitHub, and every merge outside the LOW_RISK_OPS_AUTOMERGE exception | — |
+| **Claude Code** | analyse Issues, design, implement, test, regression, debug, docs, branch / commit / push / PR, fix CI, answer reviews, reproducibility, change log; may self-review and merge only when every LOW_RISK_OPS_AUTOMERGE gate in §4 passes | force push, rewrite history, delete protected / release branches; merge when any LOW_RISK_OPS_AUTOMERGE gate is false or ambiguous |
+| **ChatGPT** | independent reviewer / architect on GitHub PRs: architecture, diff, tests, regression, evidence, security / data exposure, reproducibility; blocking vs non-blocking comments; review recommendation | merge unless the Owner explicitly delegates a specific merge action |
 
 Recommendations are separate: Claude Code → `READY_FOR_REVIEW / NOT_READY / BLOCKED`; ChatGPT →
 `APPROVE / APPROVE_WITH_FOLLOW_UP / REQUEST_CHANGES / DO_NOT_MERGE`; Owner → `MERGE / DO_NOT_MERGE`.
+For LOW_RISK_OPS_AUTOMERGE only, Claude Code may additionally record `SELF_REVIEW=PASS` and `SELF_MERGE=AUTHORIZED_BY_POLICY` after every gate passes.
 
 ## 2. Quant v1 is FROZEN
 
@@ -46,8 +47,18 @@ ready-for-review PR. Verify locally: `.venv\Scripts\python.exe scripts\ci\local_
 **Mandatory for every Claude Code session:** follow `docs/COLLABORATION_WORKFLOW.md` (§7 GitHub = Shared State: status comment after every substantive step, `agent:*` labels, blocker write-back, ChatGPT review handoff, redacted evidence) and `docs/CODE_CHANGE_GOVERNANCE.md` (§6 Owner Decision Required → `owner:decision`, merge boundary, no scope expansion). State that exists only in the session is `HANDOFF_INCOMPLETE`; a decision asked only in the session is `OWNER_DECISION_NOT_FORMALIZED`. At every major Owner-facing point, write the **exact** final response to `handoff/claude_sessions/` first and present that same text (§7.10); link it as `LATEST_CLAUDE_HANDOFF`.
 
 - Repo: `DevonForlan/ai-cup-2026-etf-agent` (private), default branch `master`.
-- **Issue → feature branch → implementation → tests → PR → ChatGPT review → Owner merge** (squash preferred;
-  delete the branch after merge). Never push daily work to `master`; never force push; never rewrite history.
+- Normal path: **Issue → feature branch → implementation → tests → PR → ChatGPT review → Owner merge** (squash preferred; delete the branch after merge).
+- Exception: **LOW_RISK_OPS_AUTOMERGE**. Claude Code may self-review and merge its own PR only when ALL gates below pass:
+  1. Issue is already Owner-approved or clearly within an Owner-approved OPS scope;
+  2. no frozen-path diff and Quant fingerprint unchanged;
+  3. no investment behaviour, ranking, weights, rebalance, cash, order sizing, decision prompt/model change;
+  4. no submission semantics, portal action policy, cutoffs/windows, attempt caps or success-definition change;
+  5. no security/privacy/credential/auth/session/MFA/CAPTCHA policy change;
+  6. no breaking API/schema, deployment architecture, destructive action, paid/third-party service, external data-source policy or competition-rule interpretation change;
+  7. full pytest, validate, secret-scan and quant-freeze-check all PASS;
+  8. PR is mergeable and current with `master`, production checkout is clean, and PR contains impact/rollback evidence.
+  If any gate is false or ambiguous, Owner merge is still mandatory. Squash is preferred; no force push, no history rewrite.
+- Never push daily work directly to `master`; merge through PRs only.
 - Branches: `feat/<issue>-<topic>`, `fix/…`, `ops/…`, `research/…`, `docs/…`. One Issue per branch / PR;
   ≤ 2–3 parallel tracks (worktrees allowed for low-coupling tracks).
 - PRs use `.github/PULL_REQUEST_TEMPLATE.md` (all sections; "tests passed" alone is not acceptable).
@@ -120,7 +131,6 @@ format, DataPack / receipt parser) go through an Issue and record: timestamp, re
 
 ## 10. ChatGPT review loop
 
-PR stays OPEN (draft → ready for review). Owner asks ChatGPT to review. Blocking comments: fix or give a concrete
-technical rebuttal. Non-blocking: fix now, open a follow-up Issue, or record why not. After fixes: push to the same
-branch, wait for CI, reply per item (review item → resolution → file → commit → test result), request a second
-review. **No auto-merge. Owner merges.**
+PR stays OPEN (draft → ready for review). Blocking comments: fix or give a concrete technical rebuttal. Non-blocking: fix now, open a follow-up Issue, or record why not. After fixes: push to the same branch, wait for CI, and reply per item (review item → resolution → file → commit → test result).
+
+For normal PRs, Owner merge remains required. For a PR that qualifies for **LOW_RISK_OPS_AUTOMERGE**, Claude Code may perform its own final review, record every gate result in the PR, and merge after all required checks are green. Self-review is not permission to waive a gate. If classification or risk is ambiguous, escalate to Owner instead of merging.
