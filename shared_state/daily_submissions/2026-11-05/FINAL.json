@@ -1,0 +1,963 @@
+{
+  "schema_version": "4.3",
+  "doc_type": "D-Plan",
+  "team_id": "TEAM_11442",
+  "trade_date": "2026-11-05",
+  "sources": [
+    {
+      "source_id": "S1",
+      "authority": "twse",
+      "url": "https://www.twse.com.tw/rwd/zh/afterTrading/MI_INDEX?date=20261104&type=ALLBUT0999&response=json",
+      "name": "TWSE 每日收盤行情（2026-11-04，含成交股數/金額；歷史價量為本地逐日快照）",
+      "content_as_of": "2026-11-04T13:30:00+08:00"
+    },
+    {
+      "source_id": "S2",
+      "authority": "tpex",
+      "url": "https://www.tpex.org.tw/www/zh-tw/afterTrading/dailyQuotes?date=2026/11/04&type=EW&response=json",
+      "name": "TPEx 上櫃股票行情（2026-11-04；歷史價量為本地逐日快照）",
+      "content_as_of": "2026-11-04T13:30:00+08:00"
+    },
+    {
+      "source_id": "S3",
+      "authority": "vendor",
+      "url": "https://fred.stlouisfed.org/series/SP500",
+      "name": "美股隔夜收盤：S&P500/Nasdaq100 (FRED)、SOX 與 TSM ADR (Yahoo chart, 非官方)",
+      "content_as_of": "2026-11-04T05:30:00+08:00"
+    },
+    {
+      "source_id": "S4",
+      "authority": "taifex",
+      "url": "https://www.taifex.com.tw/cht/3/futDataDown",
+      "name": "TAIFEX 台指期 TX 盤後交易時段（近月合約）",
+      "content_as_of": "2026-11-04T05:00:00+08:00"
+    },
+    {
+      "source_id": "S5",
+      "authority": "other",
+      "url": "https://www.cbc.gov.tw/tw/lp-645-1.html",
+      "name": "中央銀行 新台幣對美元銀行間收盤匯率（前一營業日 16:00）",
+      "content_as_of": "2026-11-03T17:00:00+08:00"
+    },
+    {
+      "source_id": "S6",
+      "authority": "twse",
+      "url": "https://www.twse.com.tw/rwd/zh/fund/T86?date=20261104&selectType=ALLBUT0999&response=json",
+      "name": "TWSE 三大法人買賣超日報 T86（2026-11-04）",
+      "content_as_of": "2026-11-04T13:30:00+08:00"
+    },
+    {
+      "source_id": "S7",
+      "authority": "vendor",
+      "url": "https://api.finmindtrade.com/api/v4/data?dataset=TaiwanStockMonthRevenue",
+      "name": "FinMind 月營收（MOPS 月營收彙整；以每月 10 日為保守可得時點）",
+      "content_as_of": "2026-11-04T23:42:37.206526+08:00"
+    },
+    {
+      "source_id": "S8",
+      "authority": "tpex",
+      "url": "https://www.tpex.org.tw/www/zh-tw/insti/dailyTrade?type=Daily&sect=EW&date=2026/11/04&response=json",
+      "name": "TPEx 三大法人買賣明細（2026-11-04）",
+      "content_as_of": "2026-11-04T13:30:00+08:00"
+    },
+    {
+      "source_id": "S9",
+      "authority": "mops",
+      "url": "https://mopsov.twse.com.tw/mops/web/ajax_t05st02",
+      "name": "MOPS 重大訊息 2344（2026-11-03T15:13）",
+      "published_at": "2026-11-03T15:13:24+08:00",
+      "content_as_of": "2026-11-03T15:13:24+08:00"
+    },
+    {
+      "source_id": "S10",
+      "authority": "mops",
+      "url": "https://mopsov.twse.com.tw/mops/web/ajax_t05st02",
+      "name": "MOPS 重大訊息 2344（2026-11-03T21:10）",
+      "published_at": "2026-11-03T21:10:12+08:00",
+      "content_as_of": "2026-11-03T21:10:12+08:00"
+    },
+    {
+      "source_id": "S11",
+      "authority": "mops",
+      "url": "https://mopsov.twse.com.tw/mops/web/ajax_t05st02",
+      "name": "MOPS 重大訊息 2408（2026-11-04T14:44）",
+      "published_at": "2026-11-04T14:44:17+08:00",
+      "content_as_of": "2026-11-04T14:44:17+08:00"
+    },
+    {
+      "source_id": "S12",
+      "authority": "mops",
+      "url": "https://mopsov.twse.com.tw/mops/web/ajax_t05st02",
+      "name": "MOPS 重大訊息 2408（2026-11-04T17:35）",
+      "published_at": "2026-11-04T17:35:09+08:00",
+      "content_as_of": "2026-11-04T17:35:09+08:00"
+    }
+  ],
+  "observations": [
+    {
+      "obs_id": "O1",
+      "source_ref": [
+        "S1",
+        "S2"
+      ],
+      "topic": "tw_market_breadth",
+      "statement": "2026-11-04 收盤：150 檔中站上 20 日均線比例 12.7%；上漲 55 檔、下跌 88 檔；1 日報酬中位數 -0.75%；5 日報酬中位數 -10.85%；20 日報酬中位數 -12.94%",
+      "values": {
+        "breadth_above_ma20_pct": 12.7,
+        "advancers_1d": 55,
+        "decliners_1d": 88,
+        "median_ret_1d_pct": -0.75,
+        "median_ret_5d_pct": -10.85,
+        "median_ret_20d_pct": -12.94
+      }
+    },
+    {
+      "obs_id": "O2",
+      "source_ref": [
+        "S3",
+        "S4",
+        "S5"
+      ],
+      "topic": "overnight",
+      "statement": "隔夜/盤前：S&P500 +0.36%；Nasdaq100 +0.68%；費城半導體 SOX +2.63%；TSM ADR +1.55%；台指期夜盤(相對前日結算) +0.98%；USD/TWD +0.52%",
+      "values": {
+        "sp500_ret_pct": 0.36,
+        "nasdaq100_ret_pct": 0.68,
+        "sox_ret_pct": 2.63,
+        "tsm_adr_ret_pct": 1.55,
+        "txf_night_ret_pct": 0.98,
+        "usdtwd_ret_pct": 0.52
+      }
+    },
+    {
+      "obs_id": "O3",
+      "source_ref": [
+        "S1",
+        "S6",
+        "S7"
+      ],
+      "topic": "stock_quant",
+      "statement": "2337 旺宏 2026-11-04 收盤 87.2；20 日報酬 -28.5%；60 日報酬 -25.8%；20 日相對 universe 中位數 -15.6%；距 52 週高點 -53.0%；近 5 日三大法人淨買賣超 -38,427 張；最新月營收年增 +188.2%；20 日年化波動 53.9%",
+      "values": {
+        "close_prev": 87.2,
+        "ret_20d_pct": -28.52,
+        "ret_60d_pct": -25.79,
+        "rs_20d_vs_median_pct": -15.58,
+        "dist_52w_high_pct": -52.99,
+        "volatility_20d_ann_pct": 53.9,
+        "inst_net_5d_lots": -38427.0,
+        "revenue_yoy_pct": 188.2,
+        "revenue_mom_pct": 2.7
+      }
+    },
+    {
+      "obs_id": "O4",
+      "source_ref": [
+        "S1",
+        "S6",
+        "S7"
+      ],
+      "topic": "stock_quant",
+      "statement": "2344 華邦電 2026-11-04 收盤 141.5；20 日報酬 -20.9%；60 日報酬 -16.3%；20 日相對 universe 中位數 -8.0%；距 52 週高點 -36.3%；近 5 日三大法人淨買賣超 -43,063 張；最新月營收年增 +256.7%；20 日年化波動 66.1%",
+      "values": {
+        "close_prev": 141.5,
+        "ret_20d_pct": -20.95,
+        "ret_60d_pct": -16.27,
+        "rs_20d_vs_median_pct": -8.01,
+        "dist_52w_high_pct": -36.26,
+        "volatility_20d_ann_pct": 66.1,
+        "inst_net_5d_lots": -43063.0,
+        "revenue_yoy_pct": 256.7,
+        "revenue_mom_pct": 3.4
+      }
+    },
+    {
+      "obs_id": "O5",
+      "source_ref": [
+        "S1",
+        "S6",
+        "S7"
+      ],
+      "topic": "stock_quant",
+      "statement": "2347 聯強 2026-11-04 收盤 90.3；20 日報酬 -7.0%；60 日報酬 -7.0%；20 日相對 universe 中位數 +5.9%；距 52 週高點 -12.3%；近 5 日三大法人淨買賣超 +930 張；最新月營收年增 +158.8%；20 日年化波動 31.3%",
+      "values": {
+        "close_prev": 90.3,
+        "ret_20d_pct": -7.0,
+        "ret_60d_pct": -7.0,
+        "rs_20d_vs_median_pct": 5.94,
+        "dist_52w_high_pct": -12.33,
+        "volatility_20d_ann_pct": 31.3,
+        "inst_net_5d_lots": 930.0,
+        "revenue_yoy_pct": 158.8,
+        "revenue_mom_pct": 21.7
+      }
+    },
+    {
+      "obs_id": "O6",
+      "source_ref": [
+        "S1",
+        "S6",
+        "S7"
+      ],
+      "topic": "stock_quant",
+      "statement": "2360 致茂 2026-11-04 收盤 1,470.0；20 日報酬 -32.9%；60 日報酬 -22.0%；20 日相對 universe 中位數 -19.9%；距 52 週高點 -44.0%；近 5 日三大法人淨買賣超 +159 張；最新月營收年增 +206.5%；20 日年化波動 73.1%",
+      "values": {
+        "close_prev": 1470.0,
+        "ret_20d_pct": -32.88,
+        "ret_60d_pct": -22.02,
+        "rs_20d_vs_median_pct": -19.94,
+        "dist_52w_high_pct": -44.0,
+        "volatility_20d_ann_pct": 73.1,
+        "inst_net_5d_lots": 159.0,
+        "revenue_yoy_pct": 206.5,
+        "revenue_mom_pct": 21.8
+      }
+    },
+    {
+      "obs_id": "O7",
+      "source_ref": [
+        "S1",
+        "S6",
+        "S7"
+      ],
+      "topic": "stock_quant",
+      "statement": "2376 技嘉 2026-11-04 收盤 324.5；20 日報酬 -13.1%；60 日報酬 -5.1%；20 日相對 universe 中位數 -0.2%；距 52 週高點 -18.7%；近 5 日三大法人淨買賣超 -5,089 張；最新月營收年增 +125.4%；20 日年化波動 38.8%",
+      "values": {
+        "close_prev": 324.5,
+        "ret_20d_pct": -13.12,
+        "ret_60d_pct": -5.12,
+        "rs_20d_vs_median_pct": -0.18,
+        "dist_52w_high_pct": -18.67,
+        "volatility_20d_ann_pct": 38.8,
+        "inst_net_5d_lots": -5089.0,
+        "revenue_yoy_pct": 125.4,
+        "revenue_mom_pct": 33.1
+      }
+    },
+    {
+      "obs_id": "O8",
+      "source_ref": [
+        "S1",
+        "S6",
+        "S7"
+      ],
+      "topic": "stock_quant",
+      "statement": "2383 台光電 2026-11-04 收盤 4,555.0；20 日報酬 -12.2%；60 日報酬 -13.2%；20 日相對 universe 中位數 +0.8%；距 52 週高點 -28.3%；近 5 日三大法人淨買賣超 -1,214 張；最新月營收年增 +168.9%；20 日年化波動 78.9%",
+      "values": {
+        "close_prev": 4555.0,
+        "ret_20d_pct": -12.15,
+        "ret_60d_pct": -13.16,
+        "rs_20d_vs_median_pct": 0.79,
+        "dist_52w_high_pct": -28.27,
+        "volatility_20d_ann_pct": 78.9,
+        "inst_net_5d_lots": -1214.0,
+        "revenue_yoy_pct": 168.9,
+        "revenue_mom_pct": 6.9
+      }
+    },
+    {
+      "obs_id": "O9",
+      "source_ref": [
+        "S1",
+        "S6",
+        "S7"
+      ],
+      "topic": "stock_quant",
+      "statement": "2408 南亞科 2026-11-04 收盤 399.5；20 日報酬 -24.1%；60 日報酬 -10.2%；20 日相對 universe 中位數 -11.1%；距 52 週高點 -26.4%；近 5 日三大法人淨買賣超 -19,650 張；最新月營收年增 +487.7%；20 日年化波動 74.1%",
+      "values": {
+        "close_prev": 399.5,
+        "ret_20d_pct": -24.05,
+        "ret_60d_pct": -10.22,
+        "rs_20d_vs_median_pct": -11.11,
+        "dist_52w_high_pct": -26.43,
+        "volatility_20d_ann_pct": 74.1,
+        "inst_net_5d_lots": -19650.0,
+        "revenue_yoy_pct": 487.7,
+        "revenue_mom_pct": 3.1
+      }
+    },
+    {
+      "obs_id": "O10",
+      "source_ref": [
+        "S1",
+        "S6",
+        "S7"
+      ],
+      "topic": "stock_quant",
+      "statement": "2451 創見 2026-11-04 收盤 263.0；20 日報酬 -9.3%；60 日報酬 -6.9%；20 日相對 universe 中位數 +3.6%；距 52 週高點 -27.6%；近 5 日三大法人淨買賣超 -1,303 張；最新月營收年增 +290.4%；20 日年化波動 41.9%",
+      "values": {
+        "close_prev": 263.0,
+        "ret_20d_pct": -9.31,
+        "ret_60d_pct": -6.9,
+        "rs_20d_vs_median_pct": 3.63,
+        "dist_52w_high_pct": -27.65,
+        "volatility_20d_ann_pct": 41.9,
+        "inst_net_5d_lots": -1303.0,
+        "revenue_yoy_pct": 290.4,
+        "revenue_mom_pct": 24.8
+      }
+    },
+    {
+      "obs_id": "O11",
+      "source_ref": [
+        "S1",
+        "S6",
+        "S7"
+      ],
+      "topic": "stock_quant",
+      "statement": "2615 萬海 2026-11-04 收盤 115.5；20 日報酬 +2.2%；60 日報酬 +35.2%；20 日相對 universe 中位數 +15.2%；距 52 週高點 -8.7%；近 5 日三大法人淨買賣超 +10,166 張；最新月營收年增 +97.7%；20 日年化波動 49.6%",
+      "values": {
+        "close_prev": 115.5,
+        "ret_20d_pct": 2.21,
+        "ret_60d_pct": 35.25,
+        "rs_20d_vs_median_pct": 15.15,
+        "dist_52w_high_pct": -8.7,
+        "volatility_20d_ann_pct": 49.6,
+        "inst_net_5d_lots": 10166.0,
+        "revenue_yoy_pct": 97.7,
+        "revenue_mom_pct": 13.4
+      }
+    },
+    {
+      "obs_id": "O12",
+      "source_ref": [
+        "S2",
+        "S8",
+        "S7"
+      ],
+      "topic": "stock_quant",
+      "statement": "3081 聯亞 2026-11-04 收盤 2,100.0；20 日報酬 -28.2%；60 日報酬 -2.8%；20 日相對 universe 中位數 -15.3%；距 52 週高點 -40.5%；近 5 日三大法人淨買賣超 -1,662 張；最新月營收年增 +190.2%；20 日年化波動 90.9%",
+      "values": {
+        "close_prev": 2100.0,
+        "ret_20d_pct": -28.21,
+        "ret_60d_pct": -2.78,
+        "rs_20d_vs_median_pct": -15.27,
+        "dist_52w_high_pct": -40.51,
+        "volatility_20d_ann_pct": 90.9,
+        "inst_net_5d_lots": -1662.0,
+        "revenue_yoy_pct": 190.2,
+        "revenue_mom_pct": 3.8
+      }
+    },
+    {
+      "obs_id": "O13",
+      "source_ref": [
+        "S9"
+      ],
+      "topic": "mops_announcement",
+      "statement": "2344 重大訊息（2026-11-03T15:13）：公告本公司董事會通過115年第三季合併財務報告",
+      "values": {
+        "days_before_trade_date": 2.0
+      }
+    },
+    {
+      "obs_id": "O14",
+      "source_ref": [
+        "S10"
+      ],
+      "topic": "mops_announcement",
+      "statement": "2344 重大訊息（2026-11-03T21:10）：更正本公司之子公司背書保證資訊揭露明細表",
+      "values": {
+        "days_before_trade_date": 2.0
+      }
+    },
+    {
+      "obs_id": "O15",
+      "source_ref": [
+        "S11"
+      ],
+      "topic": "mops_announcement",
+      "statement": "2408 重大訊息（2026-11-04T14:44）：本公司自115年10月1日起變動會計估計事項",
+      "values": {
+        "days_before_trade_date": 1.0
+      }
+    },
+    {
+      "obs_id": "O16",
+      "source_ref": [
+        "S12"
+      ],
+      "topic": "mops_announcement",
+      "statement": "2408 重大訊息（2026-11-04T17:35）：公告本公司取得機器設備",
+      "values": {
+        "days_before_trade_date": 1.0
+      }
+    },
+    {
+      "obs_id": "O17",
+      "source_ref": [
+        "S1",
+        "S6",
+        "S7"
+      ],
+      "topic": "stock_quant",
+      "statement": "3443 創意 2026-11-04 收盤 7,115.0；20 日報酬 -9.9%；60 日報酬 +62.1%；20 日相對 universe 中位數 +3.0%；距 52 週高點 -17.3%；近 5 日三大法人淨買賣超 -151 張；最新月營收年增 +97.8%；20 日年化波動 77.0%",
+      "values": {
+        "close_prev": 7115.0,
+        "ret_20d_pct": -9.94,
+        "ret_60d_pct": 62.07,
+        "rs_20d_vs_median_pct": 3.0,
+        "dist_52w_high_pct": -17.27,
+        "volatility_20d_ann_pct": 77.0,
+        "inst_net_5d_lots": -151.0,
+        "revenue_yoy_pct": 97.8,
+        "revenue_mom_pct": 22.3
+      }
+    },
+    {
+      "obs_id": "O18",
+      "source_ref": [
+        "S1",
+        "S6",
+        "S7"
+      ],
+      "topic": "stock_quant",
+      "statement": "3661 世芯-KY 2026-11-04 收盤 3,180.0；20 日報酬 -16.5%；60 日報酬 -11.9%；20 日相對 universe 中位數 -3.6%；距 52 週高點 -40.8%；近 5 日三大法人淨買賣超 -1,000 張；最新月營收年增 +273.6%；20 日年化波動 71.8%",
+      "values": {
+        "close_prev": 3180.0,
+        "ret_20d_pct": -16.54,
+        "ret_60d_pct": -11.91,
+        "rs_20d_vs_median_pct": -3.6,
+        "dist_52w_high_pct": -40.84,
+        "volatility_20d_ann_pct": 71.8,
+        "inst_net_5d_lots": -1000.0,
+        "revenue_yoy_pct": 273.6,
+        "revenue_mom_pct": 18.1
+      }
+    },
+    {
+      "obs_id": "O19",
+      "source_ref": [
+        "S2",
+        "S8",
+        "S7"
+      ],
+      "topic": "stock_quant",
+      "statement": "3680 家登 2026-11-04 收盤 442.5；20 日報酬 -19.8%；60 日報酬 -1.1%；20 日相對 universe 中位數 -6.9%；距 52 週高點 -28.2%；近 5 日三大法人淨買賣超 -1,349 張；最新月營收年增 +67.7%；20 日年化波動 53.6%",
+      "values": {
+        "close_prev": 442.5,
+        "ret_20d_pct": -19.84,
+        "ret_60d_pct": -1.12,
+        "rs_20d_vs_median_pct": -6.9,
+        "dist_52w_high_pct": -28.17,
+        "volatility_20d_ann_pct": 53.6,
+        "inst_net_5d_lots": -1349.0,
+        "revenue_yoy_pct": 67.7,
+        "revenue_mom_pct": 18.4
+      }
+    },
+    {
+      "obs_id": "O20",
+      "source_ref": [
+        "S1",
+        "S6",
+        "S7"
+      ],
+      "topic": "stock_quant",
+      "statement": "3702 大聯大 2026-11-04 收盤 99.6；20 日報酬 -16.3%；60 日報酬 -22.8%；20 日相對 universe 中位數 -3.4%；距 52 週高點 -23.4%；近 5 日三大法人淨買賣超 -5,079 張；最新月營收年增 +146.5%；20 日年化波動 29.7%",
+      "values": {
+        "close_prev": 99.6,
+        "ret_20d_pct": -16.3,
+        "ret_60d_pct": -22.79,
+        "rs_20d_vs_median_pct": -3.36,
+        "dist_52w_high_pct": -23.38,
+        "volatility_20d_ann_pct": 29.7,
+        "inst_net_5d_lots": -5079.0,
+        "revenue_yoy_pct": 146.5,
+        "revenue_mom_pct": 54.4
+      }
+    },
+    {
+      "obs_id": "O21",
+      "source_ref": [
+        "S1",
+        "S6",
+        "S7"
+      ],
+      "topic": "stock_quant",
+      "statement": "4938 和碩 2026-11-04 收盤 101.5；20 日報酬 +13.8%；60 日報酬 +13.4%；20 日相對 universe 中位數 +26.7%；距 52 週高點 -6.0%；近 5 日三大法人淨買賣超 +7,166 張；最新月營收年增 +86.9%；20 日年化波動 47.3%",
+      "values": {
+        "close_prev": 101.5,
+        "ret_20d_pct": 13.79,
+        "ret_60d_pct": 13.41,
+        "rs_20d_vs_median_pct": 26.73,
+        "dist_52w_high_pct": -6.02,
+        "volatility_20d_ann_pct": 47.3,
+        "inst_net_5d_lots": 7166.0,
+        "revenue_yoy_pct": 86.9,
+        "revenue_mom_pct": 143.2
+      }
+    },
+    {
+      "obs_id": "O22",
+      "source_ref": [
+        "S2",
+        "S8",
+        "S7"
+      ],
+      "topic": "stock_quant",
+      "statement": "4979 華星光 2026-11-04 收盤 376.0；20 日報酬 -35.7%；60 日報酬 -23.6%；20 日相對 universe 中位數 -22.8%；距 52 週高點 -47.6%；近 5 日三大法人淨買賣超 -2,141 張；最新月營收年增 +97.8%；20 日年化波動 85.5%",
+      "values": {
+        "close_prev": 376.0,
+        "ret_20d_pct": -35.73,
+        "ret_60d_pct": -23.58,
+        "rs_20d_vs_median_pct": -22.79,
+        "dist_52w_high_pct": -47.63,
+        "volatility_20d_ann_pct": 85.5,
+        "inst_net_5d_lots": -2141.0,
+        "revenue_yoy_pct": 97.8,
+        "revenue_mom_pct": 5.3
+      }
+    },
+    {
+      "obs_id": "O23",
+      "source_ref": [
+        "S2",
+        "S8",
+        "S7"
+      ],
+      "topic": "stock_quant",
+      "statement": "5289 宜鼎 2026-11-04 收盤 1,010.0；20 日報酬 -22.0%；60 日報酬 -31.1%；20 日相對 universe 中位數 -9.1%；距 52 週高點 -49.2%；近 5 日三大法人淨買賣超 +167 張；最新月營收年增 +535.7%；20 日年化波動 55.6%",
+      "values": {
+        "close_prev": 1010.0,
+        "ret_20d_pct": -22.01,
+        "ret_60d_pct": -31.06,
+        "rs_20d_vs_median_pct": -9.07,
+        "dist_52w_high_pct": -49.25,
+        "volatility_20d_ann_pct": 55.6,
+        "inst_net_5d_lots": 167.0,
+        "revenue_yoy_pct": 535.7,
+        "revenue_mom_pct": 0.4
+      }
+    },
+    {
+      "obs_id": "O24",
+      "source_ref": [
+        "S2",
+        "S8",
+        "S7"
+      ],
+      "topic": "stock_quant",
+      "statement": "6187 萬潤 2026-11-04 收盤 1,065.0；20 日報酬 -21.4%；60 日報酬 -0.5%；20 日相對 universe 中位數 -8.5%；距 52 週高點 -36.4%；近 5 日三大法人淨買賣超 -324 張；最新月營收年增 +109.2%；20 日年化波動 87.0%",
+      "values": {
+        "close_prev": 1065.0,
+        "ret_20d_pct": -21.4,
+        "ret_60d_pct": -0.47,
+        "rs_20d_vs_median_pct": -8.46,
+        "dist_52w_high_pct": -36.42,
+        "volatility_20d_ann_pct": 87.0,
+        "inst_net_5d_lots": -324.0,
+        "revenue_yoy_pct": 109.2,
+        "revenue_mom_pct": 4.6
+      }
+    },
+    {
+      "obs_id": "O25",
+      "source_ref": [
+        "S2",
+        "S8",
+        "S7"
+      ],
+      "topic": "stock_quant",
+      "statement": "6274 台燿 2026-11-04 收盤 1,115.0；20 日報酬 -31.2%；60 日報酬 -24.1%；20 日相對 universe 中位數 -18.2%；距 52 週高點 -41.3%；近 5 日三大法人淨買賣超 -918 張；最新月營收年增 +114.8%；20 日年化波動 85.6%",
+      "values": {
+        "close_prev": 1115.0,
+        "ret_20d_pct": -31.17,
+        "ret_60d_pct": -24.15,
+        "rs_20d_vs_median_pct": -18.23,
+        "dist_52w_high_pct": -41.32,
+        "volatility_20d_ann_pct": 85.6,
+        "inst_net_5d_lots": -918.0,
+        "revenue_yoy_pct": 114.8,
+        "revenue_mom_pct": 3.6
+      }
+    },
+    {
+      "obs_id": "O26",
+      "source_ref": [
+        "S1",
+        "S6",
+        "S7"
+      ],
+      "topic": "stock_quant",
+      "statement": "6669 緯穎 2026-11-04 收盤 1,785.0；20 日報酬 -14.4%；60 日報酬 -71.1%；20 日相對 universe 中位數 -1.4%；距 52 週高點 -77.1%；近 5 日三大法人淨買賣超 +143 張；最新月營收年增 +100.0%；20 日年化波動 60.3%",
+      "values": {
+        "close_prev": 1785.0,
+        "ret_20d_pct": -14.39,
+        "ret_60d_pct": -71.09,
+        "rs_20d_vs_median_pct": -1.45,
+        "dist_52w_high_pct": -77.12,
+        "volatility_20d_ann_pct": 60.3,
+        "inst_net_5d_lots": 143.0,
+        "revenue_yoy_pct": 100.0,
+        "revenue_mom_pct": 19.6
+      }
+    },
+    {
+      "obs_id": "O27",
+      "source_ref": [
+        "S1",
+        "S6",
+        "S7"
+      ],
+      "topic": "stock_quant",
+      "statement": "6770 力積電 2026-11-04 收盤 59.4；20 日報酬 -22.4%；60 日報酬 -10.1%；20 日相對 universe 中位數 -9.4%；距 52 週高點 -33.0%；近 5 日三大法人淨買賣超 -105,892 張；最新月營收年增 +94.0%；20 日年化波動 55.1%",
+      "values": {
+        "close_prev": 59.4,
+        "ret_20d_pct": -22.35,
+        "ret_60d_pct": -10.14,
+        "rs_20d_vs_median_pct": -9.41,
+        "dist_52w_high_pct": -33.03,
+        "volatility_20d_ann_pct": 55.1,
+        "inst_net_5d_lots": -105892.0,
+        "revenue_yoy_pct": 94.0,
+        "revenue_mom_pct": 9.4
+      }
+    },
+    {
+      "obs_id": "O28",
+      "source_ref": [
+        "S2",
+        "S8",
+        "S7"
+      ],
+      "topic": "stock_quant",
+      "statement": "7734 印能科技 2026-11-04 收盤 1,845.0；20 日報酬 -34.7%；60 日報酬 -46.4%；20 日相對 universe 中位數 -21.8%；距 52 週高點 -57.8%；近 5 日三大法人淨買賣超 +162 張；最新月營收年增 +122.3%；20 日年化波動 73.0%",
+      "values": {
+        "close_prev": 1845.0,
+        "ret_20d_pct": -34.69,
+        "ret_60d_pct": -46.37,
+        "rs_20d_vs_median_pct": -21.75,
+        "dist_52w_high_pct": -57.83,
+        "volatility_20d_ann_pct": 73.0,
+        "inst_net_5d_lots": 162.0,
+        "revenue_yoy_pct": 122.3,
+        "revenue_mom_pct": 75.7
+      }
+    },
+    {
+      "obs_id": "O29",
+      "source_ref": [
+        "S1",
+        "S6",
+        "S7"
+      ],
+      "topic": "stock_quant",
+      "statement": "7769 鴻勁 2026-11-04 收盤 4,365.0；20 日報酬 -21.8%；60 日報酬 -33.1%；20 日相對 universe 中位數 -8.8%；距 52 週高點 -47.1%；近 5 日三大法人淨買賣超 +274 張；最新月營收年增 +100.2%；20 日年化波動 79.5%",
+      "values": {
+        "close_prev": 4365.0,
+        "ret_20d_pct": -21.77,
+        "ret_60d_pct": -33.15,
+        "rs_20d_vs_median_pct": -8.83,
+        "dist_52w_high_pct": -47.15,
+        "volatility_20d_ann_pct": 79.5,
+        "inst_net_5d_lots": 274.0,
+        "revenue_yoy_pct": 100.2,
+        "revenue_mom_pct": 9.8
+      }
+    },
+    {
+      "obs_id": "O30",
+      "source_ref": [
+        "S2",
+        "S8",
+        "S7"
+      ],
+      "topic": "stock_quant",
+      "statement": "8299 群聯 2026-11-04 收盤 1,710.0；20 日報酬 -18.4%；60 日報酬 -7.3%；20 日相對 universe 中位數 -5.4%；距 52 週高點 -40.6%；近 5 日三大法人淨買賣超 -726 張；最新月營收年增 +370.3%；20 日年化波動 61.6%",
+      "values": {
+        "close_prev": 1710.0,
+        "ret_20d_pct": -18.38,
+        "ret_60d_pct": -7.32,
+        "rs_20d_vs_median_pct": -5.44,
+        "dist_52w_high_pct": -40.62,
+        "volatility_20d_ann_pct": 61.6,
+        "inst_net_5d_lots": -726.0,
+        "revenue_yoy_pct": 370.3,
+        "revenue_mom_pct": 8.4
+      }
+    }
+  ],
+  "market_view": {
+    "basis_refs": [
+      "O1",
+      "O2"
+    ],
+    "logic": "本日市場判定為 risk_off,依據是 150 檔站上 20 日均線比例僅 12.7%,且 20 日報酬中位數為 -12.94%。短線同樣偏弱:5 日報酬中位數 -10.85%,1 日報酬中位數 -0.75%,前日上漲家數 55、下跌家數 88,廣度偏空。部位意圖維持 hold,預估現金比例 16.51%,淨流量為 +0 元。外部環境相對偏正面:S&P500 隔夜 +0.36%,Nasdaq100 +0.68%,費城半導體 SOX +2.63%,TSM ADR +1.55%,台指期夜盤相對前日結算 +0.98%。但 USD/TWD 為 +0.52%。整體為台股內部弱勢與美股隔夜偏強並存,regime 仍依量化規則維持 risk_off（O1、O2）。",
+    "regime": "risk_off",
+    "stance": "defensive",
+    "posture": {
+      "net_exposure_intent": "hold",
+      "target_cash_pct_range": [
+        0.02,
+        0.2
+      ]
+    },
+    "counter_evidence": "美股與半導體隔夜走強(SOX +2.63%、TSM ADR +1.55%)及台指期夜盤 +0.98%,與國內廣度偏弱、20 日中位報酬 -12.94% 的訊號方向相反;此外前日仍有 55 檔上漲,顯示並非全面下跌。"
+  },
+  "inferences": [
+    {
+      "inf_id": "I1",
+      "premise_refs": [
+        "O3",
+        "O4",
+        "O5",
+        "O6",
+        "O7",
+        "O8",
+        "O9",
+        "O10",
+        "O11",
+        "O12"
+      ],
+      "logic": "本組標的(2337、2344、2347、2360、2376、2383、2408、2451、2615、3081)本日維持既有部位,本日無委託。從提供的事實看,多數標的近 20 日報酬為負,例如 2360 為 -32.9%、2337 為 -28.5%、3081 為 -28.2%、2408 為 -24.1%、2344 為 -20.9%;2347 為 -7.0%,跌幅相對較小;2615 為 +2.2%,是本組唯一正報酬。前日收盤包含 2337 的 87.20、2344 的 141.50、2360 的 1,470.00。以上僅描述價格與報酬事實,不含其他基本面資訊,持有決定由量化程式完成（O3、O4、O5、O6、O7、O8、O9、O10、O11、O12）。",
+      "counter_evidence": null
+    },
+    {
+      "inf_id": "I2",
+      "premise_refs": [
+        "O13"
+      ],
+      "logic": "公告研究解讀（earnings；LLM 推論，依據所引公告）：2344 公告董事會通過115年第三季合併財務報告，115/01/01~115/09/30 累計營業收入180,427,134仟元、營業毛利118,160,992仟元、營業利益85,313,499仟元、歸屬於母公司業主淨利69,853,242仟元，基本每股盈餘15.32元。 正面：累計營業毛利118,160,992仟元，相對營業收入180,427,134仟元；期末總資產336,300,892仟元，總負債110,762,516仟元。",
+      "counter_evidence": "不確定性：公告未提供單季數字或與去年同期比較，也無法據此判斷趨勢；本日決策為 NO_TRADE。"
+    },
+    {
+      "inf_id": "I3",
+      "premise_refs": [
+        "O14"
+      ],
+      "logic": "公告研究解讀（other；LLM 推論，依據所引公告）：2344 更正子公司新唐科技股份有限公司背書保證資訊揭露明細表，115年1~9月子公司對單一企業背書保證之限額由更正前如1月2,763,305仟元，更正為13,816,524仟元；9月由3,344,488仟元更正為16,722,438仟元。",
+      "counter_evidence": "負面：更正前後限額差異大，原揭露資訊曾有誤。 不確定性：公告僅說明更正限額揭露，未說明實際背書保證餘額是否變動，亦未說明對財務的影響。"
+    },
+    {
+      "inf_id": "I4",
+      "premise_refs": [
+        "O15"
+      ],
+      "logic": "公告研究解讀（other；LLM 推論，依據所引公告）：2408 自115年10月1日起變動會計估計，將20奈米製程部分機器設備耐用年限調整為6年，公告稱此估計變動將使115年度折舊費用增加約新台幣24.38億元；會計師複核未發現重大不合理之處。 正面：會計師出具複核意見書，未發現有重大不合理之處。",
+      "counter_evidence": "負面：115年度折舊費用增加約新台幣24.38億元；公告指技術迭代迅速、產品生命週期縮短使設備經濟效益減少。 不確定性：公告未說明對獲利或每股盈餘的整體影響，折舊增加屬會計估計變動，不等同現金流出。"
+    },
+    {
+      "inf_id": "I5",
+      "premise_refs": [
+        "O16"
+      ],
+      "logic": "公告研究解讀（capex；LLM 推論，依據所引公告）：2408 公告取得機器設備，交易相對人為TOKYO SEIMITSU CO., LTD.（與公司關係：無），交易總金額折合新台幣約1,282,320,550元，依訂單條件付款。 正面：交易相對人非關係人，採比議價方式辦理。",
+      "counter_evidence": "負面：資本支出金額約1,282,320,550元，將增加設備投入。 不確定性：公告文字被截斷，設備用途、產能規劃及對營運的影響未揭露。"
+    },
+    {
+      "inf_id": "I6",
+      "premise_refs": [
+        "O17",
+        "O18",
+        "O19",
+        "O20",
+        "O21",
+        "O22",
+        "O23",
+        "O24",
+        "O25",
+        "O26"
+      ],
+      "logic": "本組標的(3443、3661、3680、3702、4938、4979、5289、6187、6274、6669)本日維持既有部位,本日無委託。事實顯示 20 日報酬多為負:4979 為 -35.7%、6274 為 -31.2%、5289 為 -22.0%、6187 為 -21.4%、3680 為 -19.8%、3661 為 -16.5%、3702 為 -16.3%、6669 為 -14.4%、3443 為 -9.9%;只有 4938 為 +13.8%。前日收盤包含 3443 的 7,115.00、3661 的 3,180.00、4938 的 101.50。本說明僅整理價格與報酬事實,持有決定由量化程式完成（O17、O18、O19、O20、O21、O22、O23、O24、O25、O26）。",
+      "counter_evidence": null
+    },
+    {
+      "inf_id": "I7",
+      "premise_refs": [
+        "O27",
+        "O28",
+        "O29",
+        "O30"
+      ],
+      "logic": "本組標的(6770、7734、7769、8299)本日維持既有部位,本日無委託。事實顯示四檔 20 日報酬均為負:7734 為 -34.7%、6770 為 -22.4%、7769 為 -21.8%、8299 為 -18.4%。前日收盤為 6770 的 59.40、7734 的 1,845.00、7769 的 4,365.00、8299 的 1,710.00。所給事實僅包含價格與近 20 日報酬,無其他基本面資料,因此本說明只描述這些數據,持有決定由量化程式完成（O27、O28、O29、O30）。",
+      "counter_evidence": null
+    }
+  ],
+  "decisions": [],
+  "no_trade_decisions": [
+    {
+      "ticker": "2337",
+      "reason_refs": [
+        "I1"
+      ],
+      "reason": "非再平衡日，組合合規，維持不動"
+    },
+    {
+      "ticker": "2344",
+      "reason_refs": [
+        "I1",
+        "I2",
+        "I3"
+      ],
+      "reason": "非再平衡日，組合合規，維持不動"
+    },
+    {
+      "ticker": "2347",
+      "reason_refs": [
+        "I1"
+      ],
+      "reason": "非再平衡日，組合合規，維持不動"
+    },
+    {
+      "ticker": "2360",
+      "reason_refs": [
+        "I1"
+      ],
+      "reason": "非再平衡日，組合合規，維持不動"
+    },
+    {
+      "ticker": "2376",
+      "reason_refs": [
+        "I1"
+      ],
+      "reason": "非再平衡日，組合合規，維持不動"
+    },
+    {
+      "ticker": "2383",
+      "reason_refs": [
+        "I1"
+      ],
+      "reason": "非再平衡日，組合合規，維持不動"
+    },
+    {
+      "ticker": "2408",
+      "reason_refs": [
+        "I1",
+        "I4",
+        "I5"
+      ],
+      "reason": "非再平衡日，組合合規，維持不動"
+    },
+    {
+      "ticker": "2451",
+      "reason_refs": [
+        "I1"
+      ],
+      "reason": "非再平衡日，組合合規，維持不動"
+    },
+    {
+      "ticker": "2615",
+      "reason_refs": [
+        "I1"
+      ],
+      "reason": "非再平衡日，組合合規，維持不動"
+    },
+    {
+      "ticker": "3081",
+      "reason_refs": [
+        "I1"
+      ],
+      "reason": "非再平衡日，組合合規，維持不動"
+    },
+    {
+      "ticker": "3443",
+      "reason_refs": [
+        "I6"
+      ],
+      "reason": "非再平衡日，組合合規，維持不動"
+    },
+    {
+      "ticker": "3661",
+      "reason_refs": [
+        "I6"
+      ],
+      "reason": "非再平衡日，組合合規，維持不動"
+    },
+    {
+      "ticker": "3680",
+      "reason_refs": [
+        "I6"
+      ],
+      "reason": "非再平衡日，組合合規，維持不動"
+    },
+    {
+      "ticker": "3702",
+      "reason_refs": [
+        "I6"
+      ],
+      "reason": "非再平衡日，組合合規，維持不動"
+    },
+    {
+      "ticker": "4938",
+      "reason_refs": [
+        "I6"
+      ],
+      "reason": "非再平衡日，組合合規，維持不動"
+    },
+    {
+      "ticker": "4979",
+      "reason_refs": [
+        "I6"
+      ],
+      "reason": "非再平衡日，組合合規，維持不動"
+    },
+    {
+      "ticker": "5289",
+      "reason_refs": [
+        "I6"
+      ],
+      "reason": "非再平衡日，組合合規，維持不動"
+    },
+    {
+      "ticker": "6187",
+      "reason_refs": [
+        "I6"
+      ],
+      "reason": "非再平衡日，組合合規，維持不動"
+    },
+    {
+      "ticker": "6274",
+      "reason_refs": [
+        "I6"
+      ],
+      "reason": "非再平衡日，組合合規，維持不動"
+    },
+    {
+      "ticker": "6669",
+      "reason_refs": [
+        "I6"
+      ],
+      "reason": "非再平衡日，組合合規，維持不動"
+    },
+    {
+      "ticker": "6770",
+      "reason_refs": [
+        "I7"
+      ],
+      "reason": "非再平衡日，組合合規，維持不動"
+    },
+    {
+      "ticker": "7734",
+      "reason_refs": [
+        "I7"
+      ],
+      "reason": "非再平衡日，組合合規，維持不動"
+    },
+    {
+      "ticker": "7769",
+      "reason_refs": [
+        "I7"
+      ],
+      "reason": "非再平衡日，組合合規，維持不動"
+    },
+    {
+      "ticker": "8299",
+      "reason_refs": [
+        "I7"
+      ],
+      "reason": "非再平衡日，組合合規，維持不動"
+    }
+  ],
+  "orders": [],
+  "agent_metadata": {
+    "model_provider": "anthropic",
+    "model_version": "claude-sonnet-5-5",
+    "run_started_at": "2026-11-04T23:43:06+08:00",
+    "run_completed_at": "2026-11-04T23:43:53+08:00",
+    "input_tokens": 8,
+    "output_tokens": 5440,
+    "tool_use_count": 3,
+    "code_version": "git:bd3478d"
+  }
+}
