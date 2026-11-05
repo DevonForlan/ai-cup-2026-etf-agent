@@ -67,7 +67,7 @@
   receipt parser）：依 Issue 處理，附本機 `scripts\ci\local_freeze_regression.py` 結果，證明 Quant 不變。
 - **Research ≠ production**：研究結果升級正式策略只能經由 PROMOTION Issue（production 設計 → 實作 → regression →
   freeze 比較 → PR → ChatGPT Review → Owner 決策）。負面結果必須保留。
-- **Merge**：只有 Owner 能決定 merge（squash 優先）。不 auto-merge、不 force push、不 rewrite 歷史。
+- **Merge**：預設仍由 Owner 決定 merge（squash 優先）。但符合 §6.4 `LOW_RISK_OPS_AUTOMERGE` 全部條件的低風險 OPS-only PR，Claude Code 可自行完成 final review 並 merge。不得 force push、不得 rewrite 歷史。
 - 比賽期間的 D-Plan、DataPack、receipt、log 等原始證據留在本機。Git 只保留 metadata（hash、時間、路徑、版本）。
 
 ## 6. Owner Decision、Merge 邊界、Scope（2026-10-23 起；GitHub Shared State 見 `docs/COLLABORATION_WORKFLOW.md` §7）
@@ -119,14 +119,41 @@ Owner approval source:              (e.g. "Owner reply in Claude Code session 20
 
 ### 6.4 Merge 邊界
 
-Claude Code、ChatGPT、任何 agent / worker 都不 merge；只有 Owner merge。PR 技術上可 merge 時加 `agent:merge-ready`，
-並留下：
+預設仍是 Owner merge。唯一例外為 `LOW_RISK_OPS_AUTOMERGE`：Claude Code 可自行 final review 並 merge，但必須全部符合下列 gate：
+
+1. Issue 已由 Owner 核准，或明確落在已核准 OPS scope。
+2. Frozen Quant / frozen paths 無變更，Quant fingerprint 完全一致。
+3. 無選股、排序、因子、權重、rebalance、現金政策、order sizing、decision prompt/model 等投資行為變更。
+4. 無 submission semantics、portal action policy、cutoff/window、attempt cap、success definition 變更。
+5. 無 security/privacy/credential/auth/session/MFA/CAPTCHA 邊界變更。
+6. 無 breaking API/schema、部署架構、destructive operation、付費/第三方服務、外部資料源政策、競賽規則解讀變更。
+7. full pytest、validate、secret-scan、quant-freeze-check 全部 PASS。
+8. PR mergeable、已更新到最新 master、production checkout clean，PR 內有 impact / rollback / evidence。
+9. 任何一項為 false、unknown 或 ambiguous，都不得 self-merge，必須回 Owner。
+
+符合時 PR 留下：
+
+```
+IMPLEMENTATION_STATUS = COMPLETE
+SELF_REVIEW = PASS
+LOW_RISK_OPS_AUTOMERGE = PASS
+QUANT_FREEZE = PASS
+TESTS = PASS
+SECRET_SCAN = PASS
+VALIDATE = PASS
+MERGEABILITY = PASS
+SELF_MERGE = AUTHORIZED_BY_POLICY
+```
+
+不符合時沿用：
 
 ```
 IMPLEMENTATION_STATUS = COMPLETE
 CHATGPT_REVIEW_STATUS = APPROVED | APPROVED_WITH_FOLLOW_UP
 OWNER_MERGE_DECISION = PENDING
 ```
+
+merge 仍以 squash 優先；禁止 force push、rewrite history。
 
 ### 6.5 不得自行擴張重大 scope
 
