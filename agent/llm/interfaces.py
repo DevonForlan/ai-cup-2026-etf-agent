@@ -110,6 +110,17 @@ class TemplateThesisWriter:
         v, a = c["values"], c["action"]
         rk = f"量化綜合評分排名 {c['rank']}/{c['n_eligible']}" if c.get("rank") else "未列入合格排名"
         base = f"{rk}（{self._drivers(v)}；{{{{fact:{c['ticker']}}}}}）。"
+        if c.get("tactical"):
+            tc = c["tactical"]
+            if tc.get("mode") == "EXIT":
+                return (f"戰術輪動還原（{tc.get('id')}，預定還原日 {tc.get('exit_trade_date')}）：非量化排名決策；"
+                        f"依輪動帳本將本檔由 {c['current_weight']:.2%} 調整至 {c['target_weight']:.2%}，回到輪動前部位。"
+                        f"（{{{{fact:{c['ticker']}}}}}）")
+            side = "轉入非科技標的" if a in ("BUY", "ADD") else "短期減碼科技股"
+            return (f"戰術輪動（{tc.get('id')}，Owner 指示之短期暫時性決策，非量化排名結果；原量化綜合評分排名 "
+                    f"{c['rank'] if c.get('rank') else '-'}/{c['n_eligible']}）：{side}，本檔由 {c['current_weight']:.2%} "
+                    f"調整至 {c['target_weight']:.2%}，預計持有 {tc.get('hold_days')} 個交易日，"
+                    f"{tc.get('exit_trade_date')} 依帳本還原。（{{{{fact:{c['ticker']}}}}}）")
         if c.get("guard_note"):
             return (base + f"{c['guard_note']}；本檔依比例由 {c['current_weight']:.2%} 調整至 {c['target_weight']:.2%}，"
                     "屬風險控管之曝險調整，非個股看法改變。")
@@ -152,6 +163,8 @@ class TemplateThesisWriter:
         for t, cw, tw, rk, reason in items:
             r = f"排名 {rk}" if rk else "排名 -"
             parts.append(f"{t}（{r}，現權重 {cw:.2%}）")
+        if items and all(it[4] == "tactical_untouched" for it in items):
+            return "戰術輪動日（Owner 指示之短期暫時性輪動）；下列持股不在輪動範圍，維持不動：" + "、".join(parts)
         if items and all(it[4] == "no_rebalance_day" for it in items):
             return ("本日非策略再平衡日；以前日收盤價檢查現有組合之檔數、權重、現金與 Active Share 均合規，"
                     "為避免來回成本（約 0.585%）維持不動：" + "、".join(parts))
@@ -164,6 +177,7 @@ class TemplateThesisWriter:
                 "decision_limit": "單日決策數上限（30），本日延後調整",
                 "no_rebalance_day": "非再平衡日，組合合規，維持不動",
                 "min_holding": "未滿最短持有天數，維持不動",
+                "tactical_untouched": "戰術輪動日：本檔不在輪動範圍，維持不動",
                 "odd_lot_locked": "持股含配股零股，無法以整股委託調整，維持不動"}.get(reason, "維持不動")
 
     def fallback_logic(self, reason: str) -> str:

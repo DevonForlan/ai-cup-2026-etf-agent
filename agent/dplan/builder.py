@@ -63,6 +63,9 @@ def build_graph(trade_date: str, fs, scores: pd.DataFrame, result, prev_holdings
                 sources: dict[str, SourceInfo], narrator=None, writer=None,
                 events: list | None = None, signal_audit: dict | None = None) -> tuple[EvidenceGraph, dict]:
     """events: EventFact list (already validated/grounded); signal_audit: ticker -> fusion audit dict."""
+    tactical = (getattr(result, "selection", None) or {}).get("tactical") if not getattr(result, "is_fallback", False) else None
+    if tactical:                      # Issue #43: tactical days use deterministic, honest template text (never LLM prose)
+        narrator, writer = None, None
     narrator = narrator or TemplateMarketNarrator()
     writer = writer or TemplateThesisWriter()
     g = EvidenceGraph(trade_date)
@@ -238,7 +241,8 @@ def build_graph(trade_date: str, fs, scores: pd.DataFrame, result, prev_holdings
                    "hold_limit": tpar["hold_rank"],
                    "funding_for": bool(funding.get(d["decision_id"])), "values": vals,
                    "events": [g.get(k).data["statement"] for k in evk],
-                   "guard_note": (tp.notes[0] if sel_info.get("guard_scale") and tp.notes else None)}
+                   "guard_note": (tp.notes[0] if sel_info.get("guard_scale") and tp.notes else None),
+                   "tactical": tactical}
             g.add("Signal", f"sig:{t}", {"rank": ctx["rank"], "score": ctx["score"], "n_eligible": n_elig})
             g.add("Inference", f"inf:{t}", {"logic": writer.decision_logic(ctx),
                                             "counter_evidence": writer.counter_evidence(ctx),

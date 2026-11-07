@@ -40,6 +40,7 @@ deadline:                # minutes before submission cutoff (competition.yaml su
   critical_warn_0845: "08:45"           # not ACCEPTED yet -> SUBMISSION_CRITICAL_WARNING_0845 (official close 08:55)
 
 paths:
+  tactical_dir: data/tactical        # tactical sleeve ledger (Issue #43; local only)
   settlement_dir: data/settlement
   submissions_dir: submissions
   archive_dir: archive
@@ -157,3 +158,10 @@ auto_upload:
   browser_profile_dir: data/browser_profiles/fundaiagent   # gitignored; the Owner logs in interactively once
   selectors: {}                   # filled ONLY from the observed UI after the manual E2E; empty -> fail closed
   accepted_markers: []            # verbatim official history wording meaning accepted (e.g. from the E2E); empty -> never ACCEPTED
+
+# Tactical override (Issue #43). ONE-FLAG ROLLBACK: enabled: false. The spec file is pinned by sha256; a mismatch
+# disables new entries (open sleeves are still unwound from the ledger). Quant v1 stays frozen and untouched.
+tactical:
+  enabled: true
+  spec: config/tactical/tactical_override_20261109.yaml
+  spec_sha256: "sha256:f5f4eff23a3ed13becde560eb3cc8dafcf17aad2875703bef756a48d0a149954"
