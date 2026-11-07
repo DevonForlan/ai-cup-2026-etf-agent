@@ -1,0 +1,56 @@
+# TACTICAL_OVERRIDE_V1 — Owner-directed temporary non-tech rotation (Issue #43, Owner directive 2026-11-08).
+# SEPARATE from the immutable Frozen Quant v1 (config/strategy_quant_v1.yaml, sha256 f34fa02e…, never edited).
+# Applied only by agent/tactical/override.py; delete this file or set enabled: false to roll back (one toggle).
+version: TACTICAL_OVERRIDE_V1
+enabled: true
+owner_directive: 'GitHub Issue #43, section LATEST OWNER DIRECTIVE 2026-11-08 (FORCE_TEMPORARY_ROTATION)'
+frozen_quant_sha256: f34fa02e924011b20c52a4bd42e961169f97e1950e76e04b7e78dc43ac23d2e0
+adverse_evidence: 'research/short_rotation/REPORT.md (branch research/43-short-rotation): DO_NOT_ROTATE; kept in the audit trail, not used to block the Owner directive'
+entry_trade_date: '2026-11-09'
+hold_trading_days: 1            # 1 (default) or 2; exit_trade_date must match (2026-11-10 / 2026-11-11)
+exit_trade_date: '2026-11-10'   # unwind D-Plan trade date; expiry-first: any run with trade_date >= this unwinds an open sleeve
+rotation_nav_pct_ladder: [0.20, 0.17, 0.14, 0.10, 0.05]   # first size that passes every guard is used (target ~20 % NAV)
+selection_asof: '2026-11-06'
+selection_rule: 'eligible non-tech (not in the 7 electronics industries; 120d corr to tech <= 0.55; ADV20 >= 0.5bn; |1d move| < 5 %), composite = mean(rank of 5d relative strength desc, rank of 60d volatility asc), max 2 names per industry, top 6, equal weight'
+sleeve:                         # fraction of the rotated NAV per name (sums to 1)
+  '2891': 0.1666666667
+  '2002': 0.1666666667
+  '2618': 0.1666666667
+  '5880': 0.1666666667
+  '5871': 0.1666666667
+  '2912': 0.1666666667
+sleeve_industry:
+  '2891': 金融保險業
+  '2002': 鋼鐵工業
+  '2618': 航運業
+  '5880': 金融保險業
+  '5871': 其他業
+  '2912': 貿易百貨業
+# technology cluster = the 7 TWSE electronics industries inside the official 150-name universe
+reduce_tickers: ['1785', '1815', '2059', '2301', '2303', '2308', '2313', '2317', '2324', '2327', '2330', '2337', '2344', '2345', '2347', '2356', '2357', '2360', '2368', '2376', '2377', '2379', '2382', '2383', '2395', '2404', '2408', '2409', '2412', '2449', '2451', '2454', '3008', '3017', '3034', '3036', '3037', '3044', '3045', '3081', '3105', '3131', '3163', '3189', '3211', '3227', '3231', '3260', '3264', '3324', '3363', '3374', '3443', '3481', '3491', '3529', '3533', '3653', '3661', '3665', '3680', '3702', '3711', '3718', '4749', '4904', '4938', '4958', '4966', '4979', '4991', '5274', '5289', '5347', '5483', '5536', '6121', '6139', '6147', '6182', '6187', '6223', '6239', '6274', '6290', '6415', '6488', '6510', '6515', '6548', '6584', '6669', '6770', '6789', '7734', '7751', '7769', '7828', '8046', '8069', '8210', '8299', '8358']
+# pre-rotation holdings (official settlement DataPack_304_2026-11-06, as_of 2026-11-05; no trades since). Unwind target.
+baseline_holdings:
+  '2337': 298000
+  '2344': 230000
+  '2347': 358000
+  '2360': 23000
+  '2376': 135000
+  '2383': 7000
+  '2408': 85000
+  '2451': 172000
+  '2615': 248000
+  '3081': 12000
+  '3443': 4000
+  '3661': 13000
+  '3680': 58000
+  '3702': 414000
+  '4938': 343000
+  '4979': 65000
+  '5289': 27000
+  '6187': 23000
+  '6274': 20000
+  '6669': 19000
+  '6770': 446000
+  '7734': 16000
+  '7769': 6000
+  '8299': 18000
