@@ -1,0 +1,48 @@
+# TACTICAL OVERRIDE (Issue #43, Owner directive 2026-11-08: FORCE_TEMPORARY_ROTATION).
+# A reversible overlay ON TOP of the immutable Frozen Quant v1 (config/strategy_quant_v1.yaml, sha256 f34fa02e...).
+# It never edits Quant v1: agent/tactical/hook.py lets the frozen constructor run first and only then replaces the
+# result for the dates named here.  sha256 of THIS file is pinned in config/ops.yaml (tactical.spec_sha256); a
+# mismatch disables the overlay (fail closed -> pure Frozen Quant v1).
+#
+# ONE-FLAG ROLLBACK: set `enabled: false` (and re-pin the sha256) or set tactical.enabled=false in config/ops.yaml.
+# An OPEN sleeve is still unwound when the overlay is disabled (ledger-driven, expiry-first) unless
+# `unwind_even_if_disabled: false`.
+tactical_override:
+  id: TACT_ROT_20261109
+  version: 1
+  enabled: true
+  source_issue: 43
+  owner_directive: "Issue #43, 2026-11-08, EXPLICIT: FORCE_TEMPORARY_ROTATION (informed of DO_NOT_ROTATE research verdict)"
+  entry_trade_date: "2026-11-09"
+  # Default hold = 1 trading day (exit in the D-Plan for 2026-11-10).  2 = explicit option (exit 2026-11-11).
+  hold_trading_days: 1
+  exit_trade_dates: {1: "2026-11-10", 2: "2026-11-11"}
+  unwind_even_if_disabled: true
+
+  # ---- sizing (research #43: x <= 20 % keeps ADV20 participation < 5 %)
+  target_rotation_nav_pct: 0.20          # of NAV_{T-1}; final size may be smaller (lots / constraints)
+  tech_sector_labels: ["半導體業", "電腦及週邊設備業", "電子零組件業", "其他電子業", "通信網路業", "光電業", "電子通路業"]
+  sector_map: config/tactical/sector_map_20251025.csv
+  min_sell_nav_pct_per_name: 0.0015      # do not create tiny sell orders (keeps the order count low: 30-order cap)
+  max_new_names: 6                       # 24 held + 6 = 30 (official maximum)
+  max_weight_per_new_name: 0.05
+
+  # ---- buy list (Owner: no fixed picks; chosen by CC from the #43 ranked candidate table as of 2026-11-06 close)
+  # Rule: eligible non-tech (tech-corr <= 0.55, ADV20 >= 0.5bn) ranked by 5-day relative strength, at most 2 names per
+  # sector label for diversification, 6 names, equal TWD weight.  Evidence: config/tactical/ranked_candidates_20261106.csv.
+  # 2753 / 1476 / 6865 are NOT in the official 150-name universe and are never allowed (checked at runtime).
+  buy_names:
+    - {ticker: "6446", name: 藥華藥, sector: 生技醫療業, rs5_rank: 1}
+    - {ticker: "2618", name: 長榮航, sector: 航運業, rs5_rank: 2}
+    - {ticker: "2886", name: 兆豐金, sector: 金融保險業, rs5_rank: 3}
+    - {ticker: "2880", name: 華南金, sector: 金融保險業, rs5_rank: 4}
+    - {ticker: "5871", name: 中租-KY, sector: 其他業, rs5_rank: 6}
+    - {ticker: "2002", name: 中鋼, sector: 鋼鐵工業, rs5_rank: 7}
+  skipped_by_sector_cap: ["2891 (3rd 金融保險業 name; rank 5)"]
+  forbidden_tickers: ["2753", "1476", "6865"]
+
+  # ---- exit (ledger driven; see agent/tactical/planner.py plan_exit)
+  # Exit = restore every touched ticker to its recorded pre-entry share count.  Expiry first: on any trade date >= the
+  # exit date with a non-restored sleeve the unwind is built BEFORE anything else.  Unfillable full unwinds are scaled
+  # (1.0, .75, .5, .25 of the gap); an incomplete exit is flagged TACTICAL_UNWIND_OVERDUE and never silently extended.
+  unwind_scales: [1.0, 0.75, 0.5, 0.25]

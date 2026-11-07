@@ -324,14 +324,23 @@ def run_competition_day(trade_date: str, team_id: str, mode: str = "dry-run", *,
         notes.append(f"LLM disabled by deadline guard ({dls.phase}) -> template narrative")
     out_dir = ops_path(ops_cfg, "ops_logs_dir") / ymd(trade_date) / "dplan_work"
     as_of = None if mode == "historical" else clock.now().replace(microsecond=0).isoformat()
+    from agent.tactical.hook import Context as TacticalContext, installed as tactical_installed
+    tctx = TacticalContext(trade_date, ops_cfg, state_dir=(ops_cfg.get("paths") or {}).get("tactical_dir"))
     try:
-        r = run_day(trade_date, store, start, rb, cfg, team_id=team_id, mode="replay", out_dir=out_dir,
-                    log_dir=ops_path(ops_cfg, "ops_logs_dir") / ymd(trade_date) / "run", calendar=cal,
-                    llm=llm, as_of_override=as_of, data_faults=data_faults, store_is_fixture=store_is_fixture)
+        with tactical_installed(tctx):          # Issue #43: reversible overlay; frozen constructor runs first
+            r = run_day(trade_date, store, start, rb, cfg, team_id=team_id, mode="replay", out_dir=out_dir,
+                        log_dir=ops_path(ops_cfg, "ops_logs_dir") / ymd(trade_date) / "run", calendar=cal,
+                        llm=llm, as_of_override=as_of, data_faults=data_faults, store_is_fixture=store_is_fixture)
     except Exception as e:  # noqa: BLE001
         lg.error(traceback.format_exc())
         return finish("BLOCKED", reason=f"program error in run_day: {type(e).__name__}: {e}"[:400])
     durations["quant_dplan_validation"] = round(time.perf_counter() - t0, 2)
+    summary["tactical"] = tctx.outcome
+    if tctx.outcome.get("applied") and isinstance(r.agent_state, dict):     # overlay must not shift Quant's rebalance clock
+        r.agent_state["last_rebalance_index"] = (start.agent_state or {}).get("last_rebalance_index")
+    if tctx.outcome.get("mode") != "NONE":
+        notes.append(f"TACTICAL {tctx.outcome.get('mode')} applied={tctx.outcome.get('applied')} "
+                     f"{tctx.outcome.get('blocked') or tctx.outcome.get('flag') or ''}")
     vl = ops_logger(trade_date, "validation", ops_cfg)
     vl.info(f"{r.dplan_path.name if r.dplan_path else None} ok={r.validation.ok} {r.validation.summary()} "
             f"fallback={r.fallback}")
@@ -391,7 +400,7 @@ def run_competition_day(trade_date: str, team_id: str, mode: str = "dry-run", *,
             "model": (llm["cfg"].get("model") if llm else None),
             "llm_replay_id": f"logs/llm/{ymd(trade_date)}/calls.jsonl" if llm else None,
             "degradation_level": level, "deadline": dls.to_dict(), "run_durations": durations,
-            "settlement_source": summary.get("settlement_source")}
+            "settlement_source": summary.get("settlement_source"), "tactical": tctx.outcome}
     summary["decision_fingerprint"] = fp
     pkg = build_package(r, team_id=team_id, trade_date=trade_date, run_id=run_id, mode=mode,
                         data_health=data_health, reconciliation=rec, preflight=pf, run_metadata=meta, ops_cfg=ops_cfg,
@@ -579,4 +588,5 @@ def main(argv=None) -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-
+
+
