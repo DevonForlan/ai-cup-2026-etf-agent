@@ -29,6 +29,7 @@ from agent.portfolio import constructor as K
 
 VERSION = "TACTICAL_OVERRIDE_V1"
 CONFIG_PATH = ROOT / "config" / "tactical_override_v1.yaml"
+STATE_DIR = ROOT / "logs" / "tactical"
 MAX_NAMES, MIN_NAMES = 30, 20
 OPERATIONAL_MODES = ("competition",)   # the scheduled production flow; dry-run / historical never apply the override
 AS_FLOOR = Decimal("0.15")          # official Active Share floor (top-15 NAV method), each ETF
@@ -37,7 +38,7 @@ Q = Decimal("0.00000001")
 
 def load_config(path: Path | str | None = None) -> dict | None:
     """Return the tactical config (+ `_fingerprint` = sha256 of the file bytes) or None if absent / disabled."""
-    p = Path(path) if path else CONFIG_PATH
+    p = Path(path) if path else CONFIG_PATH      # resolved at call time so tests can point it elsewhere
     try:
         raw = p.read_bytes()
         cfg = yaml.safe_load(raw.decode("utf-8")) or {}
@@ -259,7 +260,7 @@ def activate(trade_date: str, mode: str, *, config_path=None, state_dir=None, mo
     import agent.pipeline as P
     modes = modes or OPERATIONAL_MODES
     tcfg = load_config(config_path)
-    act = Activation(tcfg, trade_date, state_dir or (ROOT / "logs" / "tactical"))
+    act = Activation(tcfg, trade_date, state_dir or STATE_DIR)
     phase = phase_for(tcfg, trade_date) if tcfg else None
     if tcfg is None or phase is None or mode not in modes:
         yield act
