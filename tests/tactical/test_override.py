@@ -179,3 +179,12 @@ def test_is_active_only_for_operational_mode_and_dates(world, tmp_path):
     assert O.is_active(T, "dry-run", config_path=c) is False
     assert O.is_active("2026-10-26", "competition", config_path=c) is False
     assert O.is_active(T, "competition", config_path=make_cfg(tmp_path, world, enabled=False)) is False
+
+
+def test_is_active_on_unwind_dates_only_while_the_sleeve_is_open(world, tmp_path):
+    c = make_cfg(tmp_path, world)
+    sl = world["sleeve"][:4]
+    assert O.is_active("2026-10-28", "competition", config_path=c, prev_holdings=world["held"]) is False        # nothing open
+    opened = dict(world["held"]); opened[sl[0]] = 5000
+    assert O.is_active("2026-10-28", "competition", config_path=c, prev_holdings=opened) is True
+    assert O.is_active("2026-10-28", "competition", config_path=c) is True                                      # unknown holdings: conservative

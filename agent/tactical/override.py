@@ -215,10 +215,17 @@ def build_unwind(base, scores, prev_h, prev_cash, nav_prev, closes_prev, rb, cfg
     return base, rec
 
 
-def is_active(trade_date: str, mode: str, *, config_path=None, modes=None) -> bool:
-    """True when `activate` would install the wrapper for this run (used to keep the narrative template-based)."""
+def is_active(trade_date: str, mode: str, *, config_path=None, modes=None, prev_holdings=None) -> bool:
+    """True when the override can change today's D-Plan (used to keep the per-decision narrative template-based).
+    On an unwind date it is only active while the sleeve is actually open (holdings given), so ordinary later days keep
+    the LLM narrative."""
     tcfg = load_config(config_path)
-    return bool(tcfg and phase_for(tcfg, trade_date) and mode in (modes or OPERATIONAL_MODES))
+    if not (tcfg and mode in (modes or OPERATIONAL_MODES)):
+        return False
+    ph = phase_for(tcfg, trade_date)
+    if ph == "UNWIND" and prev_holdings is not None:
+        return sleeve_open({t: int(s) for t, s in prev_holdings.items()}, tcfg)
+    return bool(ph)
 
 
 class Activation:
