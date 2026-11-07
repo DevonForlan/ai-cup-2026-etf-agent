@@ -324,10 +324,16 @@ def run_competition_day(trade_date: str, team_id: str, mode: str = "dry-run", *,
         notes.append(f"LLM disabled by deadline guard ({dls.phase}) -> template narrative")
     out_dir = ops_path(ops_cfg, "ops_logs_dir") / ymd(trade_date) / "dplan_work"
     as_of = None if mode == "historical" else clock.now().replace(microsecond=0).isoformat()
+    from agent.tactical import override as TO          # Issue #43: TACTICAL_OVERRIDE_V1 (no-op unless enabled for this date)
+    tact = None
+    if llm is not None and TO.is_active(trade_date, mode):   # per-decision text must state the tactical reason: template writer
+        llm["cfg"].setdefault("narrative", {})["thesis_llm"] = False
+        notes.append("tactical override day: per-decision narrative uses the template (guard note), market narrative stays LLM")
     try:
-        r = run_day(trade_date, store, start, rb, cfg, team_id=team_id, mode="replay", out_dir=out_dir,
-                    log_dir=ops_path(ops_cfg, "ops_logs_dir") / ymd(trade_date) / "run", calendar=cal,
-                    llm=llm, as_of_override=as_of, data_faults=data_faults, store_is_fixture=store_is_fixture)
+        with TO.activate(trade_date, mode) as tact:
+            r = run_day(trade_date, store, start, rb, cfg, team_id=team_id, mode="replay", out_dir=out_dir,
+                        log_dir=ops_path(ops_cfg, "ops_logs_dir") / ymd(trade_date) / "run", calendar=cal,
+                        llm=llm, as_of_override=as_of, data_faults=data_faults, store_is_fixture=store_is_fixture)
     except Exception as e:  # noqa: BLE001
         lg.error(traceback.format_exc())
         return finish("BLOCKED", reason=f"program error in run_day: {type(e).__name__}: {e}"[:400])
@@ -392,6 +398,9 @@ def run_competition_day(trade_date: str, team_id: str, mode: str = "dry-run", *,
             "llm_replay_id": f"logs/llm/{ymd(trade_date)}/calls.jsonl" if llm else None,
             "degradation_level": level, "deadline": dls.to_dict(), "run_durations": durations,
             "settlement_source": summary.get("settlement_source")}
+    if tact is not None and tact.summary() is not None:
+        meta["tactical_override"] = {k: tact.summary().get(k) for k in ("version", "fingerprint", "phase", "status", "x_effective", "reason")}
+        summary["tactical_override"] = tact.summary()
     summary["decision_fingerprint"] = fp
     pkg = build_package(r, team_id=team_id, trade_date=trade_date, run_id=run_id, mode=mode,
                         data_health=data_health, reconciliation=rec, preflight=pf, run_metadata=meta, ops_cfg=ops_cfg,
@@ -418,7 +427,8 @@ def run_competition_day(trade_date: str, team_id: str, mode: str = "dry-run", *,
     t0 = time.perf_counter()
     arch = archive_run(trade_date, run_id, package_dir=pkg, ops_cfg=ops_cfg, readonly=archive_readonly,
                        config_files=[config, "config/competition.yaml", "config/unconfirmed_rules.yaml",
-                                     "config/ops.yaml"] + ([llm_config] if llm_config else []), crash_hook=crash_hook)
+                                     "config/ops.yaml"] + ([llm_config] if llm_config else [])
+                       + (['config/tactical_override_v1.yaml'] if (tact is not None and tact.summary() is not None) else []), crash_hook=crash_hook)
     durations["archive"] = round(time.perf_counter() - t0, 2)
     summary["sla"] = sla_check(durations, ops_cfg)
     summary["final_action"] = final_action

@@ -282,6 +282,11 @@ def sweep(root=None, *, push: bool = True) -> list[dict]:
             r = sync(td, root, push=push)
             if r["status"] != "SKIPPED":
                 res.append(r)
+    try:                                           # Issue #43: tactical-override records ride along (downstream only)
+        from agent.ops import shared_state_tactical as _T
+        _T.publish(root, push=push)
+    except Exception:  # noqa: BLE001
+        pass
     return res
 
 
