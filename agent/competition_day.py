@@ -326,6 +326,9 @@ def run_competition_day(trade_date: str, team_id: str, mode: str = "dry-run", *,
     as_of = None if mode == "historical" else clock.now().replace(microsecond=0).isoformat()
     from agent.tactical import override as TO          # Issue #43: TACTICAL_OVERRIDE_V1 (no-op unless enabled for this date)
     tact = None
+    if llm is not None and TO.is_active(trade_date, mode):   # per-decision text must state the tactical reason: template writer
+        llm["cfg"].setdefault("narrative", {})["thesis_llm"] = False
+        notes.append("tactical override day: per-decision narrative uses the template (guard note), market narrative stays LLM")
     try:
         with TO.activate(trade_date, mode) as tact:
             r = run_day(trade_date, store, start, rb, cfg, team_id=team_id, mode="replay", out_dir=out_dir,

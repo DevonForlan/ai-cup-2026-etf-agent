@@ -215,6 +215,12 @@ def build_unwind(base, scores, prev_h, prev_cash, nav_prev, closes_prev, rb, cfg
     return base, rec
 
 
+def is_active(trade_date: str, mode: str, *, config_path=None, modes=None) -> bool:
+    """True when `activate` would install the wrapper for this run (used to keep the narrative template-based)."""
+    tcfg = load_config(config_path)
+    return bool(tcfg and phase_for(tcfg, trade_date) and mode in (modes or OPERATIONAL_MODES))
+
+
 class Activation:
     def __init__(self, tcfg, trade_date, state_dir):
         self.tcfg, self.trade_date, self.state_dir = tcfg, trade_date, Path(state_dir)

@@ -171,3 +171,11 @@ def test_shipped_config_is_consistent_and_does_not_touch_frozen_quant():
     assert set(c["sleeve"]) <= uni and set(c["reduce_tickers"]) <= uni and set(c["baseline_holdings"]) <= uni
     assert not ({"2753", "1476", "6865"} & (set(c["sleeve"]) | set(c["reduce_tickers"])))
     assert len(c["baseline_holdings"]) == 24 and all(v % 1000 == 0 for v in c["baseline_holdings"].values())
+
+
+def test_is_active_only_for_operational_mode_and_dates(world, tmp_path):
+    c = make_cfg(tmp_path, world)
+    assert O.is_active(T, "competition", config_path=c) is True
+    assert O.is_active(T, "dry-run", config_path=c) is False
+    assert O.is_active("2026-10-26", "competition", config_path=c) is False
+    assert O.is_active(T, "competition", config_path=make_cfg(tmp_path, world, enabled=False)) is False
