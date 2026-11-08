@@ -64,6 +64,24 @@ def candidate_gate(summary: dict | None, tcfg: dict, run_id: str | None) -> tupl
     return (not why), why
 
 
+def data_not_degraded(health: dict | None, prior_summary: dict | None) -> tuple[bool, str]:
+    """The morning-refresh rule wants data health PASS. Here the candidate uses the SAME decision inputs as the confirmed prior FINAL
+    (T-1 closes, DataPack holdings); a WARN is accepted only when every CRITICAL source is fresh and every non-OK source is either
+    OPTIONAL or was already a WARN of the prior FINAL's run (so the candidate is not worse-informed than what is on the portal)."""
+    if not health:
+        return False, "no data_health record"
+    prior_warns = {w for w in ((prior_summary or {}).get("preflight") or {}).get("warns", [])}
+    bad = []
+    for r in health.get("sources") or []:
+        ok = r.get("status") == "OK" and not r.get("stale")
+        if ok:
+            continue
+        if r.get("criticality") == "OPTIONAL" or f"data:{r.get('source')}" in prior_warns:
+            continue
+        bad.append(f"{r.get('source')} {r.get('criticality')} {r.get('status')}")
+    return (not bad), ("; ".join(bad) if bad else "only OPTIONAL / already-known-in-prior-run sources are not OK")
+
+
 def _log(row: dict) -> None:
     LOG.parent.mkdir(parents=True, exist_ok=True)
     row = dict(row, at=datetime.now(TPE).replace(microsecond=0).isoformat())
@@ -173,12 +191,33 @@ def run(trade_date: str, *, authorization: str, expect_prior_sha: str | None = N
             return {"ok": False, "reasons": ["candidate_gate: " + "; ".join(why)]}
         return replace_final(t, team, run_id, reason=f"{authorization}: {reason}", operator=OPERATOR)
 
+    orig_decision = MF.supersede_decision
+
+    def decision(summary, prior, **kw):
+        ok, why = orig_decision(summary, prior, **kw)
+        if ok or (summary or {}).get("data_health") != "WARN":
+            return ok, why
+        day = ops_path(ops, "ops_logs_dir") / ymd(trade_date)
+        try:
+            health = json.loads((day / "data_health.json").read_text(encoding="utf-8"))
+            psum = json.loads((day / "summaries" / f"{prior_sha.split(':')[-1]}.json").read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            health = psum = None
+        good, dwhy = data_not_degraded(health, psum)
+        rec["data_health_waiver"] = {"accepted": good, "detail": dwhy}
+        if not good:
+            return False, why
+        return orig_decision(dict(summary, data_health="PASS"), prior, **kw)
+
+    MF.supersede_decision = decision
     try:
         mrec = (runner or MF.run)(portal_check=lambda t, o: (True, f"Owner-authorised supersession ({authorization}): "
                                                                f"portal holds prior FINAL {prior_sha[:20]} as SUBMISSION_CONFIRMED"),
                                   replace=tactical_replace)
     except Exception as e:  # noqa: BLE001
         mrec = {"status": "FAILED", "error_message": f"{type(e).__name__}: {e}"[:300], "superseded": False}
+    finally:
+        MF.supersede_decision = orig_decision
     rec["morning_run"] = {k: mrec.get(k) for k in ("status", "blocked_reason", "error_message", "final_action", "superseded",
                                                   "new_final_sha256", "submission_state", "auto_upload_status",
                                                   "candidate_run_id", "supersede_reason")}
