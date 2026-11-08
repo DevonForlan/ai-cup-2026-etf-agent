@@ -143,3 +143,20 @@ def test_data_not_degraded_waiver():
     h["sources"][0].update(status="FAILED")
     assert S.data_not_degraded(h, prior)[0] is False                                  # critical source never waived
     assert S.data_not_degraded(None, prior)[0] is False
+
+
+def test_submitted_at_is_that_of_the_superseding_submission(tmp_path):
+    import json
+    from agent.ops import shared_state_sync as S
+    day = tmp_path / "submissions" / "20261109"
+    (day / "FINAL").mkdir(parents=True)
+    f = day / "FINAL" / "D-Plan_TEAM_11442_2026-11-09.json"
+    f.write_bytes(b"{}")
+    sha = "sha256:" + S._sha(b"{}")
+    hist = [{"at": "A", "to": "READY_TO_SUBMIT"}, {"at": "B", "to": "SUBMITTED_UNVERIFIED"}, {"at": "C", "to": "SUBMISSION_CONFIRMED"},
+            {"at": "D", "to": "UNKNOWN"}, {"at": "E", "to": "READY_TO_SUBMIT"}, {"at": "F", "to": "SUBMITTED_UNVERIFIED"},
+            {"at": "G", "to": "SUBMISSION_CONFIRMED"}]
+    (day / "submission_state.json").write_text(json.dumps({"state": "SUBMISSION_CONFIRMED", "trade_date": "2026-11-09",
+                                                           "team_id": "TEAM_11442", "dplan_sha256": sha, "history": hist}))
+    r = S.confirmed_record("2026-11-09", tmp_path, team="TEAM_11442")
+    assert r["submitted_at"] == "F" and r["confirmed_at"] == "G"

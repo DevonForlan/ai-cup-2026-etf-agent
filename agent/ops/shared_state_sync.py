@@ -79,7 +79,9 @@ def confirmed_record(trade_date: str, root=None, team: str | None = None) -> dic
     if _norm(st.get("dplan_sha256")) != sha:
         return None                      # state and file disagree: never publish something that is not the confirmed FINAL
     confirmed_at = next((h.get("at") for h in reversed(st.get("history") or []) if h.get("to") in DONE), None)
-    submitted_at = next((h.get("at") for h in st.get("history") or [] if h.get("to") == "SUBMITTED_UNVERIFIED"), None)
+    hist = st.get("history") or []
+    ready = max((i for i, h in enumerate(hist) if h.get("to") == "READY_TO_SUBMIT"), default=0)   # Issue #49: a superseding FINAL re-enters READY
+    submitted_at = next((h.get("at") for h in hist[ready:] if h.get("to") == "SUBMITTED_UNVERIFIED"), None)
     return {"trade_date": trade_date, "team_id": team_id, "file": f, "data": data, "sha256": sha,
             "status": st["state"], "submitted_at": submitted_at or confirmed_at, "confirmed_at": confirmed_at,
             "source_path": f.relative_to(root).as_posix()}
