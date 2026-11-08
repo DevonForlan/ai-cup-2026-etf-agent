@@ -6,7 +6,7 @@
  "version": "TACTICAL_OVERRIDE_V2_TECH_LT10",
  "fingerprint": "9a67d94dc14ad466a2b22d7f6c34976cdd2e2ba3c1ae334f64fb0aabe9d83d50",
  "x_effective": null,
- "submission_status": "NOT_CONFIRMED",
- "final_sha256": null,
+ "submission_status": "SUBMISSION_CONFIRMED",
+ "final_sha256": "5a2e820bcda2e1ec889ebe09a439f36a848f01fae258fbcde746625b85c3680a",
  "record_path": "shared_state/tactical/2026-11-09_ENTRY_V2.json"
 }
