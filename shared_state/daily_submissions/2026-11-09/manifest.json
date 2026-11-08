@@ -2,12 +2,14 @@
  "trade_date": "2026-11-09",
  "team_id": "TEAM_11442",
  "final_path": "shared_state/daily_submissions/2026-11-09/FINAL.json",
- "final_sha256": "5126889080828c1fc0f3a2af6d3cfdbf8744893d1373d770d0d9f84f241b2153",
+ "final_sha256": "5a2e820bcda2e1ec889ebe09a439f36a848f01fae258fbcde746625b85c3680a",
  "source_final_path": "submissions/20261109/FINAL/D-Plan_TEAM_11442_2026-11-09.json",
  "submission_status": "SUBMISSION_CONFIRMED",
  "submitted_at": "2026-11-08T19:36:32.952327+08:00",
- "confirmed_at": "2026-11-08T19:36:38.299397+08:00",
- "synced_at": "2026-11-08T19:36:46+08:00",
- "idempotency_key": "2026-11-09|TEAM_11442|5126889080828c1fc0f3a2af6d3cfdbf8744893d1373d770d0d9f84f241b2153",
- "supersedes": []
+ "confirmed_at": "2026-11-09T02:55:05.698491+08:00",
+ "synced_at": "2026-11-09T02:55:11+08:00",
+ "idempotency_key": "2026-11-09|TEAM_11442|5a2e820bcda2e1ec889ebe09a439f36a848f01fae258fbcde746625b85c3680a",
+ "supersedes": [
+  "5126889080828c1fc0f3a2af6d3cfdbf8744893d1373d770d0d9f84f241b2153"
+ ]
 }
