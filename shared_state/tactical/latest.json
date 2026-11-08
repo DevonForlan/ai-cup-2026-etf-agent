@@ -1,0 +1,12 @@
+{
+ "trade_date": "2026-11-09",
+ "phase": "ENTRY",
+ "status": "APPLIED",
+ "tactical_status": null,
+ "version": "TACTICAL_OVERRIDE_V1",
+ "fingerprint": "5092e7dcc880d4799f7dc1c869fa6581c74377e16f82fa65f1ff88922586768b",
+ "x_effective": 0.2,
+ "submission_status": "SUBMISSION_CONFIRMED",
+ "final_sha256": "5126889080828c1fc0f3a2af6d3cfdbf8744893d1373d770d0d9f84f241b2153",
+ "record_path": "shared_state/tactical/2026-11-09_ENTRY.json"
+}
