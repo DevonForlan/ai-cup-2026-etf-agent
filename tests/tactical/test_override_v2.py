@@ -130,3 +130,16 @@ def test_candidate_gate():
         assert S.candidate_gate(bad, tc, "r1")[0] is False, k
     assert S.candidate_gate(ok, tc, "other")[0] is False
     assert S.candidate_gate(None, tc, "r1")[0] is False
+
+
+def test_data_not_degraded_waiver():
+    from agent.ops import tactical_supersede as S
+    h = {"sources": [{"source": "twse_prices", "criticality": "CRITICAL", "status": "OK", "stale": False},
+                     {"source": "etf_holdings", "criticality": "IMPORTANT", "status": "STALE", "stale": True},
+                     {"source": "mops_material_info", "criticality": "OPTIONAL", "status": "FAILED", "stale": False}]}
+    prior = {"preflight": {"warns": ["data:etf_holdings"]}}
+    assert S.data_not_degraded(h, prior)[0] is True
+    assert S.data_not_degraded(h, {"preflight": {"warns": []}})[0] is False          # a NEW important gap is not waived
+    h["sources"][0].update(status="FAILED")
+    assert S.data_not_degraded(h, prior)[0] is False                                  # critical source never waived
+    assert S.data_not_degraded(None, prior)[0] is False
