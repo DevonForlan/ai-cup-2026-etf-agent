@@ -399,7 +399,7 @@ def run_competition_day(trade_date: str, team_id: str, mode: str = "dry-run", *,
             "degradation_level": level, "deadline": dls.to_dict(), "run_durations": durations,
             "settlement_source": summary.get("settlement_source")}
     if tact is not None and tact.summary() is not None:
-        meta["tactical_override"] = {k: tact.summary().get(k) for k in ("version", "fingerprint", "phase", "status", "x_effective", "reason")}
+        meta["tactical_override"] = {k: tact.summary().get(k) for k in ("version", "fingerprint", "phase", "status", "x_effective", "reason", "tech_weight_after", "nontech_weight_after", "target_tech_weight_max")}
         summary["tactical_override"] = tact.summary()
     summary["decision_fingerprint"] = fp
     pkg = build_package(r, team_id=team_id, trade_date=trade_date, run_id=run_id, mode=mode,
@@ -428,7 +428,7 @@ def run_competition_day(trade_date: str, team_id: str, mode: str = "dry-run", *,
     arch = archive_run(trade_date, run_id, package_dir=pkg, ops_cfg=ops_cfg, readonly=archive_readonly,
                        config_files=[config, "config/competition.yaml", "config/unconfirmed_rules.yaml",
                                      "config/ops.yaml"] + ([llm_config] if llm_config else [])
-                       + (['config/tactical_override_v1.yaml'] if (tact is not None and tact.summary() is not None) else []), crash_hook=crash_hook)
+                       + ([TO.config_rel(tact)] if (tact is not None and tact.summary() is not None) else []), crash_hook=crash_hook)
     durations["archive"] = round(time.perf_counter() - t0, 2)
     summary["sla"] = sla_check(durations, ops_cfg)
     summary["final_action"] = final_action

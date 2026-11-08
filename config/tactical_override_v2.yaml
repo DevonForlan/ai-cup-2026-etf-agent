@@ -1,0 +1,202 @@
+# TACTICAL_OVERRIDE_V2_TECH_LT10 - Owner-mandated temporary restructuring (Issue #49), supersedes V1 for 2026-11-09.
+# SEPARATE from the immutable Frozen Quant v1 (config/strategy_quant_v1.yaml, never edited). V1 config is untouched.
+# Applied only by agent/tactical/override.py; delete this file or set enabled: false to roll back (V1 then applies again).
+version: TACTICAL_OVERRIDE_V2_TECH_LT10
+enabled: true
+owner_directive: 'GitHub Issue #49 (OWNER MANDATORY: supersede the 11/09 FINAL, technology < 10% NAV) + authorization comment 2026-11-08T18:00:27Z'
+supersedes: TACTICAL_OVERRIDE_V1 (config/tactical_override_v1.yaml, fingerprint 5092e7dcc880d4799f7dc1c869fa6581c74377e16f82fa65f1ff88922586768b; V1 history untouched)
+frozen_quant_sha256: f34fa02e924011b20c52a4bd42e961169f97e1950e76e04b7e78dc43ac23d2e0
+adverse_evidence: research/short_rotation/REPORT.md (DO_NOT_ROTATE) kept in the audit trail; the Owner accepted the risk knowingly
+entry_trade_date: '2026-11-09'
+hold_trading_days: 1
+exit_trade_date: '2026-11-10'
+target_tech_weight_max: 0.1
+tech_design_max: 0.085
+tech_guard_max: 0.09
+max_orders: 30
+target_holdings_min: 22
+buy_weight_cap: 0.085
+ladder:
+- cash_target: 0.15
+  untouched_max: 0.075
+  n_buys: 10
+- cash_target: 0.18
+  untouched_max: 0.075
+  n_buys: 10
+- cash_target: 0.12
+  untouched_max: 0.075
+  n_buys: 10
+- cash_target: 0.2
+  untouched_max: 0.075
+  n_buys: 10
+- cash_target: 0.15
+  untouched_max: 0.075
+  n_buys: 9
+- cash_target: 0.18
+  untouched_max: 0.075
+  n_buys: 9
+- cash_target: 0.15
+  untouched_max: 0.05
+  n_buys: 8
+selection_asof: '2026-11-06'
+selection_rule: 'execution only, no new research: ranked non-tech candidates of research/short_rotation/results/ranked_candidates_20261106.csv (eligible: outside the 7 electronics industries, 120d corr
+  to tech <= 0.55, ADV20 >= 0.5bn, |1d move| < 5%), composite = mean(rank 5d relative strength desc, rank 60d volatility asc), at most 2 names per industry (2615 already held counts as shipping), top 10.
+  Relative weights = 50% equal + 50% inverse 60d volatility. 2412 is technology under the #41-#43 classification and is not used; 2753 / 1476 / 6865 are not in the official universe.'
+sleeve:
+  '2002': 0.12062
+  '2891': 0.096375
+  '2618': 0.094651
+  '5880': 0.09681
+  '1216': 0.112618
+  '5871': 0.095432
+  '2912': 0.128195
+  '1101': 0.092148
+  '6446': 0.070095
+  '3293': 0.093055
+sleeve_industry:
+  '2002': 鋼鐵工業
+  '2891': 金融保險業
+  '2618': 航運業
+  '5880': 金融保險業
+  '1216': 食品工業
+  '5871': 其他業
+  '2912': 貿易百貨業
+  '1101': 水泥工業
+  '6446': 生技醫療業
+  '3293': 文化創意業
+legacy_sleeve_names:
+- '2891'
+- '2002'
+- '2618'
+- '5880'
+- '5871'
+- '2912'
+reduce_tickers:
+- '1785'
+- '1815'
+- '2059'
+- '2301'
+- '2303'
+- '2308'
+- '2313'
+- '2317'
+- '2324'
+- '2327'
+- '2330'
+- '2337'
+- '2344'
+- '2345'
+- '2347'
+- '2356'
+- '2357'
+- '2360'
+- '2368'
+- '2376'
+- '2377'
+- '2379'
+- '2382'
+- '2383'
+- '2395'
+- '2404'
+- '2408'
+- '2409'
+- '2412'
+- '2449'
+- '2451'
+- '2454'
+- '3008'
+- '3017'
+- '3034'
+- '3036'
+- '3037'
+- '3044'
+- '3045'
+- '3081'
+- '3105'
+- '3131'
+- '3163'
+- '3189'
+- '3211'
+- '3227'
+- '3231'
+- '3260'
+- '3264'
+- '3324'
+- '3363'
+- '3374'
+- '3443'
+- '3481'
+- '3491'
+- '3529'
+- '3533'
+- '3653'
+- '3661'
+- '3665'
+- '3680'
+- '3702'
+- '3711'
+- '3718'
+- '4749'
+- '4904'
+- '4938'
+- '4958'
+- '4966'
+- '4979'
+- '4991'
+- '5274'
+- '5289'
+- '5347'
+- '5483'
+- '5536'
+- '6121'
+- '6139'
+- '6147'
+- '6182'
+- '6187'
+- '6223'
+- '6239'
+- '6274'
+- '6290'
+- '6415'
+- '6488'
+- '6510'
+- '6515'
+- '6548'
+- '6584'
+- '6669'
+- '6770'
+- '6789'
+- '7734'
+- '7751'
+- '7769'
+- '7828'
+- '8046'
+- '8069'
+- '8210'
+- '8299'
+- '8358'
+baseline_holdings:
+  '2337': 298000
+  '2344': 230000
+  '2347': 358000
+  '2360': 23000
+  '2376': 135000
+  '2383': 7000
+  '2408': 85000
+  '2451': 172000
+  '2615': 248000
+  '3081': 12000
+  '3443': 4000
+  '3661': 13000
+  '3680': 58000
+  '3702': 414000
+  '4938': 343000
+  '4979': 65000
+  '5289': 27000
+  '6187': 23000
+  '6274': 20000
+  '6669': 19000
+  '6770': 446000
+  '7734': 16000
+  '7769': 6000
+  '8299': 18000
