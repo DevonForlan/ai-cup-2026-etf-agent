@@ -2,9 +2,9 @@
  "task": "tactical_supersede",
  "trade_date": "2026-11-09",
  "authorization": "Issue #49 Owner authorization 2026-11-08T18:00:27Z",
- "status": "NOT_SUPERSEDED",
+ "status": "SUPERSEDED_CONFIRMED",
  "operator": "tactical_supersede_v2",
- "started_at": "2026-11-09T02:30:50+08:00",
+ "started_at": "2026-11-09T02:47:49+08:00",
  "prior_final_sha256": "sha256:5126889080828c1fc0f3a2af6d3cfdbf8744893d1373d770d0d9f84f241b2153",
  "tactical_version": "TACTICAL_OVERRIDE_V2_TECH_LT10",
  "tactical_fingerprint": "9a67d94dc14ad466a2b22d7f6c34976cdd2e2ba3c1ae334f64fb0aabe9d83d50",
@@ -17,28 +17,36 @@
   "matching_rows": 1
  },
  "prior_archive": "submissions\\20261109\\superseded\\512688908082",
+ "data_health_waiver": {
+  "accepted": true,
+  "detail": "only OPTIONAL / already-known-in-prior-run sources are not OK"
+ },
+ "candidate_gate": {
+  "ok": true,
+  "reasons": []
+ },
  "morning_run": {
   "status": "PASS",
   "blocked_reason": null,
   "error_message": null,
   "final_action": "KEPT_DIFFERENT",
-  "superseded": false,
-  "new_final_sha256": null,
-  "submission_state": "READY_FOR_UPLOAD",
-  "auto_upload_status": "ALREADY_SUBMITTED",
-  "candidate_run_id": "20261109_023818_gitf0d5a9d",
-  "supersede_reason": "data health WARN (freshness not PASS)"
+  "superseded": true,
+  "new_final_sha256": "sha256:5a2e820bcda2e1ec889ebe09a439f36a848f01fae258fbcde746625b85c3680a",
+  "submission_state": "SUBMISSION_CONFIRMED",
+  "auto_upload_status": "SUBMISSION_CONFIRMED",
+  "candidate_run_id": "20261109_025453_git96d4c77",
+  "supersede_reason": "morning refresh produced a different, fully validated decision"
  },
- "active_final_sha256": "sha256:5126889080828c1fc0f3a2af6d3cfdbf8744893d1373d770d0d9f84f241b2153",
- "blocked_reason": "data health WARN (freshness not PASS)",
- "finished_at": "2026-11-09T02:38:30+08:00",
+ "active_final_sha256": "sha256:5a2e820bcda2e1ec889ebe09a439f36a848f01fae258fbcde746625b85c3680a",
+ "state_after": "SUBMISSION_CONFIRMED",
+ "finished_at": "2026-11-09T02:55:25+08:00",
  "source_record": "logs/tactical/supersede_20261109_latest.json",
- "source_sha256": "sha256:1a5c9c876b9af14b9cafd99db629d8e0ed41424c025105c5da597e5fb474c115",
+ "source_sha256": "sha256:83a7bdd9b44c180bf8dea2351a673b3aeeea8a92c66fce8d65f67b30ca18340a",
  "final_sha256": "5a2e820bcda2e1ec889ebe09a439f36a848f01fae258fbcde746625b85c3680a",
  "final_path": "shared_state/daily_submissions/2026-11-09/FINAL.json",
  "submission_status": "SUBMISSION_CONFIRMED",
- "submitted_at": "2026-11-08T19:36:32.952327+08:00",
+ "submitted_at": "2026-11-09T02:55:02.746800+08:00",
  "confirmed_at": "2026-11-09T02:55:05.698491+08:00",
- "idempotency_key": "supersede_20261109_latest.json|sha256:1a5c9c876b9af14b9cafd99db629d8e0ed41424c025105c5da597e5fb474c115|SUBMISSION_CONFIRMED|5a2e820bcda2e1ec889ebe09a439f36a848f01fae258fbcde746625b85c3680a",
- "synced_at": "2026-11-09T02:55:19+08:00"
+ "idempotency_key": "supersede_20261109_latest.json|sha256:83a7bdd9b44c180bf8dea2351a673b3aeeea8a92c66fce8d65f67b30ca18340a|SUBMISSION_CONFIRMED|5a2e820bcda2e1ec889ebe09a439f36a848f01fae258fbcde746625b85c3680a",
+ "synced_at": "2026-11-09T17:08:15+08:00"
 }
