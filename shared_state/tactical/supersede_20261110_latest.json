@@ -1,0 +1,52 @@
+{
+ "task": "tactical_supersede",
+ "trade_date": "2026-11-10",
+ "authorization": "Issue #61 Owner override 2026-11-09 (one-time full Frozen Quant v1 rebalance)",
+ "status": "SUPERSEDED_CONFIRMED",
+ "operator": "tactical_supersede_v2",
+ "started_at": "2026-11-10T00:04:52+08:00",
+ "prior_final_sha256": "sha256:d7e435ea88e425b21f7474dfd4b4bf494bdcb6643ac074b91d155cdcf9cd1b70",
+ "tactical_version": "TACTICAL_OVERRIDE_V2_TECH_LT10",
+ "tactical_fingerprint": "6282ae4de0bedf0d1dc5f648af4245b6ef2ea3fa6dd01d9832e59ba5306930e9",
+ "state_before": "SUBMISSION_CONFIRMED",
+ "portal_prior_check": {
+  "status": "SUBMISSION_CONFIRMED",
+  "final_sha256": "sha256:d7e435ea88e425b21f7474dfd4b4bf494bdcb6643ac074b91d155cdcf9cd1b70",
+  "history_entry": "第 11\t2026-11-10\t已繳交\t2026-11-09 20:06\t回看",
+  "reasons": [],
+  "matching_rows": 1
+ },
+ "prior_archive": "submissions\\20261110\\superseded\\d7e435ea88e4",
+ "data_health_waiver": {
+  "accepted": true,
+  "detail": "only OPTIONAL / already-known-in-prior-run sources are not OK"
+ },
+ "candidate_gate": {
+  "ok": true,
+  "reasons": []
+ },
+ "morning_run": {
+  "status": "PASS",
+  "blocked_reason": null,
+  "error_message": null,
+  "final_action": "KEPT_DIFFERENT",
+  "superseded": true,
+  "new_final_sha256": "sha256:302477613e9b570e20760a238859d2d9026f0043a90833c5bb02c2f3b4612977",
+  "submission_state": "SUBMISSION_CONFIRMED",
+  "auto_upload_status": "SUBMISSION_CONFIRMED",
+  "candidate_run_id": "20261110_000842_git5381652",
+  "supersede_reason": "morning refresh produced a different, fully validated decision"
+ },
+ "active_final_sha256": "sha256:302477613e9b570e20760a238859d2d9026f0043a90833c5bb02c2f3b4612977",
+ "state_after": "SUBMISSION_CONFIRMED",
+ "finished_at": "2026-11-10T00:09:11+08:00",
+ "source_record": "logs/tactical/supersede_20261110_latest.json",
+ "source_sha256": "sha256:312b177df3a49d6cd9892076cf27bd3ab3b2f4c55f0743038285377a750cde8e",
+ "final_sha256": "302477613e9b570e20760a238859d2d9026f0043a90833c5bb02c2f3b4612977",
+ "final_path": "shared_state/daily_submissions/2026-11-10/FINAL.json",
+ "submission_status": "SUBMISSION_CONFIRMED",
+ "submitted_at": "2026-11-10T00:08:52.154312+08:00",
+ "confirmed_at": "2026-11-10T00:08:55.105749+08:00",
+ "idempotency_key": "supersede_20261110_latest.json|sha256:312b177df3a49d6cd9892076cf27bd3ab3b2f4c55f0743038285377a750cde8e|SUBMISSION_CONFIRMED|302477613e9b570e20760a238859d2d9026f0043a90833c5bb02c2f3b4612977",
+ "synced_at": "2026-11-10T00:09:59+08:00"
+}
