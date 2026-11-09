@@ -29,7 +29,10 @@ import time
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
-from agent.config import ROOT
+if __package__ in (None, ""):          # `python <path>/cc_session_sync.py hook` works from any cwd / any shell
+    sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+
+from agent.config import ROOT  # noqa: E402
 
 REL = "shared_state/cc_sessions"
 LOCAL = Path("logs") / "cc_sessions"
@@ -60,7 +63,7 @@ _PATTERNS = [
                 r"cookie)|sessionid|cookie|set-cookie|authorization)\b\"?\s*[:=]\s*)(\"[^\"\n]{4,}\"|'[^'\n]{4,}'|"
                 r"[^\s,;'\"<>]{4,}[^\n]*?)(?=$|[\s,;}])", re.M), r"\1" + R),
     # command-line flags: --token VALUE / --password=VALUE / -p VALUE style secrets
-    (re.compile(r"(?i)(--?(?:token|password|passwd|secret|api-key|apikey|access-key|auth|cookie|bearer)(?:\s+|=))(?!--)[^\s\"']{4,}"), r"" + R),
+    (re.compile(r"(?i)(?<![\w-])(--?(?:token|password|passwd|secret|api-key|apikey|access-key|auth|cookie|bearer)(?:\s+|=))(?!--)[^\s\"']{4,}"), r"\1" + R),
     (re.compile(r"(?i)([?&](?:token|access_token|api_key|apikey|key|sig|signature|csrf|session)=)[^&\s\"'<>]+"), r"\1" + R),
     # personal data (organisation policy): e-mail addresses, except the commit-trailer noreply address
     (re.compile(r"\b(?!noreply@anthropic\.com\b)[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}\b"), "[REDACTED_EMAIL]"),
@@ -486,7 +489,7 @@ def hook(stdin_text: str, root=None) -> int:
         if not fast and mark.exists() and time.time() - mark.stat().st_mtime < HOOK_MIN_INTERVAL_S:
             return 0
         mark.write_text(str(time.time()), encoding="utf-8")
-        cmd = [sys.executable, "-m", "agent.ops.cc_session_sync", "sync", "--session", sid, "--transcript", tp]
+        cmd = [sys.executable, str(Path(__file__).resolve()), "sync", "--session", sid, "--transcript", tp]
         if ev in ("Stop", "SessionEnd"):
             cmd.append("--force")
         flags = 0x08000000 | 0x00000008 if os.name == "nt" else 0       # CREATE_NO_WINDOW | DETACHED_PROCESS

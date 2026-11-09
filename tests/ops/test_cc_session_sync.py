@@ -123,3 +123,10 @@ def test_module_never_touches_submission_or_scheduler_code():
         elif isinstance(n, ast.Import):
             mods |= {a.name for a in n.names}
     assert not [m for m in mods if "submission" in m or "scheduled_run" in m or "competition_day" in m or "morning" in m]
+
+
+def test_cli_flag_redaction_keeps_the_flag_name():
+    out = C.redact("gh x --token abc123456789 --password=hunter22 --verbose non-secret value")
+    assert "abc123456789" not in out and "hunter22" not in out
+    assert "--token " + C.R in out and "--password=" + C.R in out and chr(1) not in out
+    assert "non-secret value" in out and "--verbose" in out                    # prose / other flags untouched
