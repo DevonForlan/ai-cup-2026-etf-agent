@@ -60,7 +60,7 @@ _PATTERNS = [
                 r"cookie)|sessionid|cookie|set-cookie|authorization)\b\"?\s*[:=]\s*)(\"[^\"\n]{4,}\"|'[^'\n]{4,}'|"
                 r"[^\s,;'\"<>]{4,}[^\n]*?)(?=$|[\s,;}])", re.M), r"\1" + R),
     # command-line flags: --token VALUE / --password=VALUE / -p VALUE style secrets
-    (re.compile(r"(?i)(--?(?:token|password|passwd|secret|api-key|apikey|access-key|auth|cookie|bearer)(?:\s+|=))(?!--)[^\s\"']{4,}"), r"" + R),
+    (re.compile(r"(?i)(?<![\w-])(--?(?:token|password|passwd|secret|api-key|apikey|access-key|auth|cookie|bearer)(?:\s+|=))(?!--)[^\s\"']{4,}"), r"\1" + R),
     (re.compile(r"(?i)([?&](?:token|access_token|api_key|apikey|key|sig|signature|csrf|session)=)[^&\s\"'<>]+"), r"\1" + R),
     # personal data (organisation policy): e-mail addresses, except the commit-trailer noreply address
     (re.compile(r"\b(?!noreply@anthropic\.com\b)[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}\b"), "[REDACTED_EMAIL]"),
