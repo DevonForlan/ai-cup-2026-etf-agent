@@ -37,7 +37,7 @@
       "authority": "other",
       "url": "https://www.cbc.gov.tw/tw/lp-645-1.html",
       "name": "中央銀行 新台幣對美元銀行間收盤匯率（前一營業日 16:00）",
-      "content_as_of": "2026-11-06T17:00:00+08:00"
+      "content_as_of": "2026-11-09T17:00:00+08:00"
     },
     {
       "source_id": "S6",
@@ -63,13 +63,6 @@
     },
     {
       "source_id": "S9",
-      "authority": "tpex",
-      "url": "https://www.tpex.org.tw/www/zh-tw/insti/dailyTrade?type=Daily&sect=EW&date=2026/11/09&response=json",
-      "name": "TPEx 三大法人買賣明細（2026-11-09）",
-      "content_as_of": "2026-11-09T13:30:00+08:00"
-    },
-    {
-      "source_id": "S10",
       "authority": "mops",
       "url": "https://mopsov.twse.com.tw/mops/web/ajax_t05st02",
       "name": "MOPS 重大訊息 2891（2026-11-09T18:04）",
@@ -77,12 +70,19 @@
       "content_as_of": "2026-11-09T18:04:42+08:00"
     },
     {
-      "source_id": "S11",
+      "source_id": "S10",
       "authority": "mops",
       "url": "https://mopsov.twse.com.tw/mops/web/ajax_t05st02",
       "name": "MOPS 重大訊息 2891（2026-11-09T18:13）",
       "published_at": "2026-11-09T18:13:39+08:00",
       "content_as_of": "2026-11-09T18:13:39+08:00"
+    },
+    {
+      "source_id": "S11",
+      "authority": "tpex",
+      "url": "https://www.tpex.org.tw/www/zh-tw/insti/dailyTrade?type=Daily&sect=EW&date=2026/11/09&response=json",
+      "name": "TPEx 三大法人買賣明細（2026-11-09）",
+      "content_as_of": "2026-11-09T13:30:00+08:00"
     },
     {
       "source_id": "S12",
@@ -127,14 +127,14 @@
         "S5"
       ],
       "topic": "overnight",
-      "statement": "隔夜/盤前：S&P500 -4.36%；Nasdaq100 +1.35%；費城半導體 SOX +4.21%；TSM ADR +6.33%；台指期夜盤(相對前日結算) +1.63%；USD/TWD -0.33%",
+      "statement": "隔夜/盤前：S&P500 -4.36%；Nasdaq100 +1.35%；費城半導體 SOX +4.21%；TSM ADR +6.33%；台指期夜盤(相對前日結算) +1.63%；USD/TWD +0.35%",
       "values": {
         "sp500_ret_pct": -4.36,
         "nasdaq100_ret_pct": 1.35,
         "sox_ret_pct": 4.21,
         "tsm_adr_ret_pct": 6.33,
         "txf_night_ret_pct": 1.63,
-        "usdtwd_ret_pct": -0.33
+        "usdtwd_ret_pct": 0.35
       }
     },
     {
@@ -266,6 +266,17 @@
     {
       "obs_id": "O9",
       "source_ref": [
+        "S8"
+      ],
+      "topic": "mops_announcement",
+      "statement": "2347 重大訊息（2026-11-09T17:44）：聯強國際對子公司新增背書保證金額逾公開發行公司 最近期財務報表淨值5%",
+      "values": {
+        "days_before_trade_date": 1.0
+      }
+    },
+    {
+      "obs_id": "O10",
+      "source_ref": [
         "S1",
         "S6",
         "S7"
@@ -285,7 +296,49 @@
       }
     },
     {
-      "obs_id": "O10",
+      "obs_id": "O11",
+      "source_ref": [
+        "S1",
+        "S6",
+        "S7"
+      ],
+      "topic": "stock_quant",
+      "statement": "2383 台光電 2026-11-09 收盤 4,070.0；20 日報酬 -31.6%；60 日報酬 -23.1%；20 日相對 universe 中位數 -11.7%；距 52 週高點 -35.9%；近 5 日三大法人淨買賣超 -2,777 張；最新月營收年增 +203.1%；20 日年化波動 79.5%",
+      "values": {
+        "close_prev": 4070.0,
+        "ret_20d_pct": -31.6,
+        "ret_60d_pct": -23.06,
+        "rs_20d_vs_median_pct": -11.66,
+        "dist_52w_high_pct": -35.91,
+        "volatility_20d_ann_pct": 79.5,
+        "inst_net_5d_lots": -2777.0,
+        "revenue_yoy_pct": 203.1,
+        "revenue_mom_pct": 13.7
+      }
+    },
+    {
+      "obs_id": "O12",
+      "source_ref": [
+        "S1",
+        "S6",
+        "S7"
+      ],
+      "topic": "stock_quant",
+      "statement": "2408 南亞科 2026-11-09 收盤 370.0；20 日報酬 -28.0%；60 日報酬 -26.3%；20 日相對 universe 中位數 -8.1%；距 52 週高點 -31.9%；近 5 日三大法人淨買賣超 -34,415 張；最新月營收年增 +487.7%；20 日年化波動 87.3%",
+      "values": {
+        "close_prev": 370.0,
+        "ret_20d_pct": -28.02,
+        "ret_60d_pct": -26.29,
+        "rs_20d_vs_median_pct": -8.08,
+        "dist_52w_high_pct": -31.86,
+        "volatility_20d_ann_pct": 87.3,
+        "inst_net_5d_lots": -34415.0,
+        "revenue_yoy_pct": 487.7,
+        "revenue_mom_pct": 3.1
+      }
+    },
+    {
+      "obs_id": "O13",
       "source_ref": [
         "S1",
         "S6",
@@ -306,28 +359,7 @@
       }
     },
     {
-      "obs_id": "O11",
-      "source_ref": [
-        "S1",
-        "S6",
-        "S7"
-      ],
-      "topic": "stock_quant",
-      "statement": "2615 萬海 2026-11-09 收盤 107.0；20 日報酬 -4.0%；60 日報酬 +22.3%；20 日相對 universe 中位數 +15.9%；距 52 週高點 -15.4%；近 5 日三大法人淨買賣超 +7,116 張；最新月營收年增 +124.4%；20 日年化波動 52.5%",
-      "values": {
-        "close_prev": 107.0,
-        "ret_20d_pct": -4.04,
-        "ret_60d_pct": 22.29,
-        "rs_20d_vs_median_pct": 15.9,
-        "dist_52w_high_pct": -15.42,
-        "volatility_20d_ann_pct": 52.5,
-        "inst_net_5d_lots": 7116.0,
-        "revenue_yoy_pct": 124.4,
-        "revenue_mom_pct": 7.6
-      }
-    },
-    {
-      "obs_id": "O12",
+      "obs_id": "O14",
       "source_ref": [
         "S1",
         "S6",
@@ -348,18 +380,7 @@
       }
     },
     {
-      "obs_id": "O13",
-      "source_ref": [
-        "S8"
-      ],
-      "topic": "mops_announcement",
-      "statement": "2347 重大訊息（2026-11-09T17:44）：聯強國際對子公司新增背書保證金額逾公開發行公司 最近期財務報表淨值5%",
-      "values": {
-        "days_before_trade_date": 1.0
-      }
-    },
-    {
-      "obs_id": "O14",
+      "obs_id": "O15",
       "source_ref": [
         "S1",
         "S6",
@@ -380,7 +401,29 @@
       }
     },
     {
-      "obs_id": "O15",
+      "obs_id": "O16",
+      "source_ref": [
+        "S9"
+      ],
+      "topic": "mops_announcement",
+      "statement": "2891 重大訊息（2026-11-09T18:04）：中信金控代子公司Land and Houses Bank Public Company Limited公告董事會決議115年度期中盈餘分配案",
+      "values": {
+        "days_before_trade_date": 1.0
+      }
+    },
+    {
+      "obs_id": "O17",
+      "source_ref": [
+        "S10"
+      ],
+      "topic": "mops_announcement",
+      "statement": "2891 重大訊息（2026-11-09T18:13）：代子公司Land and Houses Bank Public Company Limited 公告115年上半年度現金股利分派事項",
+      "values": {
+        "days_before_trade_date": 1.0
+      }
+    },
+    {
+      "obs_id": "O18",
       "source_ref": [
         "S1",
         "S6",
@@ -401,10 +444,10 @@
       }
     },
     {
-      "obs_id": "O16",
+      "obs_id": "O19",
       "source_ref": [
         "S2",
-        "S9",
+        "S11",
         "S7"
       ],
       "topic": "stock_quant",
@@ -422,7 +465,71 @@
       }
     },
     {
-      "obs_id": "O17",
+      "obs_id": "O20",
+      "source_ref": [
+        "S12"
+      ],
+      "topic": "mops_announcement",
+      "statement": "3293 重大訊息（2026-11-09T17:56）：公告本公司董事會通過115年第3季財務報告",
+      "values": {
+        "days_before_trade_date": 1.0
+      }
+    },
+    {
+      "obs_id": "O21",
+      "source_ref": [
+        "S13"
+      ],
+      "topic": "mops_announcement",
+      "statement": "3293 重大訊息（2026-11-09T18:02）：董事會決議115年上半年不分派盈餘",
+      "values": {
+        "days_before_trade_date": 1.0
+      }
+    },
+    {
+      "obs_id": "O22",
+      "source_ref": [
+        "S1",
+        "S6",
+        "S7"
+      ],
+      "topic": "stock_quant",
+      "statement": "3443 創意 2026-11-09 收盤 6,705.0；20 日報酬 -20.7%；60 日報酬 +48.0%；20 日相對 universe 中位數 -0.8%；距 52 週高點 -22.0%；近 5 日三大法人淨買賣超 -1,008 張；最新月營收年增 +127.0%；20 日年化波動 82.8%",
+      "values": {
+        "close_prev": 6705.0,
+        "ret_20d_pct": -20.74,
+        "ret_60d_pct": 48.01,
+        "rs_20d_vs_median_pct": -0.81,
+        "dist_52w_high_pct": -22.03,
+        "volatility_20d_ann_pct": 82.8,
+        "inst_net_5d_lots": -1008.0,
+        "revenue_yoy_pct": 127.0,
+        "revenue_mom_pct": 18.0
+      }
+    },
+    {
+      "obs_id": "O23",
+      "source_ref": [
+        "S1",
+        "S6",
+        "S7"
+      ],
+      "topic": "stock_quant",
+      "statement": "3661 世芯-KY 2026-11-09 收盤 3,110.0；20 日報酬 -25.8%；60 日報酬 -18.2%；20 日相對 universe 中位數 -5.8%；距 52 週高點 -42.1%；近 5 日三大法人淨買賣超 -1,239 張；最新月營收年增 +273.6%；20 日年化波動 79.9%",
+      "values": {
+        "close_prev": 3110.0,
+        "ret_20d_pct": -25.78,
+        "ret_60d_pct": -18.16,
+        "rs_20d_vs_median_pct": -5.84,
+        "dist_52w_high_pct": -42.14,
+        "volatility_20d_ann_pct": 79.9,
+        "inst_net_5d_lots": -1239.0,
+        "revenue_yoy_pct": 273.6,
+        "revenue_mom_pct": 18.1
+      }
+    },
+    {
+      "obs_id": "O24",
       "source_ref": [
         "S1",
         "S6",
@@ -443,7 +550,7 @@
       }
     },
     {
-      "obs_id": "O18",
+      "obs_id": "O25",
       "source_ref": [
         "S1",
         "S6",
@@ -464,28 +571,28 @@
       }
     },
     {
-      "obs_id": "O19",
+      "obs_id": "O26",
       "source_ref": [
         "S2",
-        "S9",
+        "S11",
         "S7"
       ],
       "topic": "stock_quant",
-      "statement": "4979 華星光 2026-11-09 收盤 348.5；20 日報酬 -39.8%；60 日報酬 -35.0%；20 日相對 universe 中位數 -19.9%；距 52 週高點 -51.5%；近 5 日三大法人淨買賣超 +1,355 張；最新月營收年增 +75.4%；20 日年化波動 98.1%",
+      "statement": "5274 信驊 2026-11-09 收盤 11,700.0；20 日報酬 -34.1%；60 日報酬 -29.3%；20 日相對 universe 中位數 -14.2%；距 52 週高點 -44.0%；近 5 日三大法人淨買賣超 -179 張；最新月營收年增 +177.8%；20 日年化波動 75.1%",
       "values": {
-        "close_prev": 348.5,
-        "ret_20d_pct": -39.81,
-        "ret_60d_pct": -34.98,
-        "rs_20d_vs_median_pct": -19.87,
-        "dist_52w_high_pct": -51.46,
-        "volatility_20d_ann_pct": 98.1,
-        "inst_net_5d_lots": 1355.0,
-        "revenue_yoy_pct": 75.4,
-        "revenue_mom_pct": -2.8
+        "close_prev": 11700.0,
+        "ret_20d_pct": -34.08,
+        "ret_60d_pct": -29.26,
+        "rs_20d_vs_median_pct": -14.15,
+        "dist_52w_high_pct": -44.03,
+        "volatility_20d_ann_pct": 75.1,
+        "inst_net_5d_lots": -179.0,
+        "revenue_yoy_pct": 177.8,
+        "revenue_mom_pct": 24.0
       }
     },
     {
-      "obs_id": "O20",
+      "obs_id": "O27",
       "source_ref": [
         "S1",
         "S6",
@@ -506,7 +613,7 @@
       }
     },
     {
-      "obs_id": "O21",
+      "obs_id": "O28",
       "source_ref": [
         "S1",
         "S6",
@@ -527,93 +634,7 @@
       }
     },
     {
-      "obs_id": "O22",
-      "source_ref": [
-        "S2",
-        "S9",
-        "S7"
-      ],
-      "topic": "stock_quant",
-      "statement": "6187 萬潤 2026-11-09 收盤 950.0；20 日報酬 -38.1%；60 日報酬 -12.8%；20 日相對 universe 中位數 -18.2%；距 52 週高點 -43.3%；近 5 日三大法人淨買賣超 -873 張；最新月營收年增 +217.7%；20 日年化波動 95.3%",
-      "values": {
-        "close_prev": 950.0,
-        "ret_20d_pct": -38.11,
-        "ret_60d_pct": -12.84,
-        "rs_20d_vs_median_pct": -18.17,
-        "dist_52w_high_pct": -43.28,
-        "volatility_20d_ann_pct": 95.3,
-        "inst_net_5d_lots": -873.0,
-        "revenue_yoy_pct": 217.7,
-        "revenue_mom_pct": -15.7
-      }
-    },
-    {
-      "obs_id": "O23",
-      "source_ref": [
-        "S2",
-        "S9",
-        "S7"
-      ],
-      "topic": "stock_quant",
-      "statement": "6274 台燿 2026-11-09 收盤 962.0；20 日報酬 -44.1%；60 日報酬 -34.1%；20 日相對 universe 中位數 -24.1%；距 52 週高點 -49.4%；近 5 日三大法人淨買賣超 -3,735 張；最新月營收年增 +127.0%；20 日年化波動 88.7%",
-      "values": {
-        "close_prev": 962.0,
-        "ret_20d_pct": -44.07,
-        "ret_60d_pct": -34.11,
-        "rs_20d_vs_median_pct": -24.13,
-        "dist_52w_high_pct": -49.37,
-        "volatility_20d_ann_pct": 88.7,
-        "inst_net_5d_lots": -3735.0,
-        "revenue_yoy_pct": 127.0,
-        "revenue_mom_pct": 5.8
-      }
-    },
-    {
-      "obs_id": "O24",
-      "source_ref": [
-        "S10"
-      ],
-      "topic": "mops_announcement",
-      "statement": "2891 重大訊息（2026-11-09T18:04）：中信金控代子公司Land and Houses Bank Public Company Limited公告董事會決議115年度期中盈餘分配案",
-      "values": {
-        "days_before_trade_date": 1.0
-      }
-    },
-    {
-      "obs_id": "O25",
-      "source_ref": [
-        "S11"
-      ],
-      "topic": "mops_announcement",
-      "statement": "2891 重大訊息（2026-11-09T18:13）：代子公司Land and Houses Bank Public Company Limited 公告115年上半年度現金股利分派事項",
-      "values": {
-        "days_before_trade_date": 1.0
-      }
-    },
-    {
-      "obs_id": "O26",
-      "source_ref": [
-        "S12"
-      ],
-      "topic": "mops_announcement",
-      "statement": "3293 重大訊息（2026-11-09T17:56）：公告本公司董事會通過115年第3季財務報告",
-      "values": {
-        "days_before_trade_date": 1.0
-      }
-    },
-    {
-      "obs_id": "O27",
-      "source_ref": [
-        "S13"
-      ],
-      "topic": "mops_announcement",
-      "statement": "3293 重大訊息（2026-11-09T18:02）：董事會決議115年上半年不分派盈餘",
-      "values": {
-        "days_before_trade_date": 1.0
-      }
-    },
-    {
-      "obs_id": "O28",
+      "obs_id": "O29",
       "source_ref": [
         "S1",
         "S6",
@@ -634,7 +655,7 @@
       }
     },
     {
-      "obs_id": "O29",
+      "obs_id": "O30",
       "source_ref": [
         "S1",
         "S6",
@@ -653,6 +674,132 @@
         "revenue_yoy_pct": 94.0,
         "revenue_mom_pct": 9.4
       }
+    },
+    {
+      "obs_id": "O31",
+      "source_ref": [
+        "S2",
+        "S11",
+        "S7"
+      ],
+      "topic": "stock_quant",
+      "statement": "7734 印能科技 2026-11-09 收盤 1,675.0；20 日報酬 -38.2%；60 日報酬 -51.5%；20 日相對 universe 中位數 -18.2%；距 52 週高點 -61.7%；近 5 日三大法人淨買賣超 +192 張；最新月營收年增 +122.3%；20 日年化波動 85.6%",
+      "values": {
+        "close_prev": 1675.0,
+        "ret_20d_pct": -38.19,
+        "ret_60d_pct": -51.52,
+        "rs_20d_vs_median_pct": -18.25,
+        "dist_52w_high_pct": -61.71,
+        "volatility_20d_ann_pct": 85.6,
+        "inst_net_5d_lots": 192.0,
+        "revenue_yoy_pct": 122.3,
+        "revenue_mom_pct": 75.7
+      }
+    },
+    {
+      "obs_id": "O32",
+      "source_ref": [
+        "S2",
+        "S11",
+        "S7"
+      ],
+      "topic": "stock_quant",
+      "statement": "8299 群聯 2026-11-09 收盤 1,650.0；20 日報酬 -19.9%；60 日報酬 -19.1%；20 日相對 universe 中位數 +0.0%；距 52 週高點 -42.7%；近 5 日三大法人淨買賣超 -1,484 張；最新月營收年增 +346.3%；20 日年化波動 79.2%",
+      "values": {
+        "close_prev": 1650.0,
+        "ret_20d_pct": -19.9,
+        "ret_60d_pct": -19.12,
+        "rs_20d_vs_median_pct": 0.03,
+        "dist_52w_high_pct": -42.71,
+        "volatility_20d_ann_pct": 79.2,
+        "inst_net_5d_lots": -1484.0,
+        "revenue_yoy_pct": 346.3,
+        "revenue_mom_pct": 2.9
+      }
+    },
+    {
+      "obs_id": "O33",
+      "source_ref": [
+        "S1",
+        "S6",
+        "S7"
+      ],
+      "topic": "stock_quant",
+      "statement": "2615 萬海 2026-11-09 收盤 107.0；20 日報酬 -4.0%；60 日報酬 +22.3%；20 日相對 universe 中位數 +15.9%；距 52 週高點 -15.4%；近 5 日三大法人淨買賣超 +7,116 張；最新月營收年增 +124.4%；20 日年化波動 52.5%",
+      "values": {
+        "close_prev": 107.0,
+        "ret_20d_pct": -4.04,
+        "ret_60d_pct": 22.29,
+        "rs_20d_vs_median_pct": 15.9,
+        "dist_52w_high_pct": -15.42,
+        "volatility_20d_ann_pct": 52.5,
+        "inst_net_5d_lots": 7116.0,
+        "revenue_yoy_pct": 124.4,
+        "revenue_mom_pct": 7.6
+      }
+    },
+    {
+      "obs_id": "O34",
+      "source_ref": [
+        "S2",
+        "S11",
+        "S7"
+      ],
+      "topic": "stock_quant",
+      "statement": "4979 華星光 2026-11-09 收盤 348.5；20 日報酬 -39.8%；60 日報酬 -35.0%；20 日相對 universe 中位數 -19.9%；距 52 週高點 -51.5%；近 5 日三大法人淨買賣超 +1,355 張；最新月營收年增 +75.4%；20 日年化波動 98.1%",
+      "values": {
+        "close_prev": 348.5,
+        "ret_20d_pct": -39.81,
+        "ret_60d_pct": -34.98,
+        "rs_20d_vs_median_pct": -19.87,
+        "dist_52w_high_pct": -51.46,
+        "volatility_20d_ann_pct": 98.1,
+        "inst_net_5d_lots": 1355.0,
+        "revenue_yoy_pct": 75.4,
+        "revenue_mom_pct": -2.8
+      }
+    },
+    {
+      "obs_id": "O35",
+      "source_ref": [
+        "S2",
+        "S11",
+        "S7"
+      ],
+      "topic": "stock_quant",
+      "statement": "6187 萬潤 2026-11-09 收盤 950.0；20 日報酬 -38.1%；60 日報酬 -12.8%；20 日相對 universe 中位數 -18.2%；距 52 週高點 -43.3%；近 5 日三大法人淨買賣超 -873 張；最新月營收年增 +217.7%；20 日年化波動 95.3%",
+      "values": {
+        "close_prev": 950.0,
+        "ret_20d_pct": -38.11,
+        "ret_60d_pct": -12.84,
+        "rs_20d_vs_median_pct": -18.17,
+        "dist_52w_high_pct": -43.28,
+        "volatility_20d_ann_pct": 95.3,
+        "inst_net_5d_lots": -873.0,
+        "revenue_yoy_pct": 217.7,
+        "revenue_mom_pct": -15.7
+      }
+    },
+    {
+      "obs_id": "O36",
+      "source_ref": [
+        "S2",
+        "S11",
+        "S7"
+      ],
+      "topic": "stock_quant",
+      "statement": "6274 台燿 2026-11-09 收盤 962.0；20 日報酬 -44.1%；60 日報酬 -34.1%；20 日相對 universe 中位數 -24.1%；距 52 週高點 -49.4%；近 5 日三大法人淨買賣超 -3,735 張；最新月營收年增 +127.0%；20 日年化波動 88.7%",
+      "values": {
+        "close_prev": 962.0,
+        "ret_20d_pct": -44.07,
+        "ret_60d_pct": -34.11,
+        "rs_20d_vs_median_pct": -24.13,
+        "dist_52w_high_pct": -49.37,
+        "volatility_20d_ann_pct": 88.7,
+        "inst_net_5d_lots": -3735.0,
+        "revenue_yoy_pct": 127.0,
+        "revenue_mom_pct": 5.8
+      }
     }
   ],
   "market_view": {
@@ -660,7 +807,7 @@
       "O1",
       "O2"
     ],
-    "logic": "依規則式市場判斷：站上 20 日均線比例 5% ≤ 35% 且 20 日中位報酬為負（O1、O2）→ regime=risk_off，策略目標現金 10%–18%。本日委託以前日收盤價估算淨流向 +0 元（+0.00% NAV），淨曝險意圖 hold；預估委託後現金比 16.53%。",
+    "logic": "依規則式市場判斷：站上 20 日均線比例 5% ≤ 35% 且 20 日中位報酬為負（O1、O2）→ regime=risk_off，策略目標現金 10%–18%。本日委託以前日收盤價估算淨流向 -12,144,400 元（-1.45% NAV），淨曝險意圖 hold；預估委託後現金比 17.99%。",
     "regime": "risk_off",
     "stance": "defensive",
     "posture": {
@@ -676,250 +823,821 @@
     {
       "inf_id": "I1",
       "premise_refs": [
-        "O3",
-        "O4",
-        "O5",
-        "O6",
-        "O7",
-        "O8",
-        "O9",
-        "O10",
-        "O11",
-        "O12"
+        "O3"
       ],
-      "logic": "本組持股本日無委託,維持量化程式既定決策。依事實,1101 前日收盤 26.80、20 日報酬 +5.1%;1216 為 76.70、+1.6%;2002 為 18.55、-2.1%;2618 為 43.90、+4.7%,漲跌幅度相對有限（O3、O4、O5、O6、O7、O8、O9、O10、O11、O12）。",
-      "counter_evidence": null
+      "logic": "1101 台泥排名 107/146,量化程式決定減碼。20 日報酬 +5.1%、60 日報酬 +9.2%,20 日相對強弱 +25.0%,距 52 週高點 -5.5%,顯示價格仍強,但排名偏後,故由程式降低部位（O3）。",
+      "conclusion": "1101 TRIM → 目標權重 2.97%",
+      "counter_evidence": "短期報酬與相對強弱為正,與排名偏後、被減碼的結果方向不同。"
     },
     {
       "inf_id": "I2",
       "premise_refs": [
-        "O13"
+        "O4"
       ],
-      "logic": "公告研究解讀（other；LLM 推論，依據所引公告）：聯強(2347)公告對子公司新增背書保證，對象包括 Synnex Global Ltd.（新增1,152,025仟元）、聯強國際(香港)有限公司（新增11,520,250仟元）、Syntech Asia Ltd.（新增1,645,750仟元）等，原因均為營運需求。 正面：被背書保證對象均為100%持有子公司；如 Synnex Global Ltd. 實際動支金額為14,754,401仟元，低於背書保證餘額29,790,625仟元。",
-      "counter_evidence": "負面：聯強國際(香港)有限公司背書保證餘額由4,456,691仟元增至15,976,941仟元。 不確定性：文件內容在嘉榮行銷項目處被截斷，完整金額與合計無法確認；被保證公司實際動支金額低於背書保證餘額，未來動用情形未知。"
+      "logic": "1216 統一排名 124/146,量化程式決定全數出清。20 日與 60 日報酬皆為 +1.6%,動能有限;20 日年化波動 +24.2%,距 52 週高點 -5.4%（O4）。",
+      "conclusion": "1216 SELL_ALL → 目標權重 0.00%",
+      "counter_evidence": "20 日相對強弱為 +21.5%,且距高點僅 -5.4%,價格表現並不弱。"
     },
     {
       "inf_id": "I3",
       "premise_refs": [
-        "O14",
-        "O15",
-        "O16",
-        "O17",
-        "O18",
-        "O19",
-        "O20",
-        "O21",
-        "O22",
-        "O23"
+        "O5"
       ],
-      "logic": "本組持股本日無委託,維持既定部位。依事實,2891 前日收盤 75.90、20 日報酬 +10.5%;4938 為 95.40、+6.0%;5880 為 27.80、+4.7%;2912 為 211.50、-0.9%;5871 為 103.00、-2.8%,表現相對平穩或偏正向（O14、O15、O16、O17、O18、O19、O20、O21、O22、O23）。",
-      "counter_evidence": null
+      "logic": "2002 中鋼排名 68/146,量化程式決定減碼。20 日報酬 -2.1%、60 日報酬 -5.6%,距 52 週高點 -12.7%,近期走勢偏弱（O5）。",
+      "conclusion": "2002 TRIM → 目標權重 2.97%",
+      "counter_evidence": "20 日相對強弱為 +17.8%,20 日年化波動 +16.7%,相對表現與波動並不差。"
     },
     {
       "inf_id": "I4",
       "premise_refs": [
-        "O24",
-        "O25"
+        "O6"
       ],
-      "logic": "公告研究解讀（dividend；LLM 推論，依據所引公告）：中信金(2891)代子公司 Land and Houses Bank Public Company Limited 公告董事會決議期中盈餘分配，配發期中現金股利泰銖1,300,000,000元，每股泰銖0.65元，發放日為115/11/25。 正面：子公司配發期中現金股利，每股泰銖0.65元。",
-      "counter_evidence": "不確定性：股利由子公司發放，對中信金控本身的認列金額與比例，文件未提供；除息相關日期為NA。"
+      "logic": "2337 旺宏排名 17/146,量化程式決定加碼。價格大幅回落:20 日報酬 -29.4%、60 日報酬 -37.6%,距 52 週高點 -55.1%;排名仍居前段,故維持持有並增加部位（O6）。",
+      "conclusion": "2337 ADD → 目標權重 3.56%",
+      "counter_evidence": "20 日年化波動 +73.7%,20 日相對強弱 -9.5%,短期走勢明顯偏弱且波動高。"
     },
     {
       "inf_id": "I5",
       "premise_refs": [
-        "O26"
+        "O7"
       ],
-      "logic": "公告研究解讀（earnings；LLM 推論，依據所引公告）：鈊象(3293)董事會通過115年第3季財報：1月1日至9月30日累計營業收入19,424,947仟元、營業利益11,645,168仟元、歸屬母公司業主淨利9,929,637仟元，基本每股盈餘35.24元。 正面：累計營業毛利18,986,788仟元，營業利益11,645,168仟元；期末總資產24,421,394仟元，總負債5,761,302仟元。",
-      "counter_evidence": "不確定性：公告僅提供累計數，未含單季或與去年同期比較，無法判斷成長趨勢；後續表現不在文件內。"
+      "logic": "2344 華邦電排名 10/146,量化程式決定加碼。20 日報酬 -26.2%,距 52 週高點 -40.3%,價格回落,但名次居前（O7）。",
+      "conclusion": "2344 ADD → 目標權重 3.56%",
+      "counter_evidence": "20 日年化波動 +84.4%,20 日相對強弱 -6.2%,短期偏弱且波動大。"
     },
     {
       "inf_id": "I6",
       "premise_refs": [
-        "O27"
+        "O8"
       ],
-      "logic": "公告研究解讀（dividend；LLM 推論，依據所引公告）：鈊象(3293)董事會決議115年上半年不分派盈餘，現金股利與股票股利各項均為0。",
-      "counter_evidence": "負面：115年上半年現金股利為0元/股。 不確定性：公告未說明不分派的原因，也未提及後續股利政策。"
+      "logic": "2347 聯強排名 49/146,量化程式決定全數出清。20 日報酬 -16.2%、60 日報酬 -11.8%,距 52 週高點 -21.3%,走勢轉弱;20 日年化波動 +35.7%（O8）。",
+      "conclusion": "2347 SELL_ALL → 目標權重 0.00%",
+      "counter_evidence": "20 日相對強弱仍為 +3.7%,相對表現未落後。"
     },
     {
       "inf_id": "I7",
       "premise_refs": [
-        "O28",
+        "O9"
+      ],
+      "logic": "公告研究解讀（other；LLM 推論，依據所引公告）：聯強國際公告對子公司新增背書保證，被背書保證對象包括 Synnex Global Ltd.、聯強國際(香港)有限公司、Syntech Asia Ltd. 等，均為100%持有子公司，原因為營運需求。例如對聯強國際(香港)有限公司本次新增11,520,250仟元，背書保證餘額為15,976,941仟元；限額為92,783,319仟元。 正面：被背書對象均為100%持有子公司，原因為營運需求。",
+      "counter_evidence": "負面：背書保證餘額龐大，例如Synnex Global Ltd.為29,790,625仟元，且已有實際動支金額。 不確定性：公告文字在中途截斷，後續對象與合計金額未知；背書保證不等同實際負債，實際動支金額僅為部分。"
+    },
+    {
+      "inf_id": "I8",
+      "premise_refs": [
+        "O10"
+      ],
+      "logic": "2376 技嘉排名 9/146,量化程式決定加碼。20 日報酬 -15.3%、60 日報酬 -11.4%,距 52 週高點 -22.4%,但名次居前;20 日相對強弱 +4.6%（O10）。",
+      "conclusion": "2376 ADD → 目標權重 3.56%",
+      "counter_evidence": "價格連續回落,20 日年化波動 +40.7%。"
+    },
+    {
+      "inf_id": "I9",
+      "premise_refs": [
+        "O11"
+      ],
+      "logic": "2383 台光電排名 3/146,量化程式決定新建部位。20 日報酬 -31.6%、60 日報酬 -23.1%,距 52 週高點 -35.9%,價格深度回落,但名次位居前列（O11）。",
+      "conclusion": "2383 BUY → 目標權重 4.74%",
+      "counter_evidence": "20 日相對強弱 -11.7%,20 日年化波動 +79.5%,短期走勢弱且波動高。"
+    },
+    {
+      "inf_id": "I10",
+      "premise_refs": [
+        "O12"
+      ],
+      "logic": "2408 南亞科排名 11/146,量化程式決定新建部位。20 日報酬 -28.0%、60 日報酬 -26.3%,距 52 週高點 -31.9%,價格回落,但排名居前（O12）。",
+      "conclusion": "2408 BUY → 目標權重 3.56%",
+      "counter_evidence": "20 日年化波動 +87.3%,20 日相對強弱 -8.1%,風險與短期弱勢明顯。"
+    },
+    {
+      "inf_id": "I11",
+      "premise_refs": [
+        "O13"
+      ],
+      "logic": "2451 創見排名 22/146,量化程式決定加碼。20 日報酬 -16.7%、60 日報酬 -19.1%,距 52 週高點 -34.2%;20 日相對強弱 +3.2%（O13）。",
+      "conclusion": "2451 ADD → 目標權重 2.97%",
+      "counter_evidence": "近 20 日與 60 日報酬皆為負,20 日年化波動 +41.4%。"
+    },
+    {
+      "inf_id": "I12",
+      "premise_refs": [
+        "O14"
+      ],
+      "logic": "2618 長榮航排名 92/146,量化程式決定減碼。20 日報酬 +4.7%、60 日報酬 +2.9%,距 52 週高點 -2.7%,價格接近高點,但名次偏後（O14）。",
+      "conclusion": "2618 TRIM → 目標權重 2.97%",
+      "counter_evidence": "20 日相對強弱 +24.6%,動能與相對表現為正,與減碼方向不同。"
+    },
+    {
+      "inf_id": "I13",
+      "premise_refs": [
+        "O15"
+      ],
+      "logic": "2891 中信金排名 140/146,量化程式決定全數出清。名次墊底段;20 日年化波動 +32.5%（O15）。",
+      "conclusion": "2891 SELL_ALL → 目標權重 0.00%",
+      "counter_evidence": "價格表現強勁:距 52 週高點 +0.0%,20 日報酬 +10.5%、60 日報酬 +14.1%,20 日相對強弱 +30.4%,與出清結果方向相反。"
+    },
+    {
+      "inf_id": "I14",
+      "premise_refs": [
+        "O16",
+        "O17"
+      ],
+      "logic": "公告研究解讀（dividend；LLM 推論，依據所引公告）：中信金控代子公司Land and Houses Bank Public Company Limited公告期中現金股利泰銖1,300,000,000元，每股泰銖0.65元，發放日為115/11/25，除息相關日期為NA。 正面：子公司董事會決議配發期中現金股利。",
+      "counter_evidence": "不確定性：股利為子公司層級，對中信金控本身的認列金額與影響，公告未揭露。"
+    },
+    {
+      "inf_id": "I15",
+      "premise_refs": [
+        "O18"
+      ],
+      "logic": "2912 統一超排名 118/146,量化程式決定減碼。20 日報酬 -0.9%、60 日報酬 -3.6%,距 52 週高點 -14.0%,動能偏弱（O18）。",
+      "conclusion": "2912 TRIM → 目標權重 2.97%",
+      "counter_evidence": "20 日相對強弱 +19.0%,20 日年化波動 +20.3%,相對表現與波動尚可。"
+    },
+    {
+      "inf_id": "I16",
+      "premise_refs": [
+        "O19"
+      ],
+      "logic": "3293 鈊象排名 103/146,量化程式決定減碼。20 日報酬 -4.2%、60 日報酬 -5.7%,距 52 週高點 -8.8%,動能偏弱（O19）。",
+      "conclusion": "3293 TRIM → 目標權重 2.97%",
+      "counter_evidence": "20 日相對強弱 +15.7%,20 日年化波動 +24.8%,相對表現仍為正。"
+    },
+    {
+      "inf_id": "I17",
+      "premise_refs": [
+        "O20"
+      ],
+      "logic": "公告研究解讀（earnings；LLM 推論，依據所引公告）：鈊象公告董事會通過115年第3季財報：115/01/01~115/09/30累計營業收入19,424,947仟元、營業毛利18,986,788仟元、營業利益11,645,168仟元、歸屬母公司業主淨利9,929,637仟元，基本每股盈餘35.24元。 正面：累計營業利益11,645,168仟元，基本每股盈餘35.24元；期末總資產24,421,394仟元，總負債5,761,302仟元。",
+      "counter_evidence": "不確定性：公告未提供去年同期或單季數據，無法判斷成長或趨勢；也未說明與市場預期的差異。"
+    },
+    {
+      "inf_id": "I18",
+      "premise_refs": [
+        "O21"
+      ],
+      "logic": "公告研究解讀（dividend；LLM 推論，依據所引公告）：鈊象董事會決議115年上半年不分派盈餘，現金股利、盈餘轉增資配股等各項均為0。",
+      "counter_evidence": "負面：115年上半年現金股利為0元/股。 不確定性：公告未說明不分派的原因，也未說明後續分派安排。"
+    },
+    {
+      "inf_id": "I19",
+      "premise_refs": [
+        "O22"
+      ],
+      "logic": "3443 創意排名 6/146,量化程式決定新建部位。60 日報酬 +48.0%,中期動能強;20 日報酬 -20.7%,距 52 週高點 -22.0%,短期回落（O22）。",
+      "conclusion": "3443 BUY → 目標權重 3.56%",
+      "counter_evidence": "20 日年化波動 +82.8%,20 日報酬 -20.7%,短期回落且波動高。"
+    },
+    {
+      "inf_id": "I20",
+      "premise_refs": [
+        "O23"
+      ],
+      "logic": "3661 世芯-KY 排名 1/146,為名次最前者,量化程式決定新建部位。20 日報酬 -25.8%、60 日報酬 -18.2%,距 52 週高點 -42.1%,價格明顯回落（O23）。",
+      "conclusion": "3661 BUY → 目標權重 4.74%",
+      "counter_evidence": "20 日相對強弱 -5.8%,20 日年化波動 +79.9%,短期弱勢且波動高。"
+    },
+    {
+      "inf_id": "I21",
+      "premise_refs": [
+        "O24"
+      ],
+      "logic": "3702 大聯大排名 2/146,量化程式決定加碼。20 日報酬 -24.7%、60 日報酬 -30.5%,距 52 週高點 -30.5%,價格回落,但名次居前。20 日年化波動 +37.1%,相對其他高排名個股較低（O24）。",
+      "conclusion": "3702 ADD → 目標權重 4.74%",
+      "counter_evidence": "20 日相對強弱 -4.7%,近期價格持續走弱。"
+    },
+    {
+      "inf_id": "I22",
+      "premise_refs": [
+        "O25"
+      ],
+      "logic": "4938 和碩排名 8/146,量化程式決定加碼。20 日報酬 +6.0%、60 日報酬 +6.6%,20 日相對強弱 +25.9%,距 52 週高點 -11.7%,動能與相對表現為正（O25）。",
+      "conclusion": "4938 ADD → 目標權重 3.56%",
+      "counter_evidence": "20 日年化波動 +53.8%,波動偏高。"
+    },
+    {
+      "inf_id": "I23",
+      "premise_refs": [
+        "O26"
+      ],
+      "logic": "5274 信驊排名 5/146,量化程式決定新建部位。20 日報酬 -34.1%、60 日報酬 -29.3%,距 52 週高點 -44.0%,價格大幅回落,但名次居前（O26）。",
+      "conclusion": "5274 BUY → 目標權重 4.74%",
+      "counter_evidence": "20 日相對強弱 -14.2%,20 日年化波動 +75.1%,短期明顯弱勢且波動高。"
+    },
+    {
+      "inf_id": "I24",
+      "premise_refs": [
+        "O27"
+      ],
+      "logic": "5871 中租-KY 排名 132/146,量化程式決定全數出清。20 日報酬 -2.8%、60 日報酬 -5.5%,距 52 週高點 -16.6%,走勢偏弱,名次靠後（O27）。",
+      "conclusion": "5871 SELL_ALL → 目標權重 0.00%",
+      "counter_evidence": "20 日相對強弱 +17.1%,20 日年化波動 +18.4%,相對表現與波動尚可。"
+    },
+    {
+      "inf_id": "I25",
+      "premise_refs": [
+        "O28"
+      ],
+      "logic": "5880 合庫金排名 139/146,量化程式決定全數出清。名次墊底段;20 日年化波動 +22.2%（O28）。",
+      "conclusion": "5880 SELL_ALL → 目標權重 0.00%",
+      "counter_evidence": "20 日報酬 +4.7%、60 日報酬 +6.5%,20 日相對強弱 +24.6%,距 52 週高點 -4.3%,價格表現為正,與出清結果方向不同。"
+    },
+    {
+      "inf_id": "I26",
+      "premise_refs": [
         "O29"
       ],
-      "logic": "6446 與 6770 本日無委託,維持量化程式既定部位。依事實,6446 前日收盤 1,370.00,20 日報酬 +13.7%,近期走勢偏強（O28、O29）。",
+      "logic": "6446 藥華藥排名 18/146,量化程式決定減碼。20 日報酬 +13.7%、60 日報酬 +3.0%,20 日相對強弱 +33.6%,距 52 週高點 -13.6%;20 日年化波動 +56.3%（O29）。",
+      "conclusion": "6446 TRIM → 目標權重 2.97%",
+      "counter_evidence": "近期報酬與相對強弱均為正,與減碼方向不同;排名 18/146 仍屬前段。"
+    },
+    {
+      "inf_id": "I27",
+      "premise_refs": [
+        "O30"
+      ],
+      "logic": "6770 力積電排名 15/146,量化程式決定加碼。20 日報酬 -20.0%、60 日報酬 -14.1%,距 52 週高點 -34.5%;20 日相對強弱 -0.0%,與中位數接近（O30）。",
+      "conclusion": "6770 ADD → 目標權重 3.56%",
+      "counter_evidence": "20 日年化波動 +72.5%,近期價格明顯回落。"
+    },
+    {
+      "inf_id": "I28",
+      "premise_refs": [
+        "O31"
+      ],
+      "logic": "7734 印能科技排名 4/146,量化程式決定新建部位。20 日報酬 -38.2%、60 日報酬 -51.5%,距 52 週高點 -61.7%,價格大幅回落,但名次居前（O31）。",
+      "conclusion": "7734 BUY → 目標權重 4.74%",
+      "counter_evidence": "20 日相對強弱 -18.2%,20 日年化波動 +85.6%,走勢極弱且波動高。"
+    },
+    {
+      "inf_id": "I29",
+      "premise_refs": [
+        "O32"
+      ],
+      "logic": "8299 群聯排名 7/146,量化程式決定新建部位。20 日報酬 -19.9%、60 日報酬 -19.1%,距 52 週高點 -42.7%;20 日相對強弱 +0.0%,與中位數持平（O32）。",
+      "conclusion": "8299 BUY → 目標權重 3.56%",
+      "counter_evidence": "20 日年化波動 +79.2%,近期價格持續回落。"
+    },
+    {
+      "inf_id": "I30",
+      "premise_refs": [
+        "O33",
+        "O34",
+        "O35",
+        "O36"
+      ],
+      "logic": "2615、4979、6187、6274 本日無委託,維持原有部位。前日收盤分別為 107.00、348.50、950.00、962.00;20 日報酬分別為 -4.0%、-39.8%、-38.1%、-44.1%（O33、O34、O35、O36）。",
       "counter_evidence": null
     }
   ],
-  "decisions": [],
-  "no_trade_decisions": [
+  "decisions": [
     {
+      "decision_id": "D1",
       "ticker": "1101",
-      "reason_refs": [
+      "action": "TRIM",
+      "target_weight": 0.029655,
+      "inference_refs": [
         "I1"
       ],
-      "reason": "非再平衡日，組合合規，維持不動"
+      "risk_check": "目標權重 2.97% ≤ 官方上限 10%；委託由 derive-orders.v2 推導",
+      "funding_for": [
+        "D24",
+        "D17",
+        "D16",
+        "D8",
+        "D19"
+      ]
     },
     {
+      "decision_id": "D2",
       "ticker": "1216",
-      "reason_refs": [
-        "I1"
-      ],
-      "reason": "非再平衡日，組合合規，維持不動"
-    },
-    {
-      "ticker": "2002",
-      "reason_refs": [
-        "I1"
-      ],
-      "reason": "非再平衡日，組合合規，維持不動"
-    },
-    {
-      "ticker": "2337",
-      "reason_refs": [
-        "I1"
-      ],
-      "reason": "非再平衡日，組合合規，維持不動"
-    },
-    {
-      "ticker": "2344",
-      "reason_refs": [
-        "I1"
-      ],
-      "reason": "非再平衡日，組合合規，維持不動"
-    },
-    {
-      "ticker": "2347",
-      "reason_refs": [
-        "I1",
+      "action": "SELL_ALL",
+      "target_weight": 0.0,
+      "inference_refs": [
         "I2"
       ],
-      "reason": "非再平衡日，組合合規，維持不動"
+      "risk_check": "目標權重 0.00% ≤ 官方上限 10%；委託由 derive-orders.v2 推導",
+      "funding_for": [
+        "D24",
+        "D17",
+        "D16",
+        "D8",
+        "D19"
+      ]
     },
     {
+      "decision_id": "D3",
+      "ticker": "2002",
+      "action": "TRIM",
+      "target_weight": 0.029655,
+      "inference_refs": [
+        "I3"
+      ],
+      "risk_check": "目標權重 2.97% ≤ 官方上限 10%；委託由 derive-orders.v2 推導",
+      "funding_for": [
+        "D24",
+        "D17",
+        "D16",
+        "D8",
+        "D19"
+      ]
+    },
+    {
+      "decision_id": "D4",
+      "ticker": "2337",
+      "action": "ADD",
+      "target_weight": 0.035586,
+      "inference_refs": [
+        "I4"
+      ],
+      "risk_check": "目標權重 3.56% ≤ 官方上限 10%；委託由 derive-orders.v2 推導"
+    },
+    {
+      "decision_id": "D5",
+      "ticker": "2344",
+      "action": "ADD",
+      "target_weight": 0.035586,
+      "inference_refs": [
+        "I5"
+      ],
+      "risk_check": "目標權重 3.56% ≤ 官方上限 10%；委託由 derive-orders.v2 推導"
+    },
+    {
+      "decision_id": "D6",
+      "ticker": "2347",
+      "action": "SELL_ALL",
+      "target_weight": 0.0,
+      "inference_refs": [
+        "I6",
+        "I7"
+      ],
+      "risk_check": "目標權重 0.00% ≤ 官方上限 10%；委託由 derive-orders.v2 推導",
+      "funding_for": [
+        "D24",
+        "D17",
+        "D16",
+        "D8",
+        "D19"
+      ]
+    },
+    {
+      "decision_id": "D7",
       "ticker": "2376",
-      "reason_refs": [
-        "I1"
+      "action": "ADD",
+      "target_weight": 0.035586,
+      "inference_refs": [
+        "I8"
       ],
-      "reason": "非再平衡日，組合合規，維持不動"
+      "risk_check": "目標權重 3.56% ≤ 官方上限 10%；委託由 derive-orders.v2 推導"
     },
     {
-      "ticker": "2451",
-      "reason_refs": [
-        "I1"
+      "decision_id": "D8",
+      "ticker": "2383",
+      "action": "BUY",
+      "target_weight": 0.047448,
+      "inference_refs": [
+        "I9"
       ],
-      "reason": "非再平衡日，組合合規，維持不動"
+      "risk_check": "目標權重 4.74% ≤ 官方上限 10%；委託由 derive-orders.v2 推導"
     },
+    {
+      "decision_id": "D9",
+      "ticker": "2408",
+      "action": "BUY",
+      "target_weight": 0.035586,
+      "inference_refs": [
+        "I10"
+      ],
+      "risk_check": "目標權重 3.56% ≤ 官方上限 10%；委託由 derive-orders.v2 推導"
+    },
+    {
+      "decision_id": "D10",
+      "ticker": "2451",
+      "action": "ADD",
+      "target_weight": 0.029655,
+      "inference_refs": [
+        "I11"
+      ],
+      "risk_check": "目標權重 2.97% ≤ 官方上限 10%；委託由 derive-orders.v2 推導"
+    },
+    {
+      "decision_id": "D11",
+      "ticker": "2618",
+      "action": "TRIM",
+      "target_weight": 0.029655,
+      "inference_refs": [
+        "I12"
+      ],
+      "risk_check": "目標權重 2.97% ≤ 官方上限 10%；委託由 derive-orders.v2 推導",
+      "funding_for": [
+        "D24",
+        "D17",
+        "D16",
+        "D8",
+        "D19"
+      ]
+    },
+    {
+      "decision_id": "D12",
+      "ticker": "2891",
+      "action": "SELL_ALL",
+      "target_weight": 0.0,
+      "inference_refs": [
+        "I13",
+        "I14"
+      ],
+      "risk_check": "目標權重 0.00% ≤ 官方上限 10%；委託由 derive-orders.v2 推導",
+      "funding_for": [
+        "D24",
+        "D17",
+        "D16",
+        "D8",
+        "D19"
+      ]
+    },
+    {
+      "decision_id": "D13",
+      "ticker": "2912",
+      "action": "TRIM",
+      "target_weight": 0.029655,
+      "inference_refs": [
+        "I15"
+      ],
+      "risk_check": "目標權重 2.97% ≤ 官方上限 10%；委託由 derive-orders.v2 推導",
+      "funding_for": [
+        "D24",
+        "D17",
+        "D16",
+        "D8",
+        "D19"
+      ]
+    },
+    {
+      "decision_id": "D14",
+      "ticker": "3293",
+      "action": "TRIM",
+      "target_weight": 0.029655,
+      "inference_refs": [
+        "I16",
+        "I17",
+        "I18"
+      ],
+      "risk_check": "目標權重 2.97% ≤ 官方上限 10%；委託由 derive-orders.v2 推導",
+      "funding_for": [
+        "D24",
+        "D17",
+        "D16",
+        "D8",
+        "D19"
+      ]
+    },
+    {
+      "decision_id": "D15",
+      "ticker": "3443",
+      "action": "BUY",
+      "target_weight": 0.035586,
+      "inference_refs": [
+        "I19"
+      ],
+      "risk_check": "目標權重 3.56% ≤ 官方上限 10%；委託由 derive-orders.v2 推導"
+    },
+    {
+      "decision_id": "D16",
+      "ticker": "3661",
+      "action": "BUY",
+      "target_weight": 0.047448,
+      "inference_refs": [
+        "I20"
+      ],
+      "risk_check": "目標權重 4.74% ≤ 官方上限 10%；委託由 derive-orders.v2 推導"
+    },
+    {
+      "decision_id": "D17",
+      "ticker": "3702",
+      "action": "ADD",
+      "target_weight": 0.047448,
+      "inference_refs": [
+        "I21"
+      ],
+      "risk_check": "目標權重 4.74% ≤ 官方上限 10%；委託由 derive-orders.v2 推導"
+    },
+    {
+      "decision_id": "D18",
+      "ticker": "4938",
+      "action": "ADD",
+      "target_weight": 0.035586,
+      "inference_refs": [
+        "I22"
+      ],
+      "risk_check": "目標權重 3.56% ≤ 官方上限 10%；委託由 derive-orders.v2 推導"
+    },
+    {
+      "decision_id": "D19",
+      "ticker": "5274",
+      "action": "BUY",
+      "target_weight": 0.047448,
+      "inference_refs": [
+        "I23"
+      ],
+      "risk_check": "目標權重 4.74% ≤ 官方上限 10%；委託由 derive-orders.v2 推導"
+    },
+    {
+      "decision_id": "D20",
+      "ticker": "5871",
+      "action": "SELL_ALL",
+      "target_weight": 0.0,
+      "inference_refs": [
+        "I24"
+      ],
+      "risk_check": "目標權重 0.00% ≤ 官方上限 10%；委託由 derive-orders.v2 推導",
+      "funding_for": [
+        "D24",
+        "D17",
+        "D16",
+        "D8",
+        "D19"
+      ]
+    },
+    {
+      "decision_id": "D21",
+      "ticker": "5880",
+      "action": "SELL_ALL",
+      "target_weight": 0.0,
+      "inference_refs": [
+        "I25"
+      ],
+      "risk_check": "目標權重 0.00% ≤ 官方上限 10%；委託由 derive-orders.v2 推導",
+      "funding_for": [
+        "D24",
+        "D17",
+        "D16",
+        "D8",
+        "D19"
+      ]
+    },
+    {
+      "decision_id": "D22",
+      "ticker": "6446",
+      "action": "TRIM",
+      "target_weight": 0.029655,
+      "inference_refs": [
+        "I26"
+      ],
+      "risk_check": "目標權重 2.97% ≤ 官方上限 10%；委託由 derive-orders.v2 推導",
+      "funding_for": [
+        "D24",
+        "D17",
+        "D16",
+        "D8",
+        "D19"
+      ]
+    },
+    {
+      "decision_id": "D23",
+      "ticker": "6770",
+      "action": "ADD",
+      "target_weight": 0.035586,
+      "inference_refs": [
+        "I27"
+      ],
+      "risk_check": "目標權重 3.56% ≤ 官方上限 10%；委託由 derive-orders.v2 推導"
+    },
+    {
+      "decision_id": "D24",
+      "ticker": "7734",
+      "action": "BUY",
+      "target_weight": 0.047448,
+      "inference_refs": [
+        "I28"
+      ],
+      "risk_check": "目標權重 4.74% ≤ 官方上限 10%；委託由 derive-orders.v2 推導"
+    },
+    {
+      "decision_id": "D25",
+      "ticker": "8299",
+      "action": "BUY",
+      "target_weight": 0.035586,
+      "inference_refs": [
+        "I29"
+      ],
+      "risk_check": "目標權重 3.56% ≤ 官方上限 10%；委託由 derive-orders.v2 推導"
+    }
+  ],
+  "no_trade_decisions": [
     {
       "ticker": "2615",
       "reason_refs": [
-        "I1"
+        "I30"
       ],
-      "reason": "非再平衡日，組合合規，維持不動"
-    },
-    {
-      "ticker": "2618",
-      "reason_refs": [
-        "I1"
-      ],
-      "reason": "非再平衡日，組合合規，維持不動"
-    },
-    {
-      "ticker": "2891",
-      "reason_refs": [
-        "I3",
-        "I4"
-      ],
-      "reason": "非再平衡日，組合合規，維持不動"
-    },
-    {
-      "ticker": "2912",
-      "reason_refs": [
-        "I3"
-      ],
-      "reason": "非再平衡日，組合合規，維持不動"
-    },
-    {
-      "ticker": "3293",
-      "reason_refs": [
-        "I3",
-        "I5",
-        "I6"
-      ],
-      "reason": "非再平衡日，組合合規，維持不動"
-    },
-    {
-      "ticker": "3702",
-      "reason_refs": [
-        "I3"
-      ],
-      "reason": "非再平衡日，組合合規，維持不動"
-    },
-    {
-      "ticker": "4938",
-      "reason_refs": [
-        "I3"
-      ],
-      "reason": "非再平衡日，組合合規，維持不動"
+      "reason": "權重偏離小於無交易帶 2.0%"
     },
     {
       "ticker": "4979",
       "reason_refs": [
-        "I3"
+        "I30"
       ],
-      "reason": "非再平衡日，組合合規，維持不動"
-    },
-    {
-      "ticker": "5871",
-      "reason_refs": [
-        "I3"
-      ],
-      "reason": "非再平衡日，組合合規，維持不動"
-    },
-    {
-      "ticker": "5880",
-      "reason_refs": [
-        "I3"
-      ],
-      "reason": "非再平衡日，組合合規，維持不動"
+      "reason": "權重偏離小於無交易帶 2.0%"
     },
     {
       "ticker": "6187",
       "reason_refs": [
-        "I3"
+        "I30"
       ],
-      "reason": "非再平衡日，組合合規，維持不動"
+      "reason": "權重偏離小於無交易帶 2.0%"
     },
     {
       "ticker": "6274",
       "reason_refs": [
-        "I3"
+        "I30"
       ],
-      "reason": "非再平衡日，組合合規，維持不動"
+      "reason": "權重偏離小於無交易帶 2.0%"
+    }
+  ],
+  "orders": [
+    {
+      "ticker": "1101",
+      "side": "SELL",
+      "shares": 1155000,
+      "decision_ref": "D1",
+      "derivation_detail": "target_shares = floor(0.029655×835155685.5699999 / 26.8 / 1000)×1000 = 924,000；現持 2,079,000 → SELL 1,155,000"
+    },
+    {
+      "ticker": "1216",
+      "side": "SELL",
+      "shares": 885000,
+      "decision_ref": "D2",
+      "derivation_detail": "target_shares = floor(0.0×835155685.5699999 / 76.7 / 1000)×1000 = 0；現持 885,000 → SELL 885,000"
+    },
+    {
+      "ticker": "2002",
+      "side": "SELL",
+      "shares": 2362000,
+      "decision_ref": "D3",
+      "derivation_detail": "target_shares = floor(0.029655×835155685.5699999 / 18.55 / 1000)×1000 = 1,335,000；現持 3,697,000 → SELL 2,362,000"
+    },
+    {
+      "ticker": "2337",
+      "side": "BUY",
+      "shares": 340000,
+      "decision_ref": "D4",
+      "derivation_detail": "target_shares = floor(0.035586×835155685.5699999 / 83.3 / 1000)×1000 = 356,000；現持 16,000 → BUY 340,000"
+    },
+    {
+      "ticker": "2344",
+      "side": "BUY",
+      "shares": 214000,
+      "decision_ref": "D5",
+      "derivation_detail": "target_shares = floor(0.035586×835155685.5699999 / 132.5 / 1000)×1000 = 224,000；現持 10,000 → BUY 214,000"
+    },
+    {
+      "ticker": "2347",
+      "side": "SELL",
+      "shares": 14000,
+      "decision_ref": "D6",
+      "derivation_detail": "target_shares = floor(0.0×835155685.5699999 / 81.1 / 1000)×1000 = 0；現持 14,000 → SELL 14,000"
+    },
+    {
+      "ticker": "2376",
+      "side": "BUY",
+      "shares": 92000,
+      "decision_ref": "D7",
+      "derivation_detail": "target_shares = floor(0.035586×835155685.5699999 / 309.5 / 1000)×1000 = 96,000；現持 4,000 → BUY 92,000"
+    },
+    {
+      "ticker": "2383",
+      "side": "BUY",
+      "shares": 9000,
+      "decision_ref": "D8",
+      "derivation_detail": "target_shares = floor(0.047448×835155685.5699999 / 4070.0 / 1000)×1000 = 9,000；現持 0 → BUY 9,000"
+    },
+    {
+      "ticker": "2408",
+      "side": "BUY",
+      "shares": 80000,
+      "decision_ref": "D9",
+      "derivation_detail": "target_shares = floor(0.035586×835155685.5699999 / 370.0 / 1000)×1000 = 80,000；現持 0 → BUY 80,000"
+    },
+    {
+      "ticker": "2451",
+      "side": "BUY",
+      "shares": 98000,
+      "decision_ref": "D10",
+      "derivation_detail": "target_shares = floor(0.029655×835155685.5699999 / 239.0 / 1000)×1000 = 103,000；現持 5,000 → BUY 98,000"
+    },
+    {
+      "ticker": "2618",
+      "side": "SELL",
+      "shares": 746000,
+      "decision_ref": "D11",
+      "derivation_detail": "target_shares = floor(0.029655×835155685.5699999 / 43.9 / 1000)×1000 = 564,000；現持 1,310,000 → SELL 746,000"
+    },
+    {
+      "ticker": "2891",
+      "side": "SELL",
+      "shares": 792000,
+      "decision_ref": "D12",
+      "derivation_detail": "target_shares = floor(0.0×835155685.5699999 / 75.9 / 1000)×1000 = 0；現持 792,000 → SELL 792,000"
+    },
+    {
+      "ticker": "2912",
+      "side": "SELL",
+      "shares": 208000,
+      "decision_ref": "D13",
+      "derivation_detail": "target_shares = floor(0.029655×835155685.5699999 / 211.5 / 1000)×1000 = 117,000；現持 325,000 → SELL 208,000"
+    },
+    {
+      "ticker": "3293",
+      "side": "SELL",
+      "shares": 43000,
+      "decision_ref": "D14",
+      "derivation_detail": "target_shares = floor(0.029655×835155685.5699999 / 747.0 / 1000)×1000 = 33,000；現持 76,000 → SELL 43,000"
+    },
+    {
+      "ticker": "3443",
+      "side": "BUY",
+      "shares": 4000,
+      "decision_ref": "D15",
+      "derivation_detail": "target_shares = floor(0.035586×835155685.5699999 / 6705.0 / 1000)×1000 = 4,000；現持 0 → BUY 4,000"
+    },
+    {
+      "ticker": "3661",
+      "side": "BUY",
+      "shares": 12000,
+      "decision_ref": "D16",
+      "derivation_detail": "target_shares = floor(0.047448×835155685.5699999 / 3110.0 / 1000)×1000 = 12,000；現持 0 → BUY 12,000"
+    },
+    {
+      "ticker": "3702",
+      "side": "BUY",
+      "shares": 425000,
+      "decision_ref": "D17",
+      "derivation_detail": "target_shares = floor(0.047448×835155685.5699999 / 90.4 / 1000)×1000 = 438,000；現持 13,000 → BUY 425,000"
+    },
+    {
+      "ticker": "4938",
+      "side": "BUY",
+      "shares": 298000,
+      "decision_ref": "D18",
+      "derivation_detail": "target_shares = floor(0.035586×835155685.5699999 / 95.4 / 1000)×1000 = 311,000；現持 13,000 → BUY 298,000"
+    },
+    {
+      "ticker": "5274",
+      "side": "BUY",
+      "shares": 3000,
+      "decision_ref": "D19",
+      "derivation_detail": "target_shares = floor(0.047448×835155685.5699999 / 11700.0 / 1000)×1000 = 3,000；現持 0 → BUY 3,000"
+    },
+    {
+      "ticker": "5871",
+      "side": "SELL",
+      "shares": 564000,
+      "decision_ref": "D20",
+      "derivation_detail": "target_shares = floor(0.0×835155685.5699999 / 103.0 / 1000)×1000 = 0；現持 564,000 → SELL 564,000"
+    },
+    {
+      "ticker": "5880",
+      "side": "SELL",
+      "shares": 2094000,
+      "decision_ref": "D21",
+      "derivation_detail": "target_shares = floor(0.0×835155685.5699999 / 27.8 / 1000)×1000 = 0；現持 2,094,000 → SELL 2,094,000"
     },
     {
       "ticker": "6446",
-      "reason_refs": [
-        "I7"
-      ],
-      "reason": "非再平衡日，組合合規，維持不動"
+      "side": "SELL",
+      "shares": 15000,
+      "decision_ref": "D22",
+      "derivation_detail": "target_shares = floor(0.029655×835155685.5699999 / 1370.0 / 1000)×1000 = 18,000；現持 33,000 → SELL 15,000"
     },
     {
       "ticker": "6770",
-      "reason_refs": [
-        "I7"
-      ],
-      "reason": "非再平衡日，組合合規，維持不動"
+      "side": "BUY",
+      "shares": 488000,
+      "decision_ref": "D23",
+      "derivation_detail": "target_shares = floor(0.035586×835155685.5699999 / 58.1 / 1000)×1000 = 511,000；現持 23,000 → BUY 488,000"
+    },
+    {
+      "ticker": "7734",
+      "side": "BUY",
+      "shares": 23000,
+      "decision_ref": "D24",
+      "derivation_detail": "target_shares = floor(0.047448×835155685.5699999 / 1675.0 / 1000)×1000 = 23,000；現持 0 → BUY 23,000"
+    },
+    {
+      "ticker": "8299",
+      "side": "BUY",
+      "shares": 18000,
+      "decision_ref": "D25",
+      "derivation_detail": "target_shares = floor(0.035586×835155685.5699999 / 1650.0 / 1000)×1000 = 18,000；現持 0 → BUY 18,000"
     }
   ],
-  "orders": [],
   "agent_metadata": {
     "model_provider": "anthropic",
     "model_version": "claude-sonnet-5-5",
-    "run_started_at": "2026-11-09T20:02:10+08:00",
-    "run_completed_at": "2026-11-09T20:04:14+08:00",
-    "input_tokens": 8,
-    "output_tokens": 4183,
+    "run_started_at": "2026-11-10T00:07:44+08:00",
+    "run_completed_at": "2026-11-10T00:08:41+08:00",
+    "input_tokens": 6,
+    "output_tokens": 8182,
     "tool_use_count": 3,
-    "code_version": "git:cc6ce56"
+    "code_version": "git:5381652"
   }
 }
