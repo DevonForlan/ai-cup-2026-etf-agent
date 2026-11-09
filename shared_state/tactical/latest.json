@@ -1,12 +1,12 @@
 {
  "trade_date": "2026-11-10",
- "phase": "RESUME",
- "status": "FROZEN_QUANT_RESUMED",
+ "phase": "RESUME_REBALANCE",
+ "status": "FROZEN_QUANT_FULL_REBALANCE",
  "tactical_status": null,
  "version": "TACTICAL_OVERRIDE_V2_TECH_LT10",
- "fingerprint": "191e65811faaf3d589459e19042c353742d08979ecd114e48f1e31fce39fa0f1",
+ "fingerprint": "6282ae4de0bedf0d1dc5f648af4245b6ef2ea3fa6dd01d9832e59ba5306930e9",
  "x_effective": null,
  "submission_status": "SUBMISSION_CONFIRMED",
- "final_sha256": "d7e435ea88e425b21f7474dfd4b4bf494bdcb6643ac074b91d155cdcf9cd1b70",
- "record_path": "shared_state/tactical/2026-11-10_RESUME_V2.json"
+ "final_sha256": "302477613e9b570e20760a238859d2d9026f0043a90833c5bb02c2f3b4612977",
+ "record_path": "shared_state/tactical/2026-11-10_RESUME_REBALANCE_V2.json"
 }
