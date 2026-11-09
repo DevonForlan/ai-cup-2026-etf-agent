@@ -1,0 +1,323 @@
+{
+ "trade_date": "2026-11-09",
+ "evaluation_type": "COMPETITION_DAY_ESTIMATE",
+ "is_official_settlement": false,
+ "nav": 835295641.0,
+ "daily_return_pct": 3.52,
+ "cumulative_return_pct": -16.47,
+ "mdd_pct": 21.99,
+ "turnover_pct": 147.28,
+ "fees": 1693507.0,
+ "tax": 1772564.0,
+ "cash_weight_pct": 16.55,
+ "holdings_count": 22,
+ "active_share_pct": 60.39,
+ "active_share_vs": "00985A",
+ "compliance": "PASS",
+ "nav_reconciliation": "PASS",
+ "return_attribution_check": "PASS",
+ "positive_holding_ratio_pct": 72.73,
+ "overall": "READY",
+ "starting_point": "OFFICIAL_SETTLEMENT（2026-11-06）",
+ "execution": "30 filled / 30 orders",
+ "dplan_file": "submissions\\20261109\\FINAL\\D-Plan_TEAM_11442_2026-11-09.json",
+ "holdings": [
+  {
+   "ticker": "2912",
+   "name": "統一超",
+   "weight_pct": 8.23,
+   "daily_return_pct": 0.48,
+   "contribution_pct": -0.014
+  },
+  {
+   "ticker": "2002",
+   "name": "中鋼",
+   "weight_pct": 8.21,
+   "daily_return_pct": 0.0,
+   "contribution_pct": -0.078
+  },
+  {
+   "ticker": "1216",
+   "name": "統一",
+   "weight_pct": 8.13,
+   "daily_return_pct": -0.13,
+   "contribution_pct": -0.023
+  },
+  {
+   "ticker": "2891",
+   "name": "中信金",
+   "weight_pct": 7.2,
+   "daily_return_pct": 3.41,
+   "contribution_pct": 0.079
+  },
+  {
+   "ticker": "5880",
+   "name": "合庫金",
+   "weight_pct": 6.97,
+   "daily_return_pct": -0.36,
+   "contribution_pct": -0.049
+  },
+  {
+   "ticker": "5871",
+   "name": "中租-KY",
+   "weight_pct": 6.95,
+   "daily_return_pct": 0.98,
+   "contribution_pct": -0.017
+  },
+  {
+   "ticker": "2618",
+   "name": "長榮航",
+   "weight_pct": 6.88,
+   "daily_return_pct": 0.69,
+   "contribution_pct": 0.035
+  },
+  {
+   "ticker": "3293",
+   "name": "鈊象",
+   "weight_pct": 6.8,
+   "daily_return_pct": 1.49,
+   "contribution_pct": -0.028
+  },
+  {
+   "ticker": "1101",
+   "name": "台泥",
+   "weight_pct": 6.67,
+   "daily_return_pct": 0.19,
+   "contribution_pct": -0.07
+  },
+  {
+   "ticker": "6446",
+   "name": "藥華藥",
+   "weight_pct": 5.41,
+   "daily_return_pct": 7.87,
+   "contribution_pct": 0.074
+  },
+  {
+   "ticker": "2615",
+   "name": "萬海",
+   "weight_pct": 3.18,
+   "daily_return_pct": -0.47,
+   "contribution_pct": -0.015
+  },
+  {
+   "ticker": "4979",
+   "name": "華星光",
+   "weight_pct": 2.71,
+   "daily_return_pct": 9.94,
+   "contribution_pct": 0.254
+  },
+  {
+   "ticker": "6187",
+   "name": "萬潤",
+   "weight_pct": 2.62,
+   "daily_return_pct": 9.95,
+   "contribution_pct": 0.245
+  },
+  {
+   "ticker": "6274",
+   "name": "台燿",
+   "weight_pct": 2.3,
+   "daily_return_pct": 6.18,
+   "contribution_pct": 0.139
+  },
+  {
+   "ticker": "6770",
+   "name": "力積電",
+   "weight_pct": 0.16,
+   "daily_return_pct": 9.83,
+   "contribution_pct": 0.212
+  },
+  {
+   "ticker": "2337",
+   "name": "旺宏",
+   "weight_pct": 0.16,
+   "daily_return_pct": 9.89,
+   "contribution_pct": 0.217
+  },
+  {
+   "ticker": "2344",
+   "name": "華邦電",
+   "weight_pct": 0.16,
+   "daily_return_pct": 9.96,
+   "contribution_pct": 0.267
+  },
+  {
+   "ticker": "4938",
+   "name": "和碩",
+   "weight_pct": 0.15,
+   "daily_return_pct": 2.69,
+   "contribution_pct": 0.134
+  },
+  {
+   "ticker": "2376",
+   "name": "技嘉",
+   "weight_pct": 0.15,
+   "daily_return_pct": 3.86,
+   "contribution_pct": 0.233
+  },
+  {
+   "ticker": "2451",
+   "name": "創見",
+   "weight_pct": 0.14,
+   "daily_return_pct": -3.24,
+   "contribution_pct": -0.106
+  },
+  {
+   "ticker": "3702",
+   "name": "大聯大",
+   "weight_pct": 0.14,
+   "daily_return_pct": 0.22,
+   "contribution_pct": 0.03
+  },
+  {
+   "ticker": "2347",
+   "name": "聯強",
+   "weight_pct": 0.14,
+   "daily_return_pct": -3.91,
+   "contribution_pct": -0.097
+  },
+  {
+   "ticker": "2360",
+   "name": "致茂",
+   "weight_pct": 0.0,
+   "daily_return_pct": 3.73,
+   "contribution_pct": 0.05
+  },
+  {
+   "ticker": "2383",
+   "name": "台光電",
+   "weight_pct": 0.0,
+   "daily_return_pct": 6.54,
+   "contribution_pct": 0.168
+  },
+  {
+   "ticker": "2408",
+   "name": "南亞科",
+   "weight_pct": 0.0,
+   "daily_return_pct": 7.71,
+   "contribution_pct": 0.269
+  },
+  {
+   "ticker": "3081",
+   "name": "聯亞",
+   "weight_pct": 0.0,
+   "daily_return_pct": 10.0,
+   "contribution_pct": 0.227
+  },
+  {
+   "ticker": "3443",
+   "name": "創意",
+   "weight_pct": 0.0,
+   "daily_return_pct": 8.06,
+   "contribution_pct": 0.193
+  },
+  {
+   "ticker": "3661",
+   "name": "世芯-KY",
+   "weight_pct": 0.0,
+   "daily_return_pct": 9.89,
+   "contribution_pct": 0.451
+  },
+  {
+   "ticker": "3680",
+   "name": "家登",
+   "weight_pct": 0.0,
+   "daily_return_pct": 9.9,
+   "contribution_pct": 0.22
+  },
+  {
+   "ticker": "5289",
+   "name": "宜鼎",
+   "weight_pct": 0.0,
+   "daily_return_pct": -0.32,
+   "contribution_pct": 0.022
+  },
+  {
+   "ticker": "6669",
+   "name": "緯穎",
+   "weight_pct": 0.0,
+   "daily_return_pct": 5.79,
+   "contribution_pct": 0.219
+  },
+  {
+   "ticker": "7734",
+   "name": "印能科技",
+   "weight_pct": 0.0,
+   "daily_return_pct": 7.03,
+   "contribution_pct": 0.164
+  },
+  {
+   "ticker": "7769",
+   "name": "鴻勁",
+   "weight_pct": 0.0,
+   "daily_return_pct": 9.93,
+   "contribution_pct": 0.211
+  },
+  {
+   "ticker": "8299",
+   "name": "群聯",
+   "weight_pct": 0.0,
+   "daily_return_pct": 10.0,
+   "contribution_pct": 0.332
+  }
+ ],
+ "largest_positive_contributors": [
+  {
+   "ticker": "3661",
+   "name": "世芯-KY",
+   "contribution_pct": 0.451
+  },
+  {
+   "ticker": "8299",
+   "name": "群聯",
+   "contribution_pct": 0.332
+  },
+  {
+   "ticker": "2408",
+   "name": "南亞科",
+   "contribution_pct": 0.269
+  },
+  {
+   "ticker": "2344",
+   "name": "華邦電",
+   "contribution_pct": 0.267
+  },
+  {
+   "ticker": "4979",
+   "name": "華星光",
+   "contribution_pct": 0.254
+  }
+ ],
+ "largest_negative_contributors": [
+  {
+   "ticker": "2451",
+   "name": "創見",
+   "contribution_pct": -0.106
+  },
+  {
+   "ticker": "2347",
+   "name": "聯強",
+   "contribution_pct": -0.097
+  },
+  {
+   "ticker": "2002",
+   "name": "中鋼",
+   "contribution_pct": -0.078
+  },
+  {
+   "ticker": "1101",
+   "name": "台泥",
+   "contribution_pct": -0.07
+  },
+  {
+   "ticker": "5880",
+   "name": "合庫金",
+   "contribution_pct": -0.049
+  }
+ ],
+ "source_report": "reports/daily_evaluations/2026-11-09_evaluation.md",
+ "source_sha256": "sha256:42b1eb51f261ed5b972cf37a2e31fddd7330ca590524a2b14baf67eced46e434",
+ "synced_at": "2026-11-09T17:08:03+08:00",
+ "supersedes": [],
+ "idempotency_key": "2026-11-09|sha256:42b1eb51f261ed5b972cf37a2e31fddd7330ca590524a2b14baf67eced46e434"
+}
