@@ -34,6 +34,7 @@ CONFIG_PATH = ROOT / "config" / "tactical_override_v1.yaml"
 CONFIG_PATH_V2 = ROOT / "config" / "tactical_override_v2.yaml"
 STATE_DIR = ROOT / "logs" / "tactical"
 MAX_NAMES, MIN_NAMES = 30, 20
+EXIT_RESUME = "FROZEN_QUANT_RESUME"
 OPERATIONAL_MODES = ("competition",)   # the scheduled production flow; dry-run / historical never apply the override
 AS_FLOOR = Decimal("0.15")          # official Active Share floor (top-15 NAV method), each ETF
 Q = Decimal("0.00000001")
@@ -74,7 +75,10 @@ def phase_for(cfg: dict, trade_date: str) -> str | None:
     if trade_date == str(cfg["entry_trade_date"]):
         return "ENTRY"
     if trade_date >= str(cfg["exit_trade_date"]):
-        return "UNWIND"
+        # Issue #49 (Owner preference): V2 ends after its entry day and Frozen Quant v1 resumes sole control from the
+        # actual holdings - no mechanical restore of the old lots. RESUME still *claims* the dates so the superseded V1
+        # config (whose sleeve overlaps V2's buys) can never fire an unwind.
+        return "RESUME" if cfg.get("exit_mode") == EXIT_RESUME else "UNWIND"
     return None
 
 
@@ -375,6 +379,8 @@ def is_active(trade_date: str, mode: str, *, config_path=None, modes=None, prev_
     if not (tcfg and mode in (modes or OPERATIONAL_MODES)):
         return False
     ph = phase_for(tcfg, trade_date)
+    if ph == "RESUME":
+        return False                    # Frozen Quant v1 alone decides; the narrative stays LLM-written
     if ph == "UNWIND" and prev_holdings is not None:
         return sleeve_open({t: int(s) for t, s in prev_holdings.items()}, tcfg)
     return bool(ph)
@@ -423,6 +429,20 @@ def activate(trade_date: str, mode: str, *, config_path=None, state_dir=None, mo
     tcfg = resolve_config(config_path, trade_date)
     act = Activation(tcfg, trade_date, state_dir or STATE_DIR)
     phase = phase_for(tcfg, trade_date) if tcfg else None
+    if tcfg is not None and phase == "RESUME" and mode in modes:
+        if trade_date == str(tcfg["exit_trade_date"]):     # one audit record; the construct function is NOT patched
+            act.record = {"phase": "RESUME", "status": "FROZEN_QUANT_RESUMED", "decision_authority": "FROZEN_QUANT_V1",
+                          "reason": "TACTICAL_OVERRIDE_V2 ended after its entry day; Frozen Quant v1 built this D-Plan from the actual "
+                                    "holdings with no tactical order (no mechanical restore of the stored baseline lots)",
+                          "frozen_quant_sha256": tcfg.get("frozen_quant_sha256")}
+        try:
+            yield act
+        finally:
+            try:
+                act.write()
+            except OSError:
+                pass
+        return
     if tcfg is None or phase is None or mode not in modes:
         yield act
         return

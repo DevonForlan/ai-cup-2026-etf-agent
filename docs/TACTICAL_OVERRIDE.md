@@ -31,3 +31,17 @@ Supersedes V1 for 2026-11-09: technology/electronics weight (same 7-industry clu
 * Unwind (2026-11-10, expiry-first, from ACTUAL holdings): sleeve (V2 + V1 names) sold, tech restored to the stored baseline lots; the exact reverse plan is persisted in the ENTRY record (`unwind_plan`) before submission. Failure = `TACTICAL_UNWIND_OVERDUE`, retried next window.
 * Supersession of the already SUBMISSION_CONFIRMED FINAL: `python -m agent.ops.tactical_supersede --date 2026-11-09 --authorization "Issue #49 ..."` (see module docstring): read-only portal check that the prior FINAL is confirmed, prior artefacts archived under `submissions/<T>/superseded/`, new candidate from the unchanged competition_day flow, promoted only through `candidate_gate`, submitted by the guarded auto_upload (SUBMISSION_CONFIRMED only from real portal evidence), state restored to the prior confirmed FINAL on any failure.
 * Rollback: delete/disable `config/tactical_override_v2.yaml`.
+
+## V2 exit = direct Frozen Quant v1 resume (Issue #49, Owner preference 2026-11-09)
+
+`config/tactical_override_v2.yaml` carries `exit_mode: FROZEN_QUANT_RESUME`. From `exit_trade_date` (2026-11-10) the phase is `RESUME`:
+`activate()` does **not** patch `agent.pipeline.construct`, so Frozen Quant v1 alone builds the D-Plan from the ACTUAL settled holdings
+(all its legality gates, 30-order cap and Fallback-to-previous still apply). The V2 config keeps claiming every later date so the superseded
+V1 config (whose unwind sleeve overlaps V2's buys) can never fire. One audit record `logs/tactical/<date>_RESUME_V2.json`
+(`FROZEN_QUANT_RESUMED`, `decision_authority: FROZEN_QUANT_V1`) is written on the exit date only. The `unwind_plan` stored in the ENTRY record
+remains audit data and is not executed. Rollback: set `exit_mode: EXPLICIT_UNWIND` (any other value) to restore the mechanical unwind.
+
+## Shadow baseline (Issue #48)
+`python -m agent.ops.shadow_baseline generate|compare --date T [--publish]`: untouched Frozen Quant v1 from the same settlement state and as-of,
+written only under `logs/shadow/<T>/` (`SHADOW_BASELINE_NOT_FOR_SUBMISSION`, never under `submissions/`); `compare` settles baseline / V1 / V2 order
+sets with `agent.sim.settle.settle` after the close.
