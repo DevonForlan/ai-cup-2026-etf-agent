@@ -13,6 +13,10 @@ exit_trade_date: '2026-11-10'
 # Owner preference 2026-11-09 (Issue #49): no mechanical unwind. From exit_trade_date Frozen Quant v1 resumes sole control
 # from the ACTUAL holdings (agent/tactical/override.py phase RESUME). The unwind_plan stored in the ENTRY record stays as audit data.
 exit_mode: FROZEN_QUANT_RESUME
+# Owner override 2026-11-09 (Issue #61): on this ONE date the unchanged Frozen Quant v1 constructor is called with is_rebalance_day=True
+# (bypassing only the rebalance_every=100 hold cadence) so it rebuilds the portfolio from the official opening state. No ticker, sector or
+# weight is specified here. Every other RESUME date keeps Frozen Quant's own cadence.
+resume_full_rebalance_date: '2026-11-10'
 target_tech_weight_max: 0.1
 tech_design_max: 0.085
 tech_guard_max: 0.09

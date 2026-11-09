@@ -45,3 +45,19 @@ remains audit data and is not executed. Rollback: set `exit_mode: EXPLICIT_UNWIN
 `python -m agent.ops.shadow_baseline generate|compare --date T [--publish]`: untouched Frozen Quant v1 from the same settlement state and as-of,
 written only under `logs/shadow/<T>/` (`SHADOW_BASELINE_NOT_FOR_SUBMISSION`, never under `submissions/`); `compare` settles baseline / V1 / V2 order
 sets with `agent.sim.settle.settle` after the close.
+
+## One-time full Frozen Quant v1 rebalance on 2026-11-10 (Issue #61, Owner override)
+`resume_full_rebalance_date: '2026-11-10'` in `config/tactical_override_v2.yaml`. On that date `activate()` wraps `agent.pipeline.construct`
+and calls the UNCHANGED constructor with `is_rebalance_day=True` (only the `rebalance_every=100` hold cadence is bypassed). No ticker, sector or
+weight is supplied; Frozen Quant v1 rebuilds its target from the official opening state.
+Real-data finding: that target (24 names, ~75.8 % technology) needs 35 orders, above the official 30 decisions/day, and the constructor's own
+30-order demotion breaks the cash rule (27.7 % > 25 %) -> it returns `FallbackToPreviousPortfolio` (hold). Deterministic staging
+(`_stage_to_decision_cap`): keep Quant's OWN target weights, defer the n smallest-value SELL/TRIM decisions at their current holding
+(n = 1, 2, ...), first n for which Quant's own `_finalize` (lots, caps, cash band, post-trade compliance, Active Share, stress, <= 30 orders)
+passes. The deferred names are recorded (`deferred_sells`) in `logs/tactical/<date>_RESUME_REBALANCE_V2.json`
+(`FROZEN_QUANT_FULL_REBALANCE`, `decision_authority: FROZEN_QUANT_V1`, before/after tech, cash, turnover, Active Share).
+If nothing passes the record is `FULL_REBALANCE_FALLBACK` and the unchanged Quant result (hold) stays. The superseding submission uses
+`python -m agent.ops.tactical_supersede --date 2026-11-10 --authorization "Issue #61 ..."`; `_rebalance_gate` fails closed
+(validation PASS, no fallback, record status/authority, Quant fingerprint, 1-30 orders, 20-30 holdings, Active Share >= 15 %, cash < 25 %).
+Rollback: delete the `resume_full_rebalance_date` key (plain RESUME again); the superseded no-trade FINAL is archived under
+`submissions/20261110/superseded/<sha12>/`.

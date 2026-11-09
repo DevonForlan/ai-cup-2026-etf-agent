@@ -386,6 +386,76 @@ def is_active(trade_date: str, mode: str, *, config_path=None, modes=None, prev_
     return bool(ph)
 
 
+FORCED = "FROZEN_QUANT_FULL_REBALANCE"
+
+
+def is_forced_rebalance(tcfg: dict, trade_date: str) -> bool:
+    """Issue #61: the one-time full Frozen Quant v1 rebalance date (only on the RESUME phase, only that date)."""
+    d = str(tcfg.get("resume_full_rebalance_date") or "")
+    return bool(d) and trade_date == d and phase_for(tcfg, trade_date) == "RESUME"
+
+
+def _stage_to_decision_cap(plan, prev_cash, rb, cfg, market, etf_holdings, etf_meta, scores, regime_override):
+    """The unchanged Frozen Quant v1 target needs more than the official 30 decisions/day (or breaks the cash rule when the cap demotes
+    buys). Deterministic staging, no ticker / sector / weight chosen by hand: take Quant's OWN target weights, keep (defer) the n smallest-value
+    SELL / TRIM decisions at their current holding, n = 1, 2, ... the first n for which Quant's own `_finalize` (lots, caps, cash band, post-trade
+    compliance, Active Share, stress, <= 30 orders) passes. Returns (TargetPortfolio, deferred_tickers, unconstrained_orders) or None."""
+    from agent.portfolio.decisions import plan_decisions
+    tw, prev_h, no_trade, nav, closes, lot = plan
+    full = plan_decisions(tw, prev_h, no_trade, nav, closes, lot)
+    traded = [d for d in full if d.action != "NO_TRADE"]
+    sells = sorted((d for d in full if d.action in ("SELL_ALL", "TRIM")),
+                   key=lambda d: (abs(D(d.target_shares or 0) - D(prev_h.get(d.ticker, 0))) * D(closes[d.ticker]), d.ticker))
+    regime, stance, cash_rng, why = regime_override or B.regime_from_market(market, cfg)
+    rank_of = {t: int(r) for t, r in scores["rank"].dropna().items()} if "rank" in scores else {}
+    for n in range(1, len(sells) + 1):
+        deferred = [d.ticker for d in sells[:n]]
+        tw2, nt2 = dict(tw), set(no_trade) | set(deferred)
+        for t in deferred:
+            tw2[t] = (D(prev_h.get(t, 0)) * D(closes[t]) / D(nav)).quantize(Q, rounding="ROUND_FLOOR")
+        info = {"kept": list(prev_h), "new": [], "dropped": [], "rank_of": rank_of, "tactical": "FROZEN_QUANT_V1_FULL_REBALANCE_STAGED"}
+        notes = [f"一次性完整再平衡（Owner Issue #61，沿用未修改的 Frozen Quant v1 目標權重）：每日委託上限 30 筆，"
+                 f"延後 {n} 筆最小金額賣出：{deferred}"]
+        res = K._finalize(tw2, nt2, prev_h, D(prev_cash), D(nav), closes, rb, cfg, etf_holdings, etf_meta, regime, stance, why,
+                          cash_rng, info, notes)
+        if isinstance(res, K.TargetPortfolio) and len(res.orders) <= 30:
+            return res, deferred, len(traded)
+    return None
+
+
+def _forced_record(tcfg, res, prev_holdings, closes_prev, nav_prev, rb, original_flag, *, staged=None, plan=None, stage_error=None) -> dict:
+    """Audit record of the forced rebalance (before / after, turnover, Active Share). Never raises."""
+    rec = {"phase": "RESUME_REBALANCE", "status": FORCED, "decision_authority": "FROZEN_QUANT_V1", "rebalance_override_scope": "ONE_TIME",
+           "rebalance_day_flag_from_pipeline": bool(original_flag), "frozen_quant_sha256": tcfg.get("frozen_quant_sha256"),
+           "reason": f"Owner override (Issue #61): unchanged Frozen Quant v1 rebuilt the portfolio on {tcfg.get('resume_full_rebalance_date')} "
+                     "from the official opening state; only the rebalance_every cadence was bypassed; no manual ticker / sector / weight"}
+    try:
+        prev_h = {t: int(s) for t, s in prev_holdings.items() if int(s) > 0}
+        if plan is not None:                                  # Frozen Quant's own (unconstrained) target, for the audit trail
+            tw = plan[0]
+            tech = set(tcfg["reduce_tickers"])
+            rec["frozen_target_names"] = len(tw)
+            rec["frozen_target_tech_weight"] = float(sum(v for t, v in tw.items() if t in tech))
+            rec["frozen_target_cash_weight"] = float(1 - sum(tw.values()))
+        if stage_error:
+            rec["stage_error"] = stage_error
+        if staged is not None:
+            rec.update(staged_to_decision_cap=True, deferred_sells=list(staged[1]), unconstrained_orders_needed=int(staged[2]),
+                       decision_cap=30)
+        if not isinstance(res, K.TargetPortfolio) or getattr(res, "is_fallback", False):
+            rec.update(status="FULL_REBALANCE_FALLBACK", reason=f"Frozen Quant returned a fallback / hold: {getattr(res, 'reason', res)}"[:300])
+            return rec
+        names = {t: rb.universe[t]["name"] for t in rb.universe}
+        rec.update(_summarise(res, prev_h, closes_prev, D(nav_prev), set(tcfg["reduce_tickers"]), names))
+        traded = sum((Decimal(int(o.shares)) * _closes(closes_prev, o.ticker) for o in res.orders), Decimal(0))
+        rec["turnover_pct"] = float(traded / D(nav_prev) * 100)
+        rec["holdings_before"] = len(prev_h)
+        rec["cash_weight_before"] = float(1 - sum(_weights(prev_h, closes_prev, D(nav_prev)).values()))
+    except Exception as e:  # noqa: BLE001
+        rec["summary_error"] = f"{type(e).__name__}: {e}"[:200]
+    return rec
+
+
 def config_rel(act) -> str:
     """Repo-relative posix path of the config this activation used (archived with the run)."""
     path = Path(act.tcfg["_path"]).resolve()
@@ -429,6 +499,54 @@ def activate(trade_date: str, mode: str, *, config_path=None, state_dir=None, mo
     tcfg = resolve_config(config_path, trade_date)
     act = Activation(tcfg, trade_date, state_dir or STATE_DIR)
     phase = phase_for(tcfg, trade_date) if tcfg else None
+    if tcfg is not None and phase == "RESUME" and mode in modes and is_forced_rebalance(tcfg, trade_date):
+        orig_f = P.construct
+
+        def forced(scores, prev_holdings, prev_cash, nav_prev, closes_prev, rb, cfg, market, etf_holdings=None,
+                   etf_meta=None, method=None, holding_days=None, is_rebalance_day=True, regime_override=None, guard=None):
+            """Issue #61: the UNCHANGED Frozen Quant v1 constructor, called with is_rebalance_day=True. Nothing else is altered:
+            no ticker, sector or weight is supplied; its result is returned as is (a FallbackToPreviousPortfolio stays a fallback)."""
+            seen: dict = {}
+            orig_plan = K.plan_decisions
+
+            def spy(target_w, prev_h, no_trade, nav, closes, lot):          # observe only: the same plan is returned unchanged
+                seen["plan"] = (dict(target_w), dict(prev_h), set(no_trade), nav, dict(closes), lot)
+                return orig_plan(target_w, prev_h, no_trade, nav, closes, lot)
+
+            K.plan_decisions = spy
+            try:
+                res = orig_f(scores, prev_holdings, prev_cash, nav_prev, closes_prev, rb, cfg, market, etf_holdings, etf_meta,
+                             method, holding_days, True, regime_override, guard)
+            finally:
+                K.plan_decisions = orig_plan
+            act.calls += 1
+            staged = None
+            if not isinstance(res, K.TargetPortfolio) and "plan" in seen:
+                try:
+                    staged = _stage_to_decision_cap(seen["plan"], prev_cash, rb, cfg, market, etf_holdings, etf_meta, scores,
+                                                    regime_override)
+                except Exception as e:  # noqa: BLE001  fail closed: the unchanged Quant result stays
+                    staged = None
+                    seen["stage_error"] = f"{type(e).__name__}: {e}"[:200]
+            if staged is not None:
+                res = staged[0]
+            act.record = _forced_record(tcfg, res, prev_holdings, closes_prev, nav_prev, rb, is_rebalance_day,
+                                        staged=staged, plan=seen.get("plan"), stage_error=seen.get("stage_error"))
+            return res
+
+        P.construct = forced
+        try:
+            yield act
+        finally:
+            P.construct = orig_f
+            if act.record is None:
+                act.record = {"phase": "RESUME_REBALANCE", "status": "FULL_REBALANCE_NOT_REACHED", "decision_authority": "FROZEN_QUANT_V1",
+                              "reason": "the constructor was not called in this run"}
+            try:
+                act.write()
+            except OSError:
+                pass
+        return
     if tcfg is not None and phase == "RESUME" and mode in modes:
         if trade_date == str(tcfg["exit_trade_date"]):     # one audit record; the construct function is NOT patched
             act.record = {"phase": "RESUME", "status": "FROZEN_QUANT_RESUMED", "decision_authority": "FROZEN_QUANT_V1",

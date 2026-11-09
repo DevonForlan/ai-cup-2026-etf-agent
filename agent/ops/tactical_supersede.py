@@ -35,12 +35,44 @@ LOG = ROOT / "logs" / "tactical" / "supersede.jsonl"
 OPERATOR = "tactical_supersede_v2"
 
 
+def _rebalance_gate(s: dict, t: dict, tcfg: dict, run_id: str | None) -> tuple[bool, list[str]]:
+    """Issue #61: may the one-time full Frozen Quant v1 rebalance candidate replace the confirmed no-trade FINAL? Fail closed."""
+    why = []
+    if run_id is None or s.get("run_id") != run_id:
+        why.append("summary does not belong to the candidate run")
+    if s.get("status") != "READY_TO_SUBMIT":
+        why.append(f"run status {s.get('status')}")
+    if s.get("validation") != "PASS":
+        why.append(f"validation {s.get('validation')}")
+    if s.get("fallback"):
+        why.append("the run fell back to the previous portfolio")
+    if t.get("status") != "FROZEN_QUANT_FULL_REBALANCE" or t.get("decision_authority") != "FROZEN_QUANT_V1":
+        why.append(f"record {t.get('status')} / {t.get('decision_authority')} (FROZEN_QUANT_FULL_REBALANCE by FROZEN_QUANT_V1 required)")
+    if t.get("frozen_quant_sha256") != tcfg.get("frozen_quant_sha256") or \
+            t.get("frozen_quant_sha256") != "f34fa02e924011b20c52a4bd42e961169f97e1950e76e04b7e78dc43ac23d2e0":
+        why.append("Frozen Quant v1 fingerprint mismatch")
+    if t.get("fingerprint") != tcfg.get("_fingerprint"):
+        why.append("tactical fingerprint differs from the deployed config")
+    if int(t.get("orders") or 0) > 30 or int(t.get("orders") or 0) < 1:
+        why.append(f"orders {t.get('orders')} (1-30 required)")
+    n = t.get("holdings_after")
+    if n is None or not (20 <= int(n) <= 30):
+        why.append(f"holdings {n} not in 20-30")
+    if t.get("active_share_min") is None or float(t["active_share_min"]) < 0.15:
+        why.append(f"Active Share {t.get('active_share_min')} below 0.15")
+    if t.get("cash_weight_after") is None or not float(t["cash_weight_after"]) < 0.25:
+        why.append(f"cash weight {t.get('cash_weight_after')} not below 25%")
+    return (not why), why
+
+
 def candidate_gate(summary: dict | None, tcfg: dict, run_id: str | None) -> tuple[bool, list[str]]:
     """Pure: may this competition_day candidate replace the confirmed FINAL? Every condition must hold (fail closed)."""
     from agent.tactical import override as TO
     s = summary or {}
     t = s.get("tactical_override") or {}
     why = []
+    if t.get("phase") == "RESUME_REBALANCE":                       # Issue #61: the one-time full Frozen Quant v1 rebalance
+        return _rebalance_gate(s, t, tcfg, run_id)
     if run_id is None or s.get("run_id") != run_id:
         why.append("summary does not belong to the candidate run")
     if s.get("status") != "READY_TO_SUBMIT":
@@ -112,8 +144,10 @@ def preconditions(trade_date: str, ops: dict, now: datetime) -> dict:
     out = {"ok": False, "reasons": [], "trade_date": trade_date}
     tcfg = TO.resolve_config(None, trade_date)
     out["tactical_version"] = (tcfg or {}).get("version")
-    if tcfg is None or tcfg["version"] != TO.VERSION_V2 or TO.phase_for(tcfg, trade_date) != "ENTRY":
-        out["reasons"].append("no enabled TACTICAL_OVERRIDE_V2 ENTRY config for this trade date")
+    rebalance = bool(tcfg) and tcfg["version"] == TO.VERSION_V2 and TO.is_forced_rebalance(tcfg, trade_date)
+    out["mode"] = "ONE_TIME_FROZEN_QUANT_V1_FULL_REBALANCE" if rebalance else "V2_ENTRY"
+    if tcfg is None or tcfg["version"] != TO.VERSION_V2 or (TO.phase_for(tcfg, trade_date) != "ENTRY" and not rebalance):
+        out["reasons"].append("no enabled TACTICAL_OVERRIDE_V2 ENTRY (or Issue #61 forced-rebalance) config for this trade date")
         return out
     out["tactical_fingerprint"] = tcfg["_fingerprint"]
     if run_mode(ops) != "COMPETITION":
@@ -127,7 +161,7 @@ def preconditions(trade_date: str, ops: dict, now: datetime) -> dict:
     out["prior_final_sha256"] = (prior or {}).get("sha256")
     if not prior:
         out["reasons"].append("no active FINAL to supersede")
-    elif (prior.get("tactical") or {}).get("version") == TO.VERSION_V2:
+    elif not rebalance and (prior.get("tactical") or {}).get("version") == TO.VERSION_V2:
         out["reasons"].append("the active FINAL is already the V2 FINAL")
     st = get_state(trade_date, ops).get("state")
     out["state"] = st

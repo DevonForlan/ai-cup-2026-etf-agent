@@ -54,11 +54,14 @@ def publish(root=None, *, push: bool = True) -> list[dict]:
         newest = {}                                     # (trade_date, phase) -> file of the newest tactical version
         for p in recs:
             d0 = json.loads(p.read_text(encoding="utf-8"))
-            newest[(d0["trade_date"], d0.get("phase"))] = p.name
+            grp = (d0["trade_date"], "RESUME" if str(d0.get("phase", "")).startswith("RESUME") else d0.get("phase"))
+            if grp not in newest or str(d0.get("recorded_at", "")) >= newest[grp][0]:       # Issue #61: the later record of the day wins
+                newest[grp] = (str(d0.get("recorded_at", "")), p.name)
         for p in recs:
             doc = _doc(p, root)
             name = p.name                               # V1: <date>_<phase>.json, V2: <date>_<phase>_V2.json (never overwritten)
-            if newest[(doc["trade_date"], doc.get("phase"))] != name:
+            grp = (doc["trade_date"], "RESUME" if str(doc.get("phase", "")).startswith("RESUME") else doc.get("phase"))
+            if newest[grp][1] != name:
                 doc["submission_status"] = "SUPERSEDED"  # an older tactical version of the same day: the confirmed FINAL is the newer one
                 doc["final_sha256"] = doc["final_path"] = None
                 if (base / name).exists():              # already published with its own (then-true) evidence: keep it
