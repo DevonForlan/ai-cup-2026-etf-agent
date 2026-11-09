@@ -58,3 +58,5 @@ data/portal_discovery/
 data/submission_evidence/
 data/browser_profiles/
 logs/notifications/
+logs/cc_sessions/
+logs/shadow/
