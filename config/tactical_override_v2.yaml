@@ -10,6 +10,9 @@ adverse_evidence: research/short_rotation/REPORT.md (DO_NOT_ROTATE) kept in the 
 entry_trade_date: '2026-11-09'
 hold_trading_days: 1
 exit_trade_date: '2026-11-10'
+# Owner preference 2026-11-09 (Issue #49): no mechanical unwind. From exit_trade_date Frozen Quant v1 resumes sole control
+# from the ACTUAL holdings (agent/tactical/override.py phase RESUME). The unwind_plan stored in the ENTRY record stays as audit data.
+exit_mode: FROZEN_QUANT_RESUME
 target_tech_weight_max: 0.1
 tech_design_max: 0.085
 tech_guard_max: 0.09
