@@ -1,0 +1,20 @@
+{
+ "phase": "RESUME",
+ "status": "FROZEN_QUANT_RESUMED",
+ "decision_authority": "FROZEN_QUANT_V1",
+ "reason": "TACTICAL_OVERRIDE_V2 ended after its entry day; Frozen Quant v1 built this D-Plan from the actual holdings with no tactical order (no mechanical restore of the stored baseline lots)",
+ "frozen_quant_sha256": "f34fa02e924011b20c52a4bd42e961169f97e1950e76e04b7e78dc43ac23d2e0",
+ "version": "TACTICAL_OVERRIDE_V2_TECH_LT10",
+ "fingerprint": "191e65811faaf3d589459e19042c353742d08979ecd114e48f1e31fce39fa0f1",
+ "trade_date": "2026-11-10",
+ "recorded_at": "2026-11-09T20:04:26+0800",
+ "source_record": "logs/tactical/2026-11-10_RESUME_V2.json",
+ "source_sha256": "sha256:0eeb07dc8b84f06170f354277daf02c609d3784c3c5002af6cda019abd26d91c",
+ "final_sha256": "d7e435ea88e425b21f7474dfd4b4bf494bdcb6643ac074b91d155cdcf9cd1b70",
+ "final_path": "shared_state/daily_submissions/2026-11-10/FINAL.json",
+ "submission_status": "SUBMISSION_CONFIRMED",
+ "submitted_at": "2026-11-09T20:06:12.106719+08:00",
+ "confirmed_at": "2026-11-09T20:06:25.622293+08:00",
+ "idempotency_key": "2026-11-10_RESUME_V2.json|sha256:0eeb07dc8b84f06170f354277daf02c609d3784c3c5002af6cda019abd26d91c|SUBMISSION_CONFIRMED|d7e435ea88e425b21f7474dfd4b4bf494bdcb6643ac074b91d155cdcf9cd1b70",
+ "synced_at": "2026-11-09T20:08:02+08:00"
+}
