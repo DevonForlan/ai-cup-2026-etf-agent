@@ -75,3 +75,18 @@ lowest-ranked non-technology targets first; cash is unchanged -> Quant's own `_f
 (`TECH_OVERWEIGHT_PARTIAL`); if nothing passes the untouched Quant result is returned (`TECH_OVERWEIGHT_BLOCKED`). Audit: `logs/tactical/<date>_TECH_OVERWEIGHT_V1.json`.
 Because the full-rebalance path trades, `last_rebalance_index` becomes 11-11 and 2026-11-12 runs normal Frozen Quant (`rebalance_every=100`: hold).
 Rollback: `enabled: false` or delete the config.
+
+## Issue #65 - persistent technology floor >= 85% (from the 2026-11-12 D-Plan), supersedes the Issue #63 one-day rule for later dates
+
+`config/tactical_tech_overweight_v1.yaml` now carries `floor_schedule`: `2026-11-11` -> 0.75 (Issue #63 history, that FINAL is already submitted and is not rewritten)
+and `2026-11-12 ->` 0.85 with NO end date (it never auto-expires; the Owner changes it by editing `min`, adding `to`, or `enabled: false`).
+Method (unchanged Quant first): raise Quant's own technology targets (proportional, then "ranked" mode with fewer orders when the 30-order cap binds), then
+add best-ranked eligible technology names; funding from the lowest-ranked non-technology targets first, and only when all of them are used up from cash down
+to `min_cash_weight` (0.08; the 25 % cash cap is never approached). All through Quant's own `_finalize`. If 85 % is not attainable the highest compliant level is used and
+`levels_tried` / `blocker` are recorded (`TECH_OVERWEIGHT_PARTIAL`); if nothing passes the Quant result is returned untouched.
+Real-data rehearsal (official 11/10 state, trade date 11/11 at 85 %): 85.4 % tech, cash 14.6 %, 21 holdings, 30 orders, Active Share 35 %, validator PASS.
+
+## Issue #65 - scheduler observability
+`agent/ops/shared_state_scheduler.py` publishes `shared_state/scheduler/latest_<task>.json` (START heartbeat with delay, END status incl. BLOCKED / FAILED) from the 19:30 and
+17:00 wrappers, plus a CC-session sweep, so a late / blocked run is visible on GitHub. 2026-11-10 root cause: the PC was in Modern Standby (lid closed) from 17:41 and
+"Allow wake timers" was DISABLED on battery (DC), so the 19:30 wake timer could not fire; StartWhenAvailable ran the task at 20:16 when the lid opened. Fix: wake timers enabled on DC.

@@ -8,17 +8,15 @@ from agent.tactical import override as TO
 from agent.tactical import tech_overweight as TW
 
 
-def test_repo_config_is_scoped_to_exactly_one_date():
+def test_issue63_history_segment_and_issue65_persistence():
     cfg = TW.load_config()
-    assert cfg is not None and cfg["trade_date"] == "2026-11-11" and cfg["target_tech_weight_min"] == 0.75
-    assert TW.resolve("2026-11-11") is not None
-    for d in ("2026-11-10", "2026-11-12", "2026-11-13", "2026-12-01"):
-        assert TW.resolve(d) is None                 # expires by itself; no persistent enabled path
+    assert cfg is not None
+    assert TW.resolve("2026-11-11")["target_tech_weight_min"] == 0.75      # Issue #63 history segment (one day)
+    assert TW.resolve("2026-11-10") is None
+    assert TW.resolve("2026-11-12")["target_tech_weight_min"] == 0.85      # Issue #65: persistent floor, replaces the one-day rule
     assert TO.is_active("2026-11-11", "competition") is True
-    for d in ("2026-11-12", "2026-11-13"):
-        assert TO.is_active(d, "competition") is False
-    assert TO.is_active("2026-11-11", "precompetition") is False     # operational (competition) mode only
-
+    assert TO.is_active("2026-11-12", "competition") is True
+    assert TO.is_active("2026-11-11", "precompetition") is False           # operational (competition) mode only
 
 def test_frozen_quant_untouched():
     import hashlib
@@ -65,17 +63,14 @@ def test_noop_when_target_already_met():
     assert w == tw and nt == {"N1"} and info["funded_from"] == []
 
 
-def test_activate_is_inert_on_other_dates(tmp_path):
+def test_activate_is_inert_before_the_first_segment(tmp_path):
     import agent.pipeline as P
     before = P.construct
-    for d in ("2026-11-12", "2026-11-13"):
-        with TO.activate(d, "competition", state_dir=tmp_path) as act:
-            assert P.construct is before and act.calls == 0
-    with TO.activate("2026-11-11", "competition", state_dir=tmp_path) as act:
-        assert P.construct is not before                      # patched only on the scoped date
+    with TO.activate("2026-11-12", "dry-run", state_dir=tmp_path) as act:      # non-operational mode: never patched
+        assert P.construct is before and act.calls == 0
+    with TO.activate("2026-11-11", "competition", state_dir=tmp_path):
+        assert P.construct is not before
     assert P.construct is before
-    assert not list(tmp_path.glob("2026-11-12*"))
-
 
 def test_disabled_config_is_inactive(tmp_path):
     src = yaml.safe_load((ROOT / "config/tactical_tech_overweight_v1.yaml").read_text(encoding="utf-8"))
