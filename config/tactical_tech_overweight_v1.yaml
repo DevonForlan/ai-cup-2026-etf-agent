@@ -1,0 +1,16 @@
+# TACTICAL_TECH_OVERWEIGHT_V1 - Owner-mandated ONE-DAY technology overweight (Issue #63, 2026-11-10).
+# SEPARATE from the immutable Frozen Quant v1 (config/strategy_quant_v1.yaml, never edited).
+# Applied only by agent/tactical/tech_overweight.py, and ONLY when trade_date equals the single date below (equality test,
+# so it expires by itself: 2026-11-12 and every later date are INACTIVE). Rollback: enabled: false or delete this file.
+version: TACTICAL_TECH_OVERWEIGHT_V1
+enabled: true
+owner_directive: 'GitHub Issue #63 (OWNER OVERRIDE 2026-11-10): D-Plan for 2026-11-11 only, technology >= 75% NAV, then normal Frozen Quant v1 from 2026-11-12'
+frozen_quant_sha256: f34fa02e924011b20c52a4bd42e961169f97e1950e76e04b7e78dc43ac23d2e0
+trade_date: '2026-11-11'
+target_tech_weight_min: 0.75
+# No artificial ceiling above the minimum: only the per-name cap (Quant other_target_cap), holdings 20-30, cash, Active Share, 30 orders apply.
+# Technology classification = the list used since #41-#43 (config/tactical_override_v2.yaml: reduce_tickers).
+tech_classification_file: config/tactical_override_v2.yaml
+tech_classification_key: reduce_tickers
+funding_rule: lowest-ranked non-technology Frozen Quant targets first
+selection_rule: technology names must come from Frozen Quant v1's own targets / eligible ranking (no hand-picked ticker)

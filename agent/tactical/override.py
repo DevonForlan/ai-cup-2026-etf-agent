@@ -375,6 +375,9 @@ def is_active(trade_date: str, mode: str, *, config_path=None, modes=None, prev_
     """True when the override can change today's D-Plan (used to keep the per-decision narrative template-based).
     On an unwind date it is only active while the sleeve is actually open (holdings given), so ordinary later days keep
     the LLM narrative."""
+    from agent.tactical import tech_overweight as TW
+    if mode in (modes or OPERATIONAL_MODES) and (config_path is None) and TW.resolve(trade_date) is not None:
+        return True                     # Issue #63 one-day overlay: the per-decision narrative stays template-based
     tcfg = resolve_config(config_path, trade_date)
     if not (tcfg and mode in (modes or OPERATIONAL_MODES)):
         return False
@@ -484,6 +487,8 @@ class Activation:
             return None
         self.state_dir.mkdir(parents=True, exist_ok=True)
         suffix = "" if self.tcfg["version"] == VERSION else "_V2"          # V1 evidence files are never overwritten
+        if str(self.tcfg["version"]).startswith("TACTICAL_TECH_OVERWEIGHT"):
+            suffix = "_V1"
         p = self.state_dir / f"{self.trade_date}_{s.get('phase', 'NA')}{suffix}.json"
         s["recorded_at"] = time.strftime("%Y-%m-%dT%H:%M:%S%z")
         p.write_text(json.dumps(s, ensure_ascii=False, indent=1, default=str) + "\n", encoding="utf-8", newline="\n")
@@ -491,11 +496,69 @@ class Activation:
 
 
 @contextlib.contextmanager
-def activate(trade_date: str, mode: str, *, config_path=None, state_dir=None, modes=None):
+def activate(trade_date: str, mode: str, *, config_path=None, state_dir=None, modes=None, tech_config_path=None):
     """Patch `agent.pipeline.construct` for the duration of one run_day. A no-op when the override is absent, disabled,
     outside its dates, or the run mode is not an operational one. The patch is always restored."""
     import agent.pipeline as P
     modes = modes or OPERATIONAL_MODES
+    from agent.tactical import tech_overweight as TW
+    twc = TW.resolve(trade_date, tech_config_path) if mode in modes and (config_path is None or tech_config_path) else None
+    if twc is not None:                                  # Issue #63: one-day technology overweight (exact date match only)
+        act = Activation(twc, trade_date, state_dir or STATE_DIR)
+        orig_t = P.construct
+        tech = TW.tech_tickers(twc)
+
+        def tw_wrapped(scores, prev_holdings, prev_cash, nav_prev, closes_prev, rb, cfg, market, etf_holdings=None,
+                       etf_meta=None, method=None, holding_days=None, is_rebalance_day=True, regime_override=None, guard=None):
+            seen: dict = {}
+            orig_plan = K.plan_decisions
+
+            def spy(target_w, prev_h, no_trade, nav, closes, lot):          # observe only
+                seen["plan"] = (dict(target_w), dict(prev_h), set(no_trade), nav, dict(closes), lot)
+                return orig_plan(target_w, prev_h, no_trade, nav, closes, lot)
+
+            K.plan_decisions = spy
+            try:                                         # the UNCHANGED Quant constructor builds its own full target first
+                res0 = orig_t(scores, prev_holdings, prev_cash, nav_prev, closes_prev, rb, cfg, market, etf_holdings, etf_meta,
+                              method, holding_days, True, regime_override, guard)
+            finally:
+                K.plan_decisions = orig_plan
+            act.calls += 1
+            base = {"phase": "TECH_OVERWEIGHT", "decision_authority": "FROZEN_QUANT_V1+TECH_OVERWEIGHT_OVERLAY",
+                    "rebalance_day_flag_from_pipeline": bool(is_rebalance_day)}
+            if "plan" not in seen:
+                act.record = dict(base, status="TECH_OVERWEIGHT_BLOCKED", reason="Frozen Quant produced no target plan; result untouched")
+                return res0
+            try:
+                res, rec = TW.run_overlay(seen["plan"], res0, prev_cash, rb, cfg, market, etf_holdings, etf_meta, scores,
+                                          regime_override, twc, tech)
+                prev_h = {t: int(s) for t, s in prev_holdings.items() if int(s) > 0}
+                if isinstance(res, K.TargetPortfolio):
+                    names = {t: rb.universe[t]["name"] for t in rb.universe}
+                    rec.update(_summarise(res, prev_h, closes_prev, D(nav_prev), tech, names))
+                    rec["turnover_pct"] = float(sum((Decimal(int(o.shares)) * _closes(closes_prev, o.ticker) for o in res.orders),
+                                                    Decimal(0)) / D(nav_prev) * 100)
+                    rec["holdings_before"] = len(prev_h)
+                    rec["cash_weight_before"] = float(1 - sum(_weights(prev_h, closes_prev, D(nav_prev)).values()))
+                act.record = dict(base, **rec)
+                return res
+            except Exception as e:  # noqa: BLE001  fail closed: untouched Quant result
+                act.record = dict(base, status="TECH_OVERWEIGHT_BLOCKED", reason=f"program error: {type(e).__name__}: {e}"[:300])
+                return res0
+
+        P.construct = tw_wrapped
+        try:
+            yield act
+        finally:
+            P.construct = orig_t
+            if act.record is None:
+                act.record = {"phase": "TECH_OVERWEIGHT", "status": "TECH_OVERWEIGHT_NOT_REACHED",
+                              "reason": "the constructor was not called in this run"}
+            try:
+                act.write()
+            except OSError:
+                pass
+        return
     tcfg = resolve_config(config_path, trade_date)
     act = Activation(tcfg, trade_date, state_dir or STATE_DIR)
     phase = phase_for(tcfg, trade_date) if tcfg else None

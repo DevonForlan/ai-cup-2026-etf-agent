@@ -172,7 +172,7 @@ def test_v2_direct_resume_claims_dates_and_never_patches(tmp_path, monkeypatch):
     assert TO.phase_for(t, "2026-11-09") == "ENTRY"
     assert TO.phase_for(t, "2026-11-10") == "RESUME" and TO.phase_for(t, "2026-11-20") == "RESUME"
     # the V2 config claims every later date, so the superseded V1 config (UNWIND from 11/10) can never apply
-    for d in ("2026-11-10", "2026-11-11", "2026-11-25"):
+    for d in ("2026-11-10", "2026-11-13", "2026-11-25"):   # 11-11 is the Issue #63 one-day overlay date (tested in test_tech_overweight.py)
         assert TO.resolve_config(None, d)["version"] == TO.VERSION_V2
         assert TO.is_active(d, "competition", prev_holdings={"2002": 1000}) is False
     orig = P.construct
@@ -185,9 +185,9 @@ def test_v2_direct_resume_claims_dates_and_never_patches(tmp_path, monkeypatch):
         assert P.construct is orig                       # Frozen Quant v1 constructs alone
     p = tmp_path / "2026-11-10_RESUME_V2.json"
     assert p.exists() and "FROZEN_QUANT_RESUMED" in p.read_text(encoding="utf-8")
-    with TO.activate("2026-11-11", "competition", state_dir=tmp_path):
+    with TO.activate("2026-11-13", "competition", state_dir=tmp_path):
         assert P.construct is orig
-    assert not (tmp_path / "2026-11-11_RESUME_V2.json").exists()
+    assert not (tmp_path / "2026-11-13_RESUME_V2.json").exists()
     with TO.activate("2026-11-10", "dry-run", state_dir=tmp_path):
         assert P.construct is orig
 
@@ -218,7 +218,7 @@ def test_forced_rebalance_date_and_activation_calls_unchanged_constructor_with_t
     rec = json.loads((tmp_path / "2026-11-10_RESUME_REBALANCE_V2.json").read_text(encoding="utf-8"))
     assert rec["status"] == "FULL_REBALANCE_FALLBACK" and rec["decision_authority"] == "FROZEN_QUANT_V1" and rec["rebalance_day_flag_from_pipeline"] is False
     # other dates / modes are not touched
-    with TO.activate("2026-11-11", "competition", state_dir=tmp_path):
+    with TO.activate("2026-11-13", "competition", state_dir=tmp_path):
         assert P.construct is fake_construct
     with TO.activate("2026-11-10", "dry-run", state_dir=tmp_path):
         assert P.construct is fake_construct

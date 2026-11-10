@@ -61,3 +61,17 @@ If nothing passes the record is `FULL_REBALANCE_FALLBACK` and the unchanged Quan
 (validation PASS, no fallback, record status/authority, Quant fingerprint, 1-30 orders, 20-30 holdings, Active Share >= 15 %, cash < 25 %).
 Rollback: delete the `resume_full_rebalance_date` key (plain RESUME again); the superseded no-trade FINAL is archived under
 `submissions/20261110/superseded/<sha12>/`.
+
+## Issue #63 - one-day technology overweight (TACTICAL_TECH_OVERWEIGHT_V1), trade date 2026-11-11 ONLY
+
+`config/tactical_tech_overweight_v1.yaml` (`trade_date: '2026-11-11'`, `target_tech_weight_min: 0.75`) is applied by `agent/tactical/tech_overweight.py`
+through `override.activate()`. The date is an equality test, so 2026-11-12 / 11-13 / any later date are INACTIVE with no config change
+(`tests/tactical/test_tech_overweight.py` proves 11-11 active, 11-12 / 11-13 inactive and the constructor unpatched).
+Flow: the unchanged Frozen Quant v1 constructor builds its own full target (called with `is_rebalance_day=True`, plan observed only) ->
+technology raised to >= 75 % (no ceiling except the 9 % per-name cap) first over Quant's own technology targets (proportional water-fill),
+then over further technology names that are eligible and ranked by Quant (best rank first), never a hand-picked ticker; funding comes from the
+lowest-ranked non-technology targets first; cash is unchanged -> Quant's own `_finalize` (lots, caps, cash band, compliance, Active Share, stress,
+<= 30 orders). Levels 76 / 77 / 78 / 80 / 75 % then lower are tried; the highest compliant attainable exposure is used and the blocker recorded
+(`TECH_OVERWEIGHT_PARTIAL`); if nothing passes the untouched Quant result is returned (`TECH_OVERWEIGHT_BLOCKED`). Audit: `logs/tactical/<date>_TECH_OVERWEIGHT_V1.json`.
+Because the full-rebalance path trades, `last_rebalance_index` becomes 11-11 and 2026-11-12 runs normal Frozen Quant (`rebalance_every=100`: hold).
+Rollback: `enabled: false` or delete the config.
