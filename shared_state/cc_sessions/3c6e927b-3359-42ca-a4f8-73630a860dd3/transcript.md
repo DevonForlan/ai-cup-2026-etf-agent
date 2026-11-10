@@ -48218,3 +48218,135 @@ Merge and deploy.
 - `Bash: command=cd "/c/Users/<user>/Desktop/個人/AI CUP 2026玉山人工智慧公開挑戰賽"; gh pr merge 66 --squash --delete-branch 2>&1 | tail -1; git pull -q --ff-only origin master 2>&1 | tail -1; git rev-parse HEAD origin/master; git status --short | grep -v '^??'; sha256sum config/strategy_quant_v1.yaml | cut -…[+595 chars; sha256:6e869819740565cc]`
   - result: f6aa5b4f5fb3ec432391ecf4899503429251a11a f6aa5b4f5fb3ec432391ecf4899503429251a11a f34fa02e924011b20c52a4bd42e961169f97e1950e76e04b7e78dc43ac23d2e0 QUANT_FREEZE_CHECK = PASS 2026-11-10 None False 2026-11-11 0.75 True 2026-11-12 0.85 True 2026-11-13 0.85 True 2026-12-01 0.85 True {"status": "PUB
 - `Bash: command=cd "/c/Users/<user>/Desktop/個人/AI CUP 2026玉山人工智慧公開挑戰賽"; sha256sum submissions/20261111/FINAL/*.json | cut -c1-64; .venv/Scripts/python.exe -c " from agent.submission.confirmation import verify from agent.ops.common import load_ops_config r=verify('2026-11-11',ops_cfg=load_ops_conf…[+3501 chars; sha256:ed24bcdea37ec47c]`
+  - result: 364179d2932487aff4ee09f661eb995b7d89fedc4a49e813941ab67acad48649 SUBMISSION_CONFIRMED sha256:364179d2932487aff4ee09f661eb995b7d89fedc4a49e813941ab67acad48649 1 https://github.com/DevonForlan/ai-cup-2026-etf-agent/issues/65#issuecomment-6767826416 {"status": "PUBLISHED", "new_events": 83, "turn": 16
+- `ScheduleWakeup: prompt=Issue #65/#63 follow-through. (1) Each check-in: `python agent/ops/cc_session_sync.py sync --session 3c6e927b-3359-42ca-a4f8-73630a860dd3 --force`. (2) Done so far: 11/11 FINAL (75.95%) confirmed and preserved; PR #66 merged (production f6aa5b4): persistent tech floor 0.85 fro…[+1897 chars; sha256:1ff0e61454ab8343]`
+  - result: Next wakeup scheduled for 21:52:00 (in 3533s). If you owe the user a status update this tick, write it now as ordinary response text; then end the turn — the harness re-invokes you when the wakeup fires or a task-notification arrives.
+
+### Claude
+
+_2026-11-10 20:53:19+0800_
+
+科技股 85% 的持續性下限已經上線，要到 11/11 晚上 19:30 產生 11/12 D-Plan 時才第一次實際套用。11/11 已送出的 FINAL 沒有被動到。
+
+**11/11 的 FINAL 保留**
+- sha 還是 `364179d2…`，75.95% 科技股，入口網站讀回仍是 SUBMISSION_CONFIRMED，沒有重複提交。
+- 11/11 在設定檔裡保留自己的 75% 歷史區段。這樣 11/11 07:30 的排程重算，不會因為改成 85% 而悄悄換掉已確認的版本。
+
+**85% 規則**
+- **生效日**：從 11/12 起，設定檔沒有結束日，不會自己失效；你要停用或調整，改設定檔的下限值或 `enabled`。
+- **Quant 不動**：Quant 指紋仍是 `f34fa02e…`，凍結檢查通過。
+- **作法**：沿用 Quant 自己的目標，先提高它既有的科技股權重，不夠才加入排名最高且合格的科技股，沒有人工指定代號。
+- **資金來源**：資金先從排名最低的非科技股來；非科技股用完後才動現金，現金下限 8%（現金上限 25%）。
+- **預演**：我用 11/10 官方結算後的真實狀態、把門檻設成 85% 預演（唯讀）。第一次只到 83.2%，因為非科技股的資金用完了；加了「最後才動現金」後達到 85.4%，現金 14.6%，持股 21 檔，委託 30 筆，Active Share 35%，驗證通過。
+- **風險**：30 筆委託上限是最緊的限制，實際日子可能只達到部分比例。那樣我會照你的要求回報實際比例、嘗試過的每一級和被哪個限制擋住，不會假造 85%。
+
+**19:30 沒有跑的原因**
+- **原因**：電腦在 17:41 蓋上螢幕進入休眠，而且電池模式下「允許喚醒計時器」是關的，所以 19:30 的排程叫不醒電腦。螢幕打開後排程才在 20:16 補跑，延遲 56 分鐘。
+- **之後的狀況**：補跑後被結算對帳的現金差異擋下（我已處理），20:31 送出並確認，Shared State 也在 20:31 同步。你 19:43 看不到，是因為當時還沒有產出。
+- **已做的修正**：
+  - 我把電池模式的喚醒計時器打開了。這是電腦電源設定，不在 git 裡，可以還原。
+  - 19:30 和 17:00 的排程現在會在開始時回報「已啟動、延遲幾分鐘」，結束時回報狀態（包括被擋或失敗），並順便同步對話紀錄，全部發佈到 `shared_state/scheduler/`。
+- **仍有風險**：蓋上螢幕又用電池時，排程仍可能延後，要等你打開螢幕才會跑。同樣的現金對帳差異也可能再度擋下，我會照前兩次的做法確認後重跑。
+
+**版本與 CI**
+- PR #66 的 CI 全過，已合併部署，production 在 `f6aa5b4`。
+- 完整回報已貼到 Issue #65，交接檔是 `handoff/claude_sessions/2026-11-10_3c6e927b-3359-42ca-a4f8-73630a860dd3_issue65.md`。
+
+**下一步**
+- **11/11 07:30**：確認排程沒有換掉 11/11 的 FINAL。
+- **11/11 17:00**：檢查評估有沒有抓到收盤資料。
+- **11/11 19:45**：查 11/12 D-Plan 是否套用 85%、當晚送出並讀回確認。
+- 下一次檢查排在 21:52，之後一路連下去。
+
+
+### Events
+
+- **TURN_END** 2026-11-10 20:53:19+0800 turn 167 completed
+
+## Turn 168 — 2026-11-10 21:48:27+0800
+
+
+### Events
+
+- **SYSTEM_INFO** 2026-11-10 21:48:27+0800 Conversation compacted
+
+### User
+
+_2026-11-10 21:48:27+0800_
+
+This session is being continued from a previous conversation that ran out of context. The summary below covers the earlier portion of the conversation.
+
+
+Summary:
+1. Primary Request and Intent:
+   - Project: AI CUP 2026 玉山 Agent 基金經理人, team TEAM_11442, repo `DevonForlan/ai-cup-2026-etf-agent` (private, default branch `master`). Competition 2026-10-27 → 2026-11-27. Production checkout: `C:\Users\<user>\Desktop\個人\AI CUP 2026玉山人工智慧公開挑戰賽`. Frozen Quant v1 (`config/strategy_quant_v1.yaml` sha256 `f34fa02e924011b20c52a4bd42e961169f97e1950e76e04b7e78dc43ac23d2e0`) must NEVER be edited. Frozen paths: agent/features, agent/portfolio, agent/pipeline.py, agent/run_sim.py, agent/sim, config/strategy_quant_v1.yaml.
+   - Standing Owner governance (Issue #54, CLAUDE.md §11 COMPETITION_HIGH_AUTONOMY, memory `feedback_pr_self_merge.md`):
+     - Carry authorized tasks end to end: implement → test → CI → self-review → self-merge → production deploy → verify → execute → Portal submission → confirmation → Shared State sync → GitHub evidence.
+     - Never ask the Owner to merge, deploy or pull.
+     - Stop only for: a hard official rule violation, unfixable CI/validation, a technical permission block, missing credentials, a conflicting newer Owner directive, or a materially new decision outside the authorized scope.
+     - Report the Issue #54 evidence block (AUTHORIZED_SCOPE, PR, CI_STATUS, SELF_REVIEW, MERGE_STATUS, MERGED_COMMIT, PRODUCTION_DEPLOYMENT, PRODUCTION_HEAD, RUNTIME_OR_SCHEDULER_VERIFICATION, EXECUTION_STATUS, PORTAL_STATUS_IF_APPLICABLE, SHARED_STATE_SYNC, BLOCKER_IF_ANY, NEXT_ACTION).
+   - Requests handled this segment:
+     - Issue #61 (one-time full Frozen Quant v1 rebalance for 11/10): executed, DONE.
+     - Read-only confirmation of what the 19:30 run (for 11/11) would use: answered and posted on #61.
+     - Issue #63 (11/11 D-Plan tech exposure ≥75%, one-day overlay, then auto-return to normal Quant on 11/12 with direct 19:30 submission): implemented, merged, executed, submitted and confirmed.
+     - Issue #65 (the LATEST and highest-priority Owner directive; the pasted message said the Issue #63 one-day 75% rule is history only):
+       - From trade date 2026-11-11 on, all D-Plans must use a persistent tech floor ≥85% of NAV: a minimum, not a cap, until the Owner changes or cancels it.
+       - It must be an independent tactical/owner overlay, not modifying Frozen Quant v1 or historical submissions.
+       - Tech names must come from Quant's own target/eligible ranking (raise existing eligible tech first, then add the best-ranked eligible; fund from the lowest-ranked non-tech first; no hard-coded tickers).
+       - Keep all hard guards (holdings 20–30, cash <25%, per-name cap, Active Share, orders ≤30, whole-lot, universe eligibility, reconciliation, validator, Portal read-back).
+       - If 85% is unattainable: use the highest compliant level and record the blocker and levels tried; do not fake 85%.
+       - Auto-submit after all guards pass; `SUBMISSION_CONFIRMED` only after the Portal read-only check.
+       - Also diagnose and fix why the 19:30 forecast was not visible on GitHub/shared-state (scheduler, PC wake state, shared-state publish, Git push, CC session sync).
+       - The 11/11 FINAL was already submitted at 20:31 at 75.95%: do NOT resubmit or overwrite it.
+       - Completion report fields posted to #65: PERSISTENT_85_RULE_STATUS, EFFECTIVE_FROM, OWNER_TECH_FLOOR, FROZEN_QUANT_V1_FINGERPRINT, FROZEN_QUANT_UNCHANGED, OVERLAY_IMPLEMENTATION, 2026-11-11_EXISTING_SUBMISSION_PRESERVED, NEXT_DPLAN_TECH_FLOOR, SCHEDULER_19_30_ROOT_CAUSE, SCHEDULER_FIX_STATUS, SHARED_STATE_SYNC_STATUS, PRODUCTION_HEAD, CI_STATUS, BLOCKER_IF_ANY. The Issue's own E section also lists ROOT_CAUSE_19_30, SCHEDULER_RAN, 2026-11-11_FINAL_STATUS, etc.; I used a merged field set in the posted comment.
+
+2. Key Technical Concepts:
+   - Frozen Quant v1 constructor `agent.portfolio.constructor.construct` / `_finalize`. `rebalance_every: 100` via `is_rb` in `agent/pipeline.py` line 324: `last_rb is None or di - last_rb >= rebalance_every or not held`. `last_rebalance_index` is persisted in agent_state.json (11/10 candidate package: day_index=10, last_rebalance_index=10).
+   - Tactical overlay layer: `agent.tactical.override.activate()` patches `agent.pipeline.construct` for one `run_day`.
+     - Phases: V2 ENTRY (11/09), RESUME (from 11/10), the Issue #61 forced rebalance (11/10 only, `resume_full_rebalance_date`), and the tech-overweight overlay.
+     - `is_active` keeps the per-decision narrative template-based.
+     - `tech_config_path` param; an explicit `config_path` skips the tech overlay.
+   - Tech overlay (`agent/tactical/tech_overweight.py`):
+     - Calls the unchanged constructor with `is_rebalance_day=True` while spying on `K.plan_decisions` for Quant's own target weights.
+     - `overlay_weights` (pure function) with modes `proportional` and `ranked`, a per-name cap of `other_target_cap` 0.09, and `cash_floor` funding of last resort.
+     - `run_overlay` tries both modes over levels [min+0.01, +0.02, +0.03, +0.05, min, then descending by 0.01 while above Quant's own tech weight].
+     - It selects the first result that reaches the floor, else the best compliant one (`TECH_OVERWEIGHT_PARTIAL` with a blocker); if nothing passes it returns Quant's result untouched (`TECH_OVERWEIGHT_BLOCKED`).
+     - Every candidate goes through Quant's own `K._finalize` (lots, caps, cash band, compliance, Active Share, stress, ≤30 orders).
+     - Tech classification list = `reduce_tickers` from `config/tactical_override_v2.yaml`.
+   - Submission and ops:
+     - 30 decisions/orders per day cap.
+     - Submission confirmation (8 checks) via `agent.submission.confirmation.verify(trade_date, ops_cfg=load_ops_config())`; `load_ops_config` lives in `agent.ops.common`.
+     - Settlement reconciliation (`agent.ops.reconcile --date D --accept-official --confirmed-by ... --note ...`) is a human-gated BLOCK resolution. Precedent (Issue #60 pattern): accept only if shares are identical and the cash diff is fee/tax-sized.
+     - Shared State lives on branch `shared-state` (`shared_state/daily_submissions`, `tactical`, `cc_sessions`, new `scheduler`).
+     - Scheduled tasks: `AI_CUP_Precompetition_DryRun_1930` (19:30), `_Evaluation_1700`, `_MorningFinal_0730`, `Day1_Verify_1800`; the 19:30 wrapper runs `agent.ops.scheduled_run` in COMPETITION mode with guarded auto-upload.
+   - Scheduler root cause (2026-11-10): the laptop was in Modern Standby (lid closed) from 17:41, and the power setting "Allow wake timers" was DISABLED on battery (DC) (`powercfg RTCWAKE`, DC=0). The 19:30 wake timer could not fire; `StartWhenAvailable` ran the task at 20:16 when the lid opened (56 min delay). Fix: `powercfg /setdcvalueindex SCHEME_CURRENT SUB_SLEEP RTCWAKE 1` + `/setactive`; DC is now 1. This is a local power setting (not in git).
+   - Windows tooling quirks:
+     - PowerShell `\n` inside single-quoted strings stays literal.
+     - Use Edit/Write or a script file to patch files.
+     - Junction for `data/history` in worktrees via `mklink /J`.
+     - `find` on the repo is slow.
+     - `git worktree` branch deletion fails while the worktree exists (harmless).
+   - TWSE/TPEx fetches can fail transiently at 17:00; the fix is to rerun `automation\run_precompetition_evaluation.ps1`.
+
+3. Files and Code Sections:
+   - `agent/tactical/tech_overweight.py` (new in #64, extended in #66, merged):
+     - `VERSION="TACTICAL_TECH_OVERWEIGHT_V1"`, `CONFIG_PATH=config/tactical_tech_overweight_v1.yaml`, `NEW_NAME_START=0.06`.
+     - `load_config` accepts `trade_date` OR `floor_schedule`.
+     - `floor_for(cfg, trade_date)`: the segment with the latest `from` ≤ date wins; a segment with `to` ends there; no `to` persists. The legacy single-date form is still understood.
+     - `resolve(trade_date, config_path)` returns a copy of the config with `target_tech_weight_min` = that date's floor, or None.
+     - `tech_tickers(cfg…[+16583 chars; sha256:65a9eee79d407466]
+
+
+### Events
+
+- **BACKGROUND_TASK_STATUS** 2026-11-10 21:48:27+0800 until grep -qE "passed|failed|error" "C:/Users/<user>/AppData/Local/Temp/claude/8f718917fde93c02/3c6e927b-3359-42ca-a4f8-73630a860dd3/tasks/bdhmcmhhk.output"; do sleep 10; done; tail -5 "C:/Users… [+116 chars]
+- **BACKGROUND_TASK_STATUS** 2026-11-10 21:48:27+0800 cd "C:/Users/<user>/Desktop/個人/AI CUP 2026玉山人工智慧公開挑戰賽/.worktrees/issue-49d" && until grep -qE "passed|failed|error" .pytest_full.log && ! gh pr checks 53 2>&1 | grep -q pending; do sleep 15; done… [+56 chars]
+- **SYSTEM_INFO** 2026-11-10 21:48:27+0800 Compacted while idle, before the prompt cache expired · turn off with "idleCompaction": false in settings.json
+- **SCHEDULED_WAKEUP** 2026-11-10 21:52:00+0800 Claude resuming /loop wakeup (Nov 10 9:52pm)
+
+### User
+
+_2026-11-10 21:52:00+0800_
+
+Issue #65/#63 follow-through. (1) Each check-in: `python agent/ops/cc_session_sync.py sync --session 3c6e927b-3359-42ca-a4f8-73630a860dd3 --force`. (2) Done so far: 11/11 FINAL (75.95%) confirmed and preserved; PR #66 merged (production f6aa5b4): persistent tech floor 0.85 from the 2026-11-12 D-Plan, scheduler observability, wake timers on battery enabled; Issue #65 completion posted. (3) 2026-11-11 ~17:10: check the 17:00 evaluation (logs/evaluation/latest_status.json; if BLOCKED MARKET_DATA_NOT_AVAILABLE rerun `powershell -File automation\run_precompetition_evaluation.ps1`). (4) 2026-11-11 ~19:45 (check LastRunTime/result of AI_CUP_Precompetition_DryRun_1930; if still running wait; if reconciliation BLOCKED on a cash-only fee/tax-sized diff with identical shares use `python -m agent.ops.reconcile --date 2026-11-11 --accept-official --confirmed-by "Claude Code (Owner-delegated, Issues #54/#63/#65)" --note ...` then Start-ScheduledTask AI_CUP_Precompetition_DryRun_1930; else report BLOCKED): verify the 2026-11-12 D-Plan: logs/tactical/2026-11-12_TECH_OVERWEIGHT_V1.json (floor 0.85, status APPLIED/PARTIAL, tech weight, cash, holdings, orders, Active Share, levels_tried, blocker), FINAL sha, same-evening auto-upload SUBMISSION_CONFIRMED via read-only `agent.submission.confirmation.verify('2026-11-12', ops_cfg=load_ops_config())` (load_ops_config in agent.ops.common), shared-state (`python -m agent.ops.shared_state_sync --date 2026-11-12`, `python -m agent.ops.shared_state_tacti…[+654 chars; sha256:08e5a311078a4109]
+
