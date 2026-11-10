@@ -11,6 +11,12 @@ New-Item -ItemType Directory -Force -Path $LogDir | Out-Null
 $Py = Join-Path $Root '.venv\Scripts\python.exe'
 $env:PYTHONIOENCODING = 'utf-8'
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+function Publish-SchedStatus([string]$Task, [string]$Event, [bool]$Sweep = $false) {
+    # Issue #65: observability only (never fails / blocks the run): scheduler status -> shared-state branch (+ CC session sweep after the run)
+    try { & $Py -m agent.ops.shared_state_scheduler --task $Task --event $Event 2>&1 | Out-Null } catch { }
+    if ($Sweep) { try { & $Py (Join-Path $Root 'agent\ops\cc_session_sync.py') sweep 2>&1 | Out-Null } catch { } }
+}
+Publish-SchedStatus 'dryrun_1930' 'START'
 $argsList = @('-m', 'agent.ops.scheduled_run')
 if ($SetupTest) { $argsList += '--setup-test' }
 try {
@@ -29,3 +35,4 @@ catch {
     $rec | ConvertTo-Json | Set-Content -Path (Join-Path $LogDir 'latest_status.json') -Encoding UTF8
     Add-Content -Path (Join-Path $LogDir 'wrapper.log') -Encoding UTF8 -Value ("{0} FAILED {1}" -f $now, $_.Exception.Message)
 }
+Publish-SchedStatus 'dryrun_1930' 'END' $true

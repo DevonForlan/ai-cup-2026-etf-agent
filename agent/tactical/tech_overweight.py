@@ -42,17 +42,40 @@ def load_config(path: Path | str | None = None) -> dict | None:
         cfg = yaml.safe_load(raw.decode("utf-8")) or {}
     except (OSError, ValueError, yaml.YAMLError):
         return None
-    if not cfg.get("enabled") or cfg.get("version") != VERSION or not cfg.get("trade_date"):
+    if not cfg.get("enabled") or cfg.get("version") != VERSION or not (cfg.get("trade_date") or cfg.get("floor_schedule")):
         return None
     cfg["_fingerprint"] = hashlib.sha256(raw).hexdigest()
     cfg["_path"] = str(p)
     return cfg
 
 
+def floor_for(cfg: dict, trade_date: str) -> float | None:
+    """Issue #65: persistent owner floor. `floor_schedule` = [{from, to?, min}]: the segment with the latest `from` <= trade_date
+    wins; a segment with `to` ends there, one without `to` persists until the Owner changes / disables the config. Legacy single-date
+    config (Issue #63: `trade_date` + `target_tech_weight_min`) is still understood. None = inactive for that date."""
+    td = str(trade_date)
+    if cfg.get("floor_schedule"):
+        best = None
+        for seg in cfg["floor_schedule"]:
+            if str(seg["from"]) <= td and (not seg.get("to") or td <= str(seg["to"])):
+                if best is None or str(seg["from"]) >= str(best["from"]):
+                    best = seg
+        return None if best is None else float(best["min"])
+    return float(cfg["target_tech_weight_min"]) if str(cfg.get("trade_date")) == td else None
+
+
 def resolve(trade_date: str, config_path=None) -> dict | None:
-    """The config if (and only if) it is enabled AND scoped to exactly this trade date."""
+    """The config (with `target_tech_weight_min` set to that date's floor) if the overlay is enabled and covers this trade date."""
     c = load_config(config_path)
-    return c if c is not None and str(c["trade_date"]) == str(trade_date) else None
+    if c is None:
+        return None
+    fl = floor_for(c, trade_date)
+    if fl is None:
+        return None
+    c = dict(c)
+    c["target_tech_weight_min"] = fl
+    c["trade_date"] = str(trade_date)
+    return c
 
 
 def tech_tickers(cfg: dict) -> set[str]:
@@ -63,8 +86,10 @@ def tech_tickers(cfg: dict) -> set[str]:
     return {str(t) for t in d.get(cfg.get("tech_classification_key") or "reduce_tickers", [])}
 
 
-def overlay_weights(tw, no_trade, rank_of, eligible, tech, target, cap, lot_ok=lambda t, w: True):
-    """Pure function. Returns (new_target_weights, new_no_trade, info). Cash (1 - sum) is unchanged."""
+def overlay_weights(tw, no_trade, rank_of, eligible, tech, target, cap, lot_ok=lambda t, w: True, mode="proportional", cash_floor=None):
+    """Pure function. Returns (new_target_weights, new_no_trade, info). Cash (1 - sum) is unchanged.
+    mode "proportional": raise every Quant technology target proportionally (diversified, many orders);
+    mode "ranked": raise the best-ranked Quant technology targets first up to the cap (few orders, used when the 30-order cap binds)."""
     w = {t: D(v) for t, v in tw.items()}
     target, cap = D(target), D(cap)
     info = {"funded_from": [], "raised": {}, "added": []}
@@ -72,10 +97,21 @@ def overlay_weights(tw, no_trade, rank_of, eligible, tech, target, cap, lot_ok=l
     if need <= 0:
         return w, set(no_trade), info
     nontech = sorted((t for t in w if t not in tech), key=lambda t: (-rank_of.get(t, WORST), t))
-    need = min(need, sum((w[t] for t in nontech), Decimal(0)))
+    cash_now = Decimal(1) - sum(w.values(), Decimal(0))
+    cash_room = max(Decimal(0), cash_now - D(cash_floor)) if cash_floor is not None else Decimal(0)   # only AFTER the non-tech targets are used up
+    need = min(need, sum((w[t] for t in nontech), Decimal(0)) + cash_room)
     rem, gained = need, {}
     existing = [t for t in w if t in tech]
-    for _ in range(40):                                             # 1) Quant's own technology targets, proportional water-fill
+    if mode == "ranked":                                            # 1b) fewest orders: best-ranked existing tech first, each up to the cap
+        for t in sorted(existing, key=lambda t: (rank_of.get(t, WORST), t)):
+            if rem <= Q:
+                break
+            give = min(cap - w[t], rem)
+            if give > Q:
+                w[t] += give
+                gained[t] = gained.get(t, Decimal(0)) + give
+                rem -= give
+    for _ in range(40 if mode != "ranked" else 0):                  # 1) Quant's own technology targets, proportional water-fill
         room = {t: cap - w[t] for t in existing if cap - w[t] > Q}
         if rem <= Q or not room:
             break
@@ -108,6 +144,7 @@ def overlay_weights(tw, no_trade, rank_of, eligible, tech, target, cap, lot_ok=l
         info["funded_from"].append(t)
         if w[t] <= Q:
             del w[t]
+    info["from_cash"] = float(max(left, Decimal(0)))
     info["raised"] = {t: float(v) for t, v in gained.items() if t not in info["added"]}
     w = {t: v.quantize(Q, rounding="ROUND_FLOOR") for t, v in w.items()}
     changed = {t for t in w if t not in tw or w[t] != D(tw[t])}
@@ -128,6 +165,7 @@ def run_overlay(plan, res0, prev_cash, rb, cfg, market, etf_holdings, etf_meta, 
     elig = {t: bool(v) and t in scored for t, v in elig.items()}
     caps = D(cfg["strategy_buffers"]["other_target_cap"])
     minimum = D(str(tcfg["target_tech_weight_min"]))
+    cash_floor = tcfg.get("min_cash_weight")             # funding of last resort once every non-technology target is used (None = never touch cash)
     regime, stance, cash_rng, why = regime_override or B.regime_from_market(market, cfg)
 
     def lot_ok(t, w):
@@ -137,6 +175,7 @@ def run_overlay(plan, res0, prev_cash, rb, cfg, market, etf_holdings, etf_meta, 
     quant_tw_tech = _tech_weight({t: D(v) for t, v in tw.items()}, tech)
     quant_res_tech = _tech_weight(res0.est_weights, tech) if isinstance(res0, K.TargetPortfolio) else None
     rec = {"base_strategy": "FROZEN_QUANT_V1", "tactical_overlay": "TECH_OVERWEIGHT", "target_tech_weight_min": float(minimum),
+           "owner_tech_floor": float(minimum), "owner_directive": tcfg.get("owner_directive"),
            "tech_weight_before_overlay": quant_res_tech if quant_res_tech is not None else quant_tw_tech,
            "quant_target_tech_weight": quant_tw_tech, "quant_target_names": len(tw),
            "frozen_quant_sha256": tcfg.get("frozen_quant_sha256")}
@@ -145,30 +184,38 @@ def run_overlay(plan, res0, prev_cash, rb, cfg, market, etf_holdings, etf_meta, 
         [round(float(minimum) - 0.01 * i, 4) for i in range(1, 40) if float(minimum) - 0.01 * i > quant_tw_tech]
     best = None
     tried = []
-    for lv in levels:
-        tw2, nt2, info = overlay_weights(tw, no_trade, rank_of, elig, tech, lv, caps, lot_ok)
-        notes = [f"一次性科技股加碼（Owner Issue #63）：沿用 Frozen Quant v1 目標與排名，科技目標 ≥ {float(minimum):.0%}，"
-                 f"資金先來自排名最低的非科技持股：{info['funded_from']}；新增科技（Quant 排名內）：{info['added']}"]
-        res = K._finalize(tw2, nt2, prev_h, D(prev_cash), nav, closes, rb, cfg, etf_holdings, etf_meta, regime, stance, why, cash_rng,
-                          {"kept": list(prev_h), "new": info["added"], "dropped": info["funded_from"], "rank_of": rank_of,
-                           "tactical": VERSION}, notes)
-        got = _tech_weight(res.est_weights, tech) if isinstance(res, K.TargetPortfolio) else None
-        tried.append({"level": round(lv, 4), "passed": got is not None, "tech_after": got,
-                      **({} if got is not None else {"reason": str(getattr(res, "reason", ""))[:160]})})
-        if got is None:
-            continue
-        if best is None or got > best[0]:
-            best = (got, res, info)
-        if got >= float(minimum):
+    done = False
+    for mode in ("proportional", "ranked"):             # diversified first; "ranked" uses fewer orders when the 30-order cap binds
+        for lv in levels:
+            tw2, nt2, info = overlay_weights(tw, no_trade, rank_of, elig, tech, lv, caps, lot_ok, mode, cash_floor)
+            notes = [f"科技股持續下限（Owner Issue #65/#63）：沿用 Frozen Quant v1 目標與排名，科技目標 ≥ {float(minimum):.0%}，"
+                     f"資金先來自排名最低的非科技持股：{info['funded_from']}；新增科技（Quant 排名內）：{info['added']}"]
+            res = K._finalize(tw2, nt2, prev_h, D(prev_cash), nav, closes, rb, cfg, etf_holdings, etf_meta, regime, stance, why,
+                              cash_rng, {"kept": list(prev_h), "new": info["added"], "dropped": info["funded_from"], "rank_of": rank_of,
+                                         "tactical": VERSION}, notes)
+            got = _tech_weight(res.est_weights, tech) if isinstance(res, K.TargetPortfolio) else None
+            tried.append({"mode": mode, "level": round(lv, 4), "passed": got is not None, "tech_after": got,
+                          **({} if got is not None else {"reason": str(getattr(res, "reason", ""))[:160]})})
+            if got is None:
+                continue
+            if best is None or got > best[0]:
+                best = (got, res, info, mode, lv)
+            if got >= float(minimum):
+                done = True
+                break
+        if done:
             break
     rec["levels_tried"] = tried
     if best is None:
         rec.update(status="TECH_OVERWEIGHT_BLOCKED", reason="no overlay level passed Quant's own legality pipeline; Quant result returned untouched",
                    tech_weight_after_overlay=rec["tech_weight_before_overlay"])
         return res0, rec
-    got, res, info = best
+    got, res, info, mode, lv = best
     reached = got >= float(minimum)
+    rec.update(selected_mode=mode, selected_level=round(lv, 4), blocker=None if reached else
+               ("30-order cap / per-name cap / lots / cash / Active Share: see levels_tried for each attempt"))
     rec.update(status="TECH_OVERWEIGHT_APPLIED" if reached else "TECH_OVERWEIGHT_PARTIAL", funded_from=info["funded_from"],
+               reduced_nontech_names=info["funded_from"], funded_from_cash_weight=info["from_cash"],
                raised_tech_names=info["raised"], added_tech_names=info["added"], tech_weight_after_overlay=got,
                reason="technology >= minimum reached" if reached else
                f"highest compliant attainable technology exposure {got:.2%} < {float(minimum):.0%}: a hard guard (holdings / per-name cap / "
