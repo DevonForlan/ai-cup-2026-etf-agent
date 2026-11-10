@@ -1,12 +1,12 @@
 {
- "trade_date": "2026-11-10",
- "phase": "RESUME_REBALANCE",
- "status": "FROZEN_QUANT_FULL_REBALANCE",
+ "trade_date": "2026-11-11",
+ "phase": "TECH_OVERWEIGHT",
+ "status": "TECH_OVERWEIGHT_APPLIED",
  "tactical_status": null,
- "version": "TACTICAL_OVERRIDE_V2_TECH_LT10",
- "fingerprint": "6282ae4de0bedf0d1dc5f648af4245b6ef2ea3fa6dd01d9832e59ba5306930e9",
+ "version": "TACTICAL_TECH_OVERWEIGHT_V1",
+ "fingerprint": "c6d06a7c6e737399b81653264766c0a1d6abc53f3a0f234b2828753c00898841",
  "x_effective": null,
  "submission_status": "SUBMISSION_CONFIRMED",
- "final_sha256": "302477613e9b570e20760a238859d2d9026f0043a90833c5bb02c2f3b4612977",
- "record_path": "shared_state/tactical/2026-11-10_RESUME_REBALANCE_V2.json"
+ "final_sha256": "364179d2932487aff4ee09f661eb995b7d89fedc4a49e813941ab67acad48649",
+ "record_path": "shared_state/tactical/2026-11-11_TECH_OVERWEIGHT_V1.json"
 }
