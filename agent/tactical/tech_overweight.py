@@ -179,32 +179,42 @@ def run_overlay(plan, res0, prev_cash, rb, cfg, market, etf_holdings, etf_meta, 
            "tech_weight_before_overlay": quant_res_tech if quant_res_tech is not None else quant_tw_tech,
            "quant_target_tech_weight": quant_tw_tech, "quant_target_names": len(tw),
            "frozen_quant_sha256": tcfg.get("frozen_quant_sha256")}
-    start = float(minimum) + 0.01
-    levels = [start, start + 0.01, start + 0.02, start + 0.04, float(minimum)] + \
-        [round(float(minimum) - 0.01 * i, 4) for i in range(1, 40) if float(minimum) - 0.01 * i > quant_tw_tech]
+    # Issue #65 (2026-11-11 directive): the floor is a MINIMUM, not a target. Search UPWARD from the floor and keep the highest
+    # compliant tech weight; every level goes through Quant's own _finalize (lots, caps, cash band, Active Share, stress, <=30 orders).
+    fl = float(minimum)
+    up = [round(fl + 0.01 * i, 4) for i in range(0, 60) if fl + 0.01 * i <= 0.995]
+    down = [round(fl - 0.01 * i, 4) for i in range(1, 40) if fl - 0.01 * i > quant_tw_tech]
     best = None
     tried = []
-    done = False
+    STALL = 4                                           # stop a mode after this many consecutive levels that do not improve the best
+
+    def attempt(mode, lv):
+        nonlocal best
+        tw2, nt2, info = overlay_weights(tw, no_trade, rank_of, elig, tech, lv, caps, lot_ok, mode, cash_floor)
+        notes = [f"科技股持續下限（Owner Issue #65/#63）：沿用 Frozen Quant v1 目標與排名，科技目標 ≥ {fl:.0%}（下限，非上限，向上搜尋最高合規水位），"
+                 f"資金先來自排名最低的非科技持股：{info['funded_from']}；新增科技（Quant 排名內）：{info['added']}"]
+        res = K._finalize(tw2, nt2, prev_h, D(prev_cash), nav, closes, rb, cfg, etf_holdings, etf_meta, regime, stance, why,
+                          cash_rng, {"kept": list(prev_h), "new": info["added"], "dropped": info["funded_from"], "rank_of": rank_of,
+                                     "tactical": VERSION}, notes)
+        got = _tech_weight(res.est_weights, tech) if isinstance(res, K.TargetPortfolio) else None
+        tried.append({"mode": mode, "level": round(lv, 4), "passed": got is not None, "tech_after": got,
+                      **({} if got is not None else {"reason": str(getattr(res, "reason", ""))[:160]})})
+        if got is not None and (best is None or got > best[0] + 1e-9):
+            best = (got, res, info, mode, lv)
+            return True
+        return False
+
     for mode in ("proportional", "ranked"):             # diversified first; "ranked" uses fewer orders when the 30-order cap binds
-        for lv in levels:
-            tw2, nt2, info = overlay_weights(tw, no_trade, rank_of, elig, tech, lv, caps, lot_ok, mode, cash_floor)
-            notes = [f"科技股持續下限（Owner Issue #65/#63）：沿用 Frozen Quant v1 目標與排名，科技目標 ≥ {float(minimum):.0%}，"
-                     f"資金先來自排名最低的非科技持股：{info['funded_from']}；新增科技（Quant 排名內）：{info['added']}"]
-            res = K._finalize(tw2, nt2, prev_h, D(prev_cash), nav, closes, rb, cfg, etf_holdings, etf_meta, regime, stance, why,
-                              cash_rng, {"kept": list(prev_h), "new": info["added"], "dropped": info["funded_from"], "rank_of": rank_of,
-                                         "tactical": VERSION}, notes)
-            got = _tech_weight(res.est_weights, tech) if isinstance(res, K.TargetPortfolio) else None
-            tried.append({"mode": mode, "level": round(lv, 4), "passed": got is not None, "tech_after": got,
-                          **({} if got is not None else {"reason": str(getattr(res, "reason", ""))[:160]})})
-            if got is None:
-                continue
-            if best is None or got > best[0]:
-                best = (got, res, info, mode, lv)
-            if got >= float(minimum):
-                done = True
+        miss = 0
+        for lv in up:
+            improved = attempt(mode, lv)
+            miss = 0 if improved else miss + 1
+            if best is not None and best[0] >= fl and miss >= STALL:
                 break
-        if done:
-            break
+    if best is None or best[0] < fl:                    # floor not reachable: fall back to the highest compliant level below it
+        for mode in ("proportional", "ranked"):
+            for lv in down:
+                attempt(mode, lv)
     rec["levels_tried"] = tried
     if best is None:
         rec.update(status="TECH_OVERWEIGHT_BLOCKED", reason="no overlay level passed Quant's own legality pipeline; Quant result returned untouched",
@@ -217,7 +227,7 @@ def run_overlay(plan, res0, prev_cash, rb, cfg, market, etf_holdings, etf_meta, 
     rec.update(status="TECH_OVERWEIGHT_APPLIED" if reached else "TECH_OVERWEIGHT_PARTIAL", funded_from=info["funded_from"],
                reduced_nontech_names=info["funded_from"], funded_from_cash_weight=info["from_cash"],
                raised_tech_names=info["raised"], added_tech_names=info["added"], tech_weight_after_overlay=got,
-               reason="technology >= minimum reached" if reached else
+               reason=f"technology {got:.2%} >= minimum {fl:.0%}; highest compliant level found by upward search" if reached else
                f"highest compliant attainable technology exposure {got:.2%} < {float(minimum):.0%}: a hard guard (holdings / per-name cap / "
                "cash / Active Share / 30 orders / lots) prevents more")
     return res, rec

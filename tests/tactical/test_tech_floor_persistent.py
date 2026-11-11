@@ -49,3 +49,46 @@ def test_frozen_quant_untouched_and_no_hand_picked_tickers():
         "f34fa02e924011b20c52a4bd42e961169f97e1950e76e04b7e78dc43ac23d2e0"
     cfg = yaml.safe_load((ROOT / "config/tactical_tech_overweight_v1.yaml").read_text(encoding="utf-8"))
     assert not any(k in cfg for k in ("sleeve", "tickers", "add_tickers", "buy_tickers"))
+
+
+def test_search_goes_above_the_floor_and_keeps_the_highest_compliant(monkeypatch):
+    """Issue #65 (2026-11-11): the floor is a minimum - run_overlay searches upward and selects the highest compliant tech weight."""
+    import pandas as pd
+    from decimal import Decimal
+    from agent.portfolio import constructor as K
+
+    class Res(K.TargetPortfolio):
+        def __init__(self, w):
+            self.est_weights = {"T1": Decimal(str(w))}
+
+    cap_lv = 0.93                                                     # legality ceiling: levels above it add nothing
+    monkeypatch.setattr(TW, "overlay_weights", lambda tw, nt, ro, el, tech, lv, caps, lok, mode, cf: ({}, set(), {"funded_from": [], "added": [], "raised": {}, "from_cash": 0}))
+    monkeypatch.setattr(K, "_finalize", lambda *a, **k: Res(0.80))
+    seq = iter([])
+    levels = []
+
+    def fin(tw2, nt2, prev_h, prev_cash, nav, closes, rb, cfg, eh, em, regime, stance, why, cr, meta, notes):
+        return Res(0.80)
+    monkeypatch.setattr(K, "_finalize", fin)
+    calls = []
+    orig = TW.overlay_weights
+
+    def ow(tw, nt, ro, el, tech, lv, caps, lok, mode, cf):
+        calls.append(lv)
+        return ({}, set(), {"funded_from": [], "added": [], "raised": {}, "from_cash": 0})
+    monkeypatch.setattr(TW, "overlay_weights", ow)
+    out = []
+
+    def fin2(*a, **k):
+        lv = calls[-1]
+        return Res(min(lv, cap_lv) - 0.02)
+    monkeypatch.setattr(K, "_finalize", fin2)
+    scores = pd.DataFrame({"rank": [1.0], "eligible": [True], "score": [1.0]}, index=["T1"])
+    from agent.config import load_strategy
+    cfg = load_strategy("config/strategy_quant_v1.yaml")
+    monkeypatch.setattr(TW.B, "regime_from_market", lambda m, c: ("r", "s", (0, 1), "w"))
+    res, rec = TW.run_overlay(({}, {}, set(), "1000", {}, 1), object(), "0", None, cfg, None, {}, {}, scores, None,
+                              {"target_tech_weight_min": 0.85}, {"T1"})
+    assert max(calls) > 0.86                                          # went above floor + 1pt
+    assert rec["tech_weight_after_overlay"] == max(float(min(c, cap_lv) - 0.02) for c in calls)
+    assert rec["status"] == "TECH_OVERWEIGHT_APPLIED"

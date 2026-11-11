@@ -90,3 +90,10 @@ Real-data rehearsal (official 11/10 state, trade date 11/11 at 85 %): 85.4 % tec
 `agent/ops/shared_state_scheduler.py` publishes `shared_state/scheduler/latest_<task>.json` (START heartbeat with delay, END status incl. BLOCKED / FAILED) from the 19:30 and
 17:00 wrappers, plus a CC-session sweep, so a late / blocked run is visible on GitHub. 2026-11-10 root cause: the PC was in Modern Standby (lid closed) from 17:41 and
 "Allow wake timers" was DISABLED on battery (DC), so the 19:30 wake timer could not fire; StartWhenAvailable ran the task at 20:16 when the lid opened. Fix: wake timers enabled on DC.
+
+## Issue #65 addendum (2026-11-11): the 85% floor is a minimum - upward search
+`run_overlay` no longer stops at the first level that reaches the floor. It evaluates floor, floor+1pt ... up to 99.5% in both modes (proportional, ranked),
+each through Quant's own `_finalize` (lots, per-name cap, cash band, Active Share, stress, <=30 orders), and selects the HIGHEST compliant tech weight
+(stall stop after 4 non-improving levels). Rehearsal on the official 11/10 state (trade date 11/11, floor 0.85): 88.4% tech, cash 11.6%, 21 holdings,
+30 orders (binding), Active Share 35.9%, validator PASS. A D-Plan is only submittable inside its official window (T-1 19:30 -> T 08:55): 11/11 closed 08:55,
+11/12 opens 2026-11-11 19:30, so the forecast for 11/12 runs at 19:30 on 11/11 once the 11/11 close data exists.
