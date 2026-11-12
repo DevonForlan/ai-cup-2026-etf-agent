@@ -1,0 +1,270 @@
+{
+ "phase": "TECH_OVERWEIGHT",
+ "decision_authority": "FROZEN_QUANT_V1+TECH_OVERWEIGHT_OVERLAY",
+ "rebalance_day_flag_from_pipeline": false,
+ "base_strategy": "FROZEN_QUANT_V1",
+ "tactical_overlay": "TECH_OVERWEIGHT",
+ "target_tech_weight_min": 0.85,
+ "owner_tech_floor": 0.85,
+ "owner_directive": "GitHub Issue #65 (OWNER OVERRIDE 2026-11-10: persistent tech floor >=85%, supersedes the Issue #63 one-day 75% rule for later D-Plans); Issue #63 for 2026-11-11",
+ "tech_weight_before_overlay": 0.8165298054086364,
+ "quant_target_tech_weight": 0.819736,
+ "quant_target_names": 24,
+ "frozen_quant_sha256": "f34fa02e924011b20c52a4bd42e961169f97e1950e76e04b7e78dc43ac23d2e0",
+ "levels_tried": [
+  {
+   "mode": "proportional",
+   "level": 0.85,
+   "passed": true,
+   "tech_after": 0.8323399790411289
+  },
+  {
+   "mode": "proportional",
+   "level": 0.86,
+   "passed": true,
+   "tech_after": 0.8390739881235336
+  },
+  {
+   "mode": "proportional",
+   "level": 0.87,
+   "passed": true,
+   "tech_after": 0.848163714388349
+  },
+  {
+   "mode": "proportional",
+   "level": 0.88,
+   "passed": true,
+   "tech_after": 0.8535239587406905
+  },
+  {
+   "mode": "proportional",
+   "level": 0.89,
+   "passed": true,
+   "tech_after": 0.8716377287406988
+  },
+  {
+   "mode": "proportional",
+   "level": 0.9,
+   "passed": true,
+   "tech_after": 0.880194673190263
+  },
+  {
+   "mode": "proportional",
+   "level": 0.91,
+   "passed": true,
+   "tech_after": 0.8860067941383627
+  },
+  {
+   "mode": "proportional",
+   "level": 0.92,
+   "passed": true,
+   "tech_after": 0.8970903188373202
+  },
+  {
+   "mode": "proportional",
+   "level": 0.93,
+   "passed": true,
+   "tech_after": 0.8970903188373202
+  },
+  {
+   "mode": "proportional",
+   "level": 0.94,
+   "passed": true,
+   "tech_after": 0.8970903188373202
+  },
+  {
+   "mode": "proportional",
+   "level": 0.95,
+   "passed": true,
+   "tech_after": 0.8970903188373202
+  },
+  {
+   "mode": "proportional",
+   "level": 0.96,
+   "passed": true,
+   "tech_after": 0.8970903188373202
+  },
+  {
+   "mode": "ranked",
+   "level": 0.85,
+   "passed": true,
+   "tech_after": 0.8479051899204649
+  },
+  {
+   "mode": "ranked",
+   "level": 0.86,
+   "passed": true,
+   "tech_after": 0.856865337838794
+  },
+  {
+   "mode": "ranked",
+   "level": 0.87,
+   "passed": true,
+   "tech_after": 0.8658368105062318
+  },
+  {
+   "mode": "ranked",
+   "level": 0.88,
+   "passed": true,
+   "tech_after": 0.8748536561422243
+  }
+ ],
+ "selected_mode": "proportional",
+ "selected_level": 0.92,
+ "blocker": null,
+ "status": "TECH_OVERWEIGHT_APPLIED",
+ "funded_from": [
+  "6446",
+  "2615"
+ ],
+ "reduced_nontech_names": [
+  "6446",
+  "2615"
+ ],
+ "funded_from_cash_weight": 0.060014,
+ "raised_tech_names": {
+  "3661": 0.003580455258766237,
+  "2383": 0.007379972293518889,
+  "5274": 0.005373190295412182,
+  "3260": 0.005892162442542477,
+  "3443": 0.004710256277630847,
+  "2408": 0.006538461953604575,
+  "8299": 0.006123822411117726,
+  "2344": 0.006150731171987079,
+  "3036": 0.004962342441956923,
+  "2376": 0.00594194365015078,
+  "3081": 0.0056630710375047575,
+  "6274": 0.004010261557379449,
+  "2337": 0.00601374111665219,
+  "2345": 0.002970115637229547,
+  "2059": 0.002446495613221818,
+  "1815": 0.0030581806728019753,
+  "6770": 0.002237708091385519,
+  "6223": 0.002237708091385519,
+  "2382": 0.002237708091385519,
+  "7734": 0.0029169096782378718,
+  "6187": 0.00469680189719617,
+  "2451": 0.005121960318931949
+ },
+ "added_tech_names": [],
+ "tech_weight_after_overlay": 0.8970903188373202,
+ "reason": "technology 89.71% >= minimum 85%; highest compliant level found by upward search",
+ "sells": {
+  "3661": 10000,
+  "3702": 228000,
+  "6770": 437000
+ },
+ "buys": {
+  "1815": 18000,
+  "2337": 62000,
+  "2344": 39000,
+  "2345": 1000,
+  "2376": 16000,
+  "2382": 60000,
+  "2383": 1000,
+  "2408": 14000,
+  "2451": 18000,
+  "3036": 22000,
+  "3081": 2000,
+  "3260": 16000,
+  "6187": 4000,
+  "6223": 3000,
+  "6274": 3000,
+  "7734": 1000,
+  "8299": 3000
+ },
+ "orders": 20,
+ "tech_weight_before": 0.8868882504369779,
+ "tech_weight_after": 0.8970903188373202,
+ "cash_weight_after": 0.10290968116267986,
+ "holdings_after": 22,
+ "max_weight_after": 0.0654049675528148,
+ "weights_after": {
+  "2383": 0.065405,
+  "2408": 0.060001,
+  "2344": 0.056412,
+  "8299": 0.056109,
+  "2337": 0.055155,
+  "2376": 0.054287,
+  "3260": 0.053958,
+  "3081": 0.051476,
+  "2451": 0.046997,
+  "3036": 0.04553,
+  "5274": 0.043957,
+  "6187": 0.04308,
+  "3443": 0.038533,
+  "6274": 0.036322,
+  "3661": 0.031529,
+  "1815": 0.028041,
+  "2345": 0.026167,
+  "7734": 0.026032,
+  "6770": 0.02049,
+  "2382": 0.02048,
+  "2059": 0.020014,
+  "6223": 0.017116
+ },
+ "weights_before": {
+  "3661": 0.076525,
+  "2383": 0.060338,
+  "2408": 0.053457,
+  "6770": 0.050506,
+  "2344": 0.050288,
+  "8299": 0.050067,
+  "2337": 0.049168,
+  "2376": 0.048581,
+  "3260": 0.048174,
+  "3081": 0.046301,
+  "5274": 0.043931,
+  "2451": 0.041876,
+  "3036": 0.040572,
+  "3443": 0.03851,
+  "6187": 0.0384,
+  "6274": 0.032788,
+  "1815": 0.025004,
+  "2345": 0.024283,
+  "3702": 0.024269,
+  "7734": 0.023849,
+  "2059": 0.020002
+ },
+ "active_share_min": 0.38726456496157435,
+ "active_share_benchmark": "00984A",
+ "est_nav": 815916619.13,
+ "names": {
+  "6223": "旺矽",
+  "2408": "南亞科",
+  "1815": "富喬",
+  "2376": "技嘉",
+  "2345": "智邦",
+  "3702": "大聯大",
+  "2451": "創見",
+  "2382": "廣達",
+  "3260": "威剛",
+  "3661": "世芯-KY",
+  "6187": "萬潤",
+  "7734": "印能科技",
+  "2337": "旺宏",
+  "6274": "台燿",
+  "6770": "力積電",
+  "2344": "華邦電",
+  "2383": "台光電",
+  "8299": "群聯",
+  "3036": "文曄",
+  "3081": "聯亞"
+ },
+ "turnover_pct": 20.829341765358226,
+ "holdings_before": 21,
+ "cash_weight_before": 0.11311174956302202,
+ "version": "TACTICAL_TECH_OVERWEIGHT_V1",
+ "fingerprint": "c9f083f140c1d299b059b17a576fe3aa9d8480c025b01e457ac77ecde88c8b84",
+ "trade_date": "2026-11-13",
+ "recorded_at": "2026-11-13T00:24:52+0800",
+ "source_record": "logs/tactical/2026-11-13_TECH_OVERWEIGHT_V1.json",
+ "source_sha256": "sha256:a59f63a92d3ab462b473a237e157bff3f68a64bf6c9cb5e547f952db0682041b",
+ "final_sha256": "650cc5e27f791f3197347f765c86c3ddb4cc896e0d4a126e3cdc3c6e067e7275",
+ "final_path": "shared_state/daily_submissions/2026-11-13/FINAL.json",
+ "submission_status": "SUBMISSION_CONFIRMED",
+ "submitted_at": "2026-11-13T00:25:23.990880+08:00",
+ "confirmed_at": "2026-11-13T00:25:29.631849+08:00",
+ "idempotency_key": "2026-11-13_TECH_OVERWEIGHT_V1.json|sha256:a59f63a92d3ab462b473a237e157bff3f68a64bf6c9cb5e547f952db0682041b|SUBMISSION_CONFIRMED|650cc5e27f791f3197347f765c86c3ddb4cc896e0d4a126e3cdc3c6e067e7275",
+ "synced_at": "2026-11-13T00:25:54+08:00"
+}
