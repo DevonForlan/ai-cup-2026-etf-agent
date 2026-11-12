@@ -1,0 +1,260 @@
+{
+ "trade_date": "2026-11-12",
+ "evaluation_type": "COMPETITION_DAY_ESTIMATE",
+ "is_official_settlement": false,
+ "nav": 816392897.0,
+ "daily_return_pct": -4.24,
+ "cumulative_return_pct": -18.36,
+ "mdd_pct": 21.99,
+ "turnover_pct": 35.07,
+ "fees": 426084.0,
+ "tax": 407147.0,
+ "cash_weight_pct": 11.31,
+ "holdings_count": 21,
+ "active_share_pct": 48.8,
+ "active_share_vs": "00984A",
+ "compliance": "PASS",
+ "nav_reconciliation": "PASS",
+ "return_attribution_check": "PASS",
+ "positive_holding_ratio_pct": 4.76,
+ "overall": "READY",
+ "starting_point": "OFFICIAL_SETTLEMENT（2026-11-11）",
+ "execution": "23 filled / 23 orders",
+ "dplan_file": "submissions\\20261112\\FINAL\\D-Plan_TEAM_11442_2026-11-12.json",
+ "holdings": [
+  {
+   "ticker": "3661",
+   "name": "世芯-KY",
+   "weight_pct": 7.65,
+   "daily_return_pct": 0.68,
+   "contribution_pct": -0.002
+  },
+  {
+   "ticker": "2383",
+   "name": "台光電",
+   "weight_pct": 6.03,
+   "daily_return_pct": -8.78,
+   "contribution_pct": -0.521
+  },
+  {
+   "ticker": "2408",
+   "name": "南亞科",
+   "weight_pct": 5.35,
+   "daily_return_pct": -3.68,
+   "contribution_pct": -0.214
+  },
+  {
+   "ticker": "6770",
+   "name": "力積電",
+   "weight_pct": 5.05,
+   "daily_return_pct": -4.1,
+   "contribution_pct": -0.208
+  },
+  {
+   "ticker": "2344",
+   "name": "華邦電",
+   "weight_pct": 5.03,
+   "daily_return_pct": -6.59,
+   "contribution_pct": -0.328
+  },
+  {
+   "ticker": "8299",
+   "name": "群聯",
+   "weight_pct": 5.01,
+   "daily_return_pct": -5.49,
+   "contribution_pct": -0.269
+  },
+  {
+   "ticker": "2337",
+   "name": "旺宏",
+   "weight_pct": 4.92,
+   "daily_return_pct": -5.2,
+   "contribution_pct": -0.254
+  },
+  {
+   "ticker": "2376",
+   "name": "技嘉",
+   "weight_pct": 4.86,
+   "daily_return_pct": -5.08,
+   "contribution_pct": -0.217
+  },
+  {
+   "ticker": "3260",
+   "name": "威剛",
+   "weight_pct": 4.82,
+   "daily_return_pct": -3.45,
+   "contribution_pct": -0.169
+  },
+  {
+   "ticker": "3081",
+   "name": "聯亞",
+   "weight_pct": 4.63,
+   "daily_return_pct": -5.19,
+   "contribution_pct": -0.244
+  },
+  {
+   "ticker": "5274",
+   "name": "信驊",
+   "weight_pct": 4.39,
+   "daily_return_pct": -4.78,
+   "contribution_pct": -0.211
+  },
+  {
+   "ticker": "2451",
+   "name": "創見",
+   "weight_pct": 4.19,
+   "daily_return_pct": -1.7,
+   "contribution_pct": -0.074
+  },
+  {
+   "ticker": "3036",
+   "name": "文曄",
+   "weight_pct": 4.06,
+   "daily_return_pct": -5.67,
+   "contribution_pct": -0.207
+  },
+  {
+   "ticker": "3443",
+   "name": "創意",
+   "weight_pct": 3.85,
+   "daily_return_pct": -0.32,
+   "contribution_pct": -0.012
+  },
+  {
+   "ticker": "6187",
+   "name": "萬潤",
+   "weight_pct": 3.84,
+   "daily_return_pct": -6.4,
+   "contribution_pct": -0.241
+  },
+  {
+   "ticker": "6274",
+   "name": "台燿",
+   "weight_pct": 3.28,
+   "daily_return_pct": -9.81,
+   "contribution_pct": -0.318
+  },
+  {
+   "ticker": "1815",
+   "name": "富喬",
+   "weight_pct": 2.5,
+   "daily_return_pct": -2.49,
+   "contribution_pct": -0.088
+  },
+  {
+   "ticker": "2345",
+   "name": "智邦",
+   "weight_pct": 2.43,
+   "daily_return_pct": -3.17,
+   "contribution_pct": -0.109
+  },
+  {
+   "ticker": "3702",
+   "name": "大聯大",
+   "weight_pct": 2.43,
+   "daily_return_pct": -5.23,
+   "contribution_pct": -0.225
+  },
+  {
+   "ticker": "7734",
+   "name": "印能科技",
+   "weight_pct": 2.38,
+   "daily_return_pct": -4.07,
+   "contribution_pct": -0.109
+  },
+  {
+   "ticker": "2059",
+   "name": "川湖",
+   "weight_pct": 2.0,
+   "daily_return_pct": -6.47,
+   "contribution_pct": -0.126
+  },
+  {
+   "ticker": "2002",
+   "name": "中鋼",
+   "weight_pct": 0.0,
+   "daily_return_pct": -1.06,
+   "contribution_pct": -0.004
+  },
+  {
+   "ticker": "2615",
+   "name": "萬海",
+   "weight_pct": 0.0,
+   "daily_return_pct": -3.6,
+   "contribution_pct": -0.054
+  },
+  {
+   "ticker": "2618",
+   "name": "長榮航",
+   "weight_pct": 0.0,
+   "daily_return_pct": -1.47,
+   "contribution_pct": -0.007
+  },
+  {
+   "ticker": "6446",
+   "name": "藥華藥",
+   "weight_pct": 0.0,
+   "daily_return_pct": 2.25,
+   "contribution_pct": 0.065
+  }
+ ],
+ "largest_positive_contributors": [
+  {
+   "ticker": "6446",
+   "name": "藥華藥",
+   "contribution_pct": 0.065
+  },
+  {
+   "ticker": "3661",
+   "name": "世芯-KY",
+   "contribution_pct": -0.002
+  },
+  {
+   "ticker": "2002",
+   "name": "中鋼",
+   "contribution_pct": -0.004
+  },
+  {
+   "ticker": "2618",
+   "name": "長榮航",
+   "contribution_pct": -0.007
+  },
+  {
+   "ticker": "3443",
+   "name": "創意",
+   "contribution_pct": -0.012
+  }
+ ],
+ "largest_negative_contributors": [
+  {
+   "ticker": "2383",
+   "name": "台光電",
+   "contribution_pct": -0.521
+  },
+  {
+   "ticker": "2344",
+   "name": "華邦電",
+   "contribution_pct": -0.328
+  },
+  {
+   "ticker": "6274",
+   "name": "台燿",
+   "contribution_pct": -0.318
+  },
+  {
+   "ticker": "8299",
+   "name": "群聯",
+   "contribution_pct": -0.269
+  },
+  {
+   "ticker": "2337",
+   "name": "旺宏",
+   "contribution_pct": -0.254
+  }
+ ],
+ "source_report": "reports/daily_evaluations/2026-11-12_evaluation.md",
+ "source_sha256": "sha256:0bbaca17bde1d3daed2ec80fed9285e7798260e5c9706cf52d52f84f284a53d6",
+ "synced_at": "2026-11-12T17:00:55+08:00",
+ "supersedes": [],
+ "idempotency_key": "2026-11-12|sha256:0bbaca17bde1d3daed2ec80fed9285e7798260e5c9706cf52d52f84f284a53d6"
+}
