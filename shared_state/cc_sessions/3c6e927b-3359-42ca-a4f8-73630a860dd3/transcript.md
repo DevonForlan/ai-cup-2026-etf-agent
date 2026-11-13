@@ -49784,3 +49784,44 @@ PR #69 is open and CI is running. I'll wait for it, then merge and deploy.
   - result: 6bc442f FEAT #68 - risk-adjusted technology overlay (regime band, signal tilt, sub-sector guard, turnover discipline) from the 2026-11-16 D-Plan (#69) HEAD_OK f34fa02e924011b2 None risk_adjusted 18:19
 - `Bash: command=cd "C:/Users/<user>/Desktop/個人/AI CUP 2026玉山人工智慧公開挑戰賽"; F=handoff/claude_sessions/2026-11-13_3c6e927b-3359-42ca-a4f8-73630a860dd3_issue68_impl.md; cat > $F <<'E' # Issue #68 - implementation / CI / deployment status AUTHORIZED_SCOPE = risk-adjusted technology overlay from the 2026…[+1675 chars; sha256:e7dc00a9618fd33b]`
 - `ScheduleWakeup: prompt=Issue #68 follow-through. (1) Each check-in: `python agent/ops/cc_session_sync.py sync --session 3c6e927b-3359-42ca-a4f8-73630a860dd3 --force`. (2) State: production HEAD 6bc442f (PR #69, Issue #68 risk-adjusted tech overlay effective for the 2026-11-16 D-Plan; 11/12-11/15 use…[+1891 chars; sha256:1dec77fe874c52cc]`
+  - result: https://github.com/DevonForlan/ai-cup-2026-etf-agent/issues/68#issuecomment-6850166304 {"status": "PUBLISHED", "new_events": 84, "turn": 191, "session_status": "RUNNING", "pushed": true}
+  - result: Next wakeup scheduled for 19:11:00 (in 3045s). If you owe the user a status update this tick, write it now as ordinary response text; then end the turn — the harness re-invokes you when the wakeup fires or a task-notification arrives.
+
+### Claude
+
+_2026-11-13 18:20:34+0800_
+
+Issue #68 的策略已經實作、合併並部署，下一個合法交易日（11/16）的預測要等週日 19:30 才會第一次用它。
+
+**狀態**
+- PR #69 CI 全過，已合併，production 在 `6bc442f`。
+- Frozen Quant v1 指紋 `f34fa02e…` 沒變，所有新邏輯都在 tactical overlay。
+- 11/12 到 11/15 沿用舊的 #65 行為，11/16 起套用新策略，沒有結束日，直到你改。
+- 實作回報已貼到 Issue #68：https://github.com/DevonForlan/ai-cup-2026-etf-agent/issues/68#issuecomment-6850166304。
+
+**新策略怎麼運作**
+- **目標**：在科技股 ≥85% 的前提下，找風險調整後最好的組合，不再追求最高比重。
+- **Regime**：用 SOX、台指期夜盤、科技股廣度、科技股 5 日相對強弱、20 日波動來分類。強勢給 90–95%，一般給 87–92%，高波動或廣度轉弱給 85–88%。
+- **選股傾斜**：Quant 排名是主要依據，另外加入 5 日與 20 日相對強弱、法人買賣、20 日波動、跳空與急漲跌風險。
+- **子產業集中度**：記憶體/儲存、PCB/CCL/材料、ASIC/IC 設計，各自上限 30% NAV。
+- **換手紀律**：「維持現有持股」也是候選之一，別的候選要贏過它超過 5 bp NAV 才會換股。
+- **安全邊際**：候選必須實際達到 85.5%（留 0.5 個百分點給隔日成交價的漂移）。
+- **所有競賽硬性規則**：仍由 Quant 自己的檢查把關。
+- **參數**：全部寫在設定檔，是我設的假設值，不是用近期績效調出來的。
+
+**預演**（用 11/13 FINAL 之後的狀態、模擬 11/16，唯讀）
+- 目前是高波動 regime（科技股波動 3.9%，廣度 18%），區間 85–88%。
+- 維持現有持股會讓記憶體族群到 34.6%，超過 30% 上限，所以集中度檢查改選了調整方案：科技股 85.7%，委託 12 筆，換手 14.8%，Active Share 36.6%，驗證通過。
+- 實際 11/16 的結果會依週日 19:30 的最新資料而定。
+
+**風險：週日 19:30 的筆電**
+- 這幾天筆電休眠都讓 19:30 排程晚了數小時才補跑，喚醒計時器沒有叫醒它。
+- 11/16 的窗口開到 08:55，晚跑仍來得及，但**週日晚上請不要蓋上螢幕，最好接上電源**。
+- 今晚（週五）和明天（週六）的 19:30 預期會因為沒有提交窗口而跳過。
+
+下一次檢查排在 19:11，之後一路排到週日 19:30。
+
+
+### Events
+
+- **TURN_END** 2026-11-13 18:20:35+0800 turn 191 completed
