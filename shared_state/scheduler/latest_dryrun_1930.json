@@ -1,9 +1,23 @@
 {
  "task": "dryrun_1930",
- "event": "START",
- "recorded_at": "2026-11-13T19:30:02+08:00",
+ "event": "END",
+ "recorded_at": "2026-11-13T19:30:12+08:00",
  "scheduled_local": "19:30",
- "actual_start_time": "2026-11-13T19:30:02+08:00",
+ "status": "SKIPPED",
+ "blocked_reason": "NO_SUBMISSION_WINDOW_TONIGHT",
+ "error_message": null,
+ "scheduled_time": "2026-11-13T19:30:00+08:00",
+ "actual_start_time": "2026-11-13T19:30:11+08:00",
+ "finished_at": "2026-11-13T19:30:12+08:00",
  "run_delay_minutes": 0,
- "status": "RUNNING"
+ "trade_date": null,
+ "network": null,
+ "data_refresh": null,
+ "etf_freshness": null,
+ "quant": null,
+ "active_share": null,
+ "dplan_validation": null,
+ "grounding": null,
+ "final_candidate": null,
+ "trade_date_key": null
 }
