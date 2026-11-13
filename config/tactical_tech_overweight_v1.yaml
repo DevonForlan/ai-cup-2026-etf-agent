@@ -6,12 +6,13 @@
 # The 2026-11-11 FINAL was already submitted under the 75% rule; that history is not rewritten, so 2026-11-11 keeps its own segment.
 version: TACTICAL_TECH_OVERWEIGHT_V1
 enabled: true
-owner_directive: 'GitHub Issue #65 (OWNER OVERRIDE 2026-11-10: persistent tech floor >=85%, supersedes the Issue #63 one-day 75% rule for later D-Plans); Issue #63 for 2026-11-11'
+owner_directive: 'GitHub Issue #68 (OWNER 2026-11-13: best risk-adjusted portfolio subject to tech >= 85%, from the 2026-11-16 D-Plan; supersedes the highest-compliant search); GitHub Issue #65 (OWNER OVERRIDE 2026-11-10: persistent tech floor >=85%, supersedes the Issue #63 one-day 75% rule for later D-Plans); Issue #63 for 2026-11-11'
 frozen_quant_sha256: f34fa02e924011b20c52a4bd42e961169f97e1950e76e04b7e78dc43ac23d2e0
 owner_tech_floor: 0.85
 floor_schedule:
 - {from: '2026-11-11', to: '2026-11-11', min: 0.75}     # Issue #63 (history; the submitted FINAL is 75.95%)
-- {from: '2026-11-12', min: 0.85}                       # Issue #65 persistent; no end date
+- {from: '2026-11-12', to: '2026-11-15', min: 0.85}      # Issue #65 highest-compliant search (history: 11/12, 11/13 FINALs)
+- {from: '2026-11-16', min: 0.85, policy: risk_adjusted}  # Issue #68 persistent risk-adjusted policy; no end date
 # No artificial ceiling above the minimum: only the per-name cap (Quant other_target_cap), holdings 20-30, cash, Active Share, 30 orders apply.
 # Technology classification = the list used since #41-#43 (config/tactical_override_v2.yaml: reduce_tickers).
 tech_classification_file: config/tactical_override_v2.yaml
@@ -19,3 +20,23 @@ tech_classification_key: reduce_tickers
 funding_rule: lowest-ranked non-technology Frozen Quant targets first; only when all of them are used up, cash down to min_cash_weight (cash stays far below the 25% cap)
 min_cash_weight: 0.08
 selection_rule: technology names must come from Frozen Quant v1's own targets / eligible ranking (no hand-picked ticker)
+
+# Issue #68 - risk-adjusted policy parameters (policy: risk_adjusted segments only). Documented ASSUMPTIONS, not fitted to results.
+risk_adjusted:
+  bands: {STRONG: [0.90, 0.95], NORMAL: [0.87, 0.92], DEFENSIVE: [0.85, 0.88]}
+  strong_ceiling: 0.95
+  floor_buffer: 0.005               # candidates must realise >= floor + 0.5pt (price drift before the next-day fills)
+  stay_band_tolerance: 0.03         # existing holdings stay eligible up to band max + 3pt (stability: do not trade only to move between nearby exposures)
+  regime_thresholds: {vol_high: 0.020, breadth_low: 0.45, breadth_strong: 0.65, sox_down: -0.02, txf_down: -0.015}
+  score_weights: {quant_rank: 0.40, rs5: 0.15, rs20: 0.15, flow5: 0.10, vol20: 0.10, gap: 0.10}
+  sharp_move_threshold: 0.07        # |gap| or |daily move| >= 7% in 5d (limit is 10%) -> extra score penalty
+  tilt_kappa: 0.35                  # allocation multiplier exp(kappa*z) clipped to [0.5, 2]
+  utility: {ic: 0.03, horizon_days: 5, gamma: 4.0, rho_in: 0.75, rho_x: 0.55, rho_t: 0.30, rho_n: 0.25}
+  cost_model: {fee: 0.001425, sell_tax: 0.003, slippage: 0.0010, per_order: 0.00002}
+  min_improvement: 0.0005           # keep the existing portfolio unless another candidate beats its utility by > 5 bp of NAV (about one round trip on 4-5% NAV of turnover)
+  bucket_cap: 0.30                  # max NAV share of one named technology sub-sector (memory, PCB/CCL/materials, ASIC/IC design)
+  # Sub-sector CLASSIFICATION (risk-factor grouping only; never a selection list). Unlisted technology names = other_tech (foundry/OSAT/ODM/servers/etc).
+  buckets:
+    memory_storage: ['2337', '2344', '2408', '2451', '3260', '5289', '6770', '8299']
+    pcb_ccl_materials: ['1815', '2313', '2368', '2383', '3037', '3044', '3189', '4749', '4958', '6274', '8046', '8358']
+    asic_ic_design: ['2379', '2454', '3034', '3227', '3443', '3529', '3661', '4966', '5274', '6415']

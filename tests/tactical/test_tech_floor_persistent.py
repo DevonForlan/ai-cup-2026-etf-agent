@@ -23,7 +23,7 @@ def test_floor_schedule_persistent_from_1112_and_history_kept():
 
 def test_owner_can_end_or_change_the_floor(tmp_path):
     cfg = yaml.safe_load((ROOT / "config/tactical_tech_overweight_v1.yaml").read_text(encoding="utf-8"))
-    cfg["floor_schedule"][1]["to"] = "2026-11-20"                     # explicit Owner end date
+    cfg["floor_schedule"][-1]["to"] = "2026-11-20"                     # explicit Owner end date
     p = tmp_path / "ended.yaml"
     p.write_text(yaml.safe_dump(cfg), encoding="utf-8")
     assert TW.resolve("2026-11-20", p)["target_tech_weight_min"] == 0.85

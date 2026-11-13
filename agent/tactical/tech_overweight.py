@@ -64,6 +64,15 @@ def floor_for(cfg: dict, trade_date: str) -> float | None:
     return float(cfg["target_tech_weight_min"]) if str(cfg.get("trade_date")) == td else None
 
 
+def segment_policy(cfg: dict, trade_date: str) -> str | None:
+    """Issue #68: policy of the floor segment in force on that date (None / 'highest_compliant' = the #65 search, 'risk_adjusted' = #68)."""
+    td, best = str(trade_date), None
+    for seg in cfg.get("floor_schedule") or []:
+        if str(seg["from"]) <= td and (not seg.get("to") or td <= str(seg["to"])) and (best is None or str(seg["from"]) >= str(best["from"])):
+            best = seg
+    return None if best is None else best.get("policy")
+
+
 def resolve(trade_date: str, config_path=None) -> dict | None:
     """The config (with `target_tech_weight_min` set to that date's floor) if the overlay is enabled and covers this trade date."""
     c = load_config(config_path)
@@ -73,6 +82,7 @@ def resolve(trade_date: str, config_path=None) -> dict | None:
     if fl is None:
         return None
     c = dict(c)
+    c["policy"] = segment_policy(c, trade_date)
     c["target_tech_weight_min"] = fl
     c["trade_date"] = str(trade_date)
     return c
@@ -86,7 +96,8 @@ def tech_tickers(cfg: dict) -> set[str]:
     return {str(t) for t in d.get(cfg.get("tech_classification_key") or "reduce_tickers", [])}
 
 
-def overlay_weights(tw, no_trade, rank_of, eligible, tech, target, cap, lot_ok=lambda t, w: True, mode="proportional", cash_floor=None):
+def overlay_weights(tw, no_trade, rank_of, eligible, tech, target, cap, lot_ok=lambda t, w: True, mode="proportional", cash_floor=None,
+                    mult=None, bucket_of=None, bucket_cap=None):
     """Pure function. Returns (new_target_weights, new_no_trade, info). Cash (1 - sum) is unchanged.
     mode "proportional": raise every Quant technology target proportionally (diversified, many orders);
     mode "ranked": raise the best-ranked Quant technology targets first up to the cap (few orders, used when the 30-order cap binds)."""
@@ -102,21 +113,40 @@ def overlay_weights(tw, no_trade, rank_of, eligible, tech, target, cap, lot_ok=l
     need = min(need, sum((w[t] for t in nontech), Decimal(0)) + cash_room)
     rem, gained = need, {}
     existing = [t for t in w if t in tech]
+    bcap = D(bucket_cap) if (bucket_of and bucket_cap is not None) else None
+    m_of = (lambda t: D(str(mult.get(t, 1.0)))) if mult else (lambda t: Decimal(1))
+
+    def head(t):                                                    # Issue #68: sub-sector concentration headroom (None = unconstrained)
+        if bcap is None:
+            return None
+        b = bucket_of.get(t)
+        return bcap - sum((v for k, v in w.items() if bucket_of.get(k) == b), Decimal(0))
     if mode == "ranked":                                            # 1b) fewest orders: best-ranked existing tech first, each up to the cap
         for t in sorted(existing, key=lambda t: (rank_of.get(t, WORST), t)):
             if rem <= Q:
                 break
-            give = min(cap - w[t], rem)
+            give = min(cap - w[t], rem, head(t) if bcap is not None else rem)
             if give > Q:
                 w[t] += give
                 gained[t] = gained.get(t, Decimal(0)) + give
                 rem -= give
     for _ in range(40 if mode != "ranked" else 0):                  # 1) Quant's own technology targets, proportional water-fill
         room = {t: cap - w[t] for t in existing if cap - w[t] > Q}
+        if bcap is not None:
+            room = {t: r for t, r in room.items() if head(t) > Q}
         if rem <= Q or not room:
             break
-        base = sum((w[t] for t in room), Decimal(0)) or Decimal(1)
-        step = {t: min(room[t], rem * w[t] / base) for t in room}
+        base = sum((w[t] * m_of(t) for t in room), Decimal(0)) or Decimal(1)
+        step = {t: min(room[t], rem * w[t] * m_of(t) / base) for t in room}
+        if bcap is not None:                                        # a sub-sector may not take more than its headroom in one pass
+            tot: dict = {}
+            for t, v in step.items():
+                tot[bucket_of.get(t)] = tot.get(bucket_of.get(t), Decimal(0)) + v
+            for t in list(step):
+                b = bucket_of.get(t)
+                h = bcap - sum((v for k, v in w.items() if bucket_of.get(k) == b), Decimal(0))
+                if tot[b] > h:
+                    step[t] = step[t] * max(h, Decimal(0)) / tot[b]
         for t, s in step.items():
             w[t] += s
             gained[t] = gained.get(t, Decimal(0)) + s
@@ -126,8 +156,8 @@ def overlay_weights(tw, no_trade, rank_of, eligible, tech, target, cap, lot_ok=l
         for t in cands:
             if rem <= Q:
                 break
-            give = min(cap, NEW_NAME_START, rem)
-            if not lot_ok(t, give):
+            give = min(cap, NEW_NAME_START, rem, head(t) if bcap is not None else rem)
+            if give <= Q or not lot_ok(t, give):
                 continue
             w[t] = give
             gained[t] = give
@@ -155,7 +185,7 @@ def _tech_weight(weights, tech):
     return float(sum((v for t, v in weights.items() if t in tech), Decimal(0)))
 
 
-def run_overlay(plan, res0, prev_cash, rb, cfg, market, etf_holdings, etf_meta, scores, regime_override, tcfg, tech):
+def run_overlay_legacy(plan, res0, prev_cash, rb, cfg, market, etf_holdings, etf_meta, scores, regime_override, tcfg, tech):
     """plan = Quant's observed (target_w, prev_h, no_trade, nav, closes, lot). Returns (result, record_fields)."""
     tw, prev_h, no_trade, nav, closes, lot = plan
     nav = D(nav)
@@ -231,3 +261,12 @@ def run_overlay(plan, res0, prev_cash, rb, cfg, market, etf_holdings, etf_meta, 
                f"highest compliant attainable technology exposure {got:.2%} < {float(minimum):.0%}: a hard guard (holdings / per-name cap / "
                "cash / Active Share / 30 orders / lots) prevents more")
     return res, rec
+
+
+def run_overlay(plan, res0, prev_cash, rb, cfg, market, etf_holdings, etf_meta, scores, regime_override, tcfg, tech):
+    """Dispatcher: Issue #68 risk-adjusted policy from its effective date, else the Issue #65 highest-compliant search (history)."""
+    if tcfg.get("policy") == "risk_adjusted":
+        from agent.tactical import tech_risk_adjusted as RA
+        return RA.run_overlay_v2(plan, res0, prev_cash, rb, cfg, market, etf_holdings, etf_meta, scores, regime_override, tcfg, tech,
+                                 legacy=run_overlay_legacy)
+    return run_overlay_legacy(plan, res0, prev_cash, rb, cfg, market, etf_holdings, etf_meta, scores, regime_override, tcfg, tech)

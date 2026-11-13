@@ -97,3 +97,17 @@ each through Quant's own `_finalize` (lots, per-name cap, cash band, Active Shar
 (stall stop after 4 non-improving levels). Rehearsal on the official 11/10 state (trade date 11/11, floor 0.85): 88.4% tech, cash 11.6%, 21 holdings,
 30 orders (binding), Active Share 35.9%, validator PASS. A D-Plan is only submittable inside its official window (T-1 19:30 -> T 08:55): 11/11 closed 08:55,
 11/12 opens 2026-11-11 19:30, so the forecast for 11/12 runs at 19:30 on 11/11 once the 11/11 close data exists.
+
+## Issue #68 (2026-11-13): risk-adjusted technology policy from the 2026-11-16 D-Plan (replaces the "highest compliant" search)
+Objective: best risk-adjusted portfolio subject to technology >= 85 % (floor = minimum, never the target). Frozen Quant v1 untouched; overlay only
+(`agent/tactical/tech_risk_adjusted.py`, `tech_regime.py`, `tech_overweight.overlay_weights` extensions, config `risk_adjusted:` block + floor segment
+`{from: 2026-11-16, policy: risk_adjusted}`; 2026-11-12..15 keep the #65 search as history). Every candidate still goes through Quant's `_finalize`
+(holdings 20-30, cash, per-name cap, Active Share, stress, <=30 orders, whole lots, compliance).
+- Regime (data: SOX / TXF night / tech breadth / tech 5d RS / tech 20d vol): DEFENSIVE (vol >= 2.0 %, breadth_ma20 < 45 %, SOX 1d <= -2 %, TXF night <= -1.5 %) 85-88 %;
+  STRONG (SOX 5d > 0, breadth >= 65 %, tech RS5 > 0, vol < 2 %) 90-95 %; otherwise NORMAL 87-92 %.
+- Name tilt: composite z = 0.40 Quant rank + 0.15 RS5 + 0.15 RS20 + 0.10 institutional flow - 0.10 vol20 - 0.10 gap/move (and -0.5 if |gap or move| >= 7 %); multiplier exp(0.35 z) in [0.5, 2].
+- Sub-sector guard: memory/storage, PCB-CCL-materials, ASIC-IC design each <= 30 % NAV (classification list in the config; concentration overrides stability).
+- Utility U = 5 * (mu'w - 2 w'Sigma w) - cost; mu_i = 0.03 * sigma_i * z_i, Sigma bucket-aware (rho 0.75 same bucket / 0.55 other tech / 0.30 tech-vs-other / 0.25 other); cost = fee 0.1425 % + sell tax 0.3 % + slippage 0.10 % + 2 bp/order.
+- Stability: "stay" (today's holdings, zero orders) competes; kept unless another candidate wins by > 5 bp NAV; stays eligible up to band max + 3 pt; every candidate must realise >= 85.5 % (0.5 pt price-drift buffer).
+- Fallbacks: widen to the 95 % ceiling; then the #65 search; then Quant's result untouched. All parameters are documented assumptions (config), not fitted to results.
+Rehearsal (state after the 11/13 FINAL, trade date 11/16): DEFENSIVE regime (tech vol 3.9 %, breadth 18 %), band 85-88 %; stay breached the memory bucket (34.6 %), so the guard chose tilt@0.88: tech 85.7 %, 12 orders, turnover 14.8 %, Active Share 36.6 %, validator PASS.
