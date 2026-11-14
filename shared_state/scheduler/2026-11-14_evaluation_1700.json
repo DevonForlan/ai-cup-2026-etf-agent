@@ -1,0 +1,9 @@
+{
+ "task": "evaluation_1700",
+ "event": "START",
+ "recorded_at": "2026-11-14T23:07:18+08:00",
+ "scheduled_local": "17:00",
+ "actual_start_time": "2026-11-14T23:07:18+08:00",
+ "run_delay_minutes": 367,
+ "status": "RUNNING"
+}
