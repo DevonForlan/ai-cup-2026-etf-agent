@@ -1,9 +1,13 @@
 {
  "task": "evaluation_1700",
- "event": "START",
- "recorded_at": "2026-11-14T23:07:18+08:00",
+ "event": "END",
+ "recorded_at": "2026-11-14T23:10:35+08:00",
  "scheduled_local": "17:00",
- "actual_start_time": "2026-11-14T23:07:18+08:00",
- "run_delay_minutes": 367,
- "status": "RUNNING"
+ "status": "SKIPPED",
+ "blocked_reason": "NO_TRADING_DAY",
+ "started_at": "2026-11-14T23:10:32+08:00",
+ "finished_at": "2026-11-14T23:10:32+08:00",
+ "evaluation_date": "2026-11-14",
+ "label": "PRECOMPETITION_PAPER_RUN",
+ "trade_date_key": "2026-11-14"
 }
