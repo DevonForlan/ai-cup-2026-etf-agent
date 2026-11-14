@@ -1,0 +1,9 @@
+{
+ "task": "dryrun_1930",
+ "event": "START",
+ "recorded_at": "2026-11-14T23:07:42+08:00",
+ "scheduled_local": "19:30",
+ "actual_start_time": "2026-11-14T23:07:42+08:00",
+ "run_delay_minutes": 217,
+ "status": "RUNNING"
+}
