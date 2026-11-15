@@ -51066,3 +51066,60 @@ Issue #68 follow-through. (1) Each check-in: `python agent/ops/cc_session_sync.p
 - `Bash: command=cd "C:/Users/<user>/Desktop/個人/AI CUP 2026玉山人工智慧公開挑戰賽" && (python agent/ops/cc_session_sync.py sync --session 3c6e927b-3359-42ca-a4f8-73630a860dd3 --force 2>&1 | tail -1) | description=Sync CC session at check-in`
   - result: 2026年11月15日 下午 07:35:30     LastRunTime    : 2026/11/15 下午 07:30:01 LastTaskResult : 267009 NextRunTime    : 2026/11/16 下午 07:30:00    Running  Name     LastWriteTime          ----     -------------          20261116 2026/11/15 下午 07:35:27 20261114 2026/11/13 下午 05:25:20
   - result: Command running in background with ID: b88fly05n. Output is being written to: C:\Users\<user>\AppData\Local\Temp\claude\8f718917fde93c02\3c6e927b-3359-42ca-a4f8-73630a860dd3\tasks\b88fly05n.output. You will be notified when it completes — do not poll that file or sleep while waiting. Read the f…[+29
+
+### Claude
+
+_2026-11-15 19:35:38+0800_
+
+The run started on time at 19:30:01 and is still running. It has already created the 2026-11-16 log folder. I'll look at what it has written so far.
+
+
+### Tool actions
+
+- `Bash: command=cd "C:/Users/<user>/Desktop/個人/AI CUP 2026玉山人工智慧公開挑戰賽" && ls -la logs/ops/20261116 | head -20; ls logs/tactical | tail -3; ls submissions/20261116 2>/dev/null | description=List 11/16 run artifacts`
+  - result: total 97 drwxr-xr-x 1 <user> 1049089     0 Nov 15 19:35 . drwxr-xr-x 1 <user> 1049089     0 Nov 15 19:31 .. -rw-r--r-- 1 <user> 1049089   305 Nov 15 19:35 competition_day.log -rw-r--r-- 1 <user> 1049089 27154 Nov 15 19:35 competition_day_summary.json -rw-r--r-- 1 <user> 1049…[+901 chars; sha256:bb56
+- `Bash: command=cd "C:/Users/<user>/Desktop/個人/AI CUP 2026玉山人工智慧公開挑戰賽" && cat logs/ops/20261116/operator_summary.txt; cat logs/ops/20261116/reconciliation.log; ls logs/tactical | grep 2026-11-16 | description=Read operator summary and reconciliation`
+  - result: ========================================================================  TRADE DATE  : 2026-11-16     TEAM: TEAM_11442     MODE: COMPETITION  DEADLINE    : NORMAL  (803.7 min left)  DATA        : health=PASS  preflight=WARN  warns=['etf_holdings_freshness', 'settlement_reconciled', 'active_share
+
+### Events
+
+- **TASK_NOTIFICATION** 2026-11-15 19:35:44+0800 Background command "Sync CC session at check-in" completed (exit code 0)
+
+### Tool actions
+
+- `Bash: command=cd "C:/Users/<user>/Desktop/個人/AI CUP 2026玉山人工智慧公開挑戰賽" && python - <<'EOF' import json r=json.load(open("logs/tactical/2026-11-16_TECH_OVERWEIGHT_V1.json",encoding="utf-8")) for k in ("status","reason","policy","regime","regime_reasons","regime_missing_inputs","band","band_used_ma…[+603 chars; sha256:034965a04b2a863d]`
+  - result: status TECH_OVERWEIGHT_APPLIED reason DEFENSIVE regime, band 85%-88%: highest risk-adjusted utility inside the band policy risk_adjusted regime DEFENSIVE regime_reasons ['tech_vol20>=2.0%', 'breadth_ma20<45%'] regime_missing_inputs [] band [0.85, 0.88] band_used_max 0.88 selected proportiona
+- `Bash: command=cd "C:/Users/<user>/Desktop/個人/AI CUP 2026玉山人工智慧公開挑戰賽" && cat submissions/20261116/submission_state.json | head -c 900; echo; tail -c 600 submissions/20261116/receipts.jsonl 2>/dev/null; tail -5 logs/ops/20261116/competition_day.log | description=Check submission state`
+- `PowerShell: command=Get-Date; (Get-ScheduledTask AI_CUP_Precompetition_DryRun_1930).State; (Get-ScheduledTaskInfo AI_CUP_Precompetition_DryRun_1930).LastTaskResult | description=Task state`
+  - result: {  "trade_date": "2026-11-16",  "state": "SUBMISSION_CONFIRMED",  "history": [   {    "at": "2026-11-15T19:35:27.265148+08:00",    "from": "NOT_READY",    "to": "READY_TO_SUBMIT",    "reason": "FINAL verified by ManualSubmissionProvider.prepare",    "dplan_sha256": "sha256:1e31deef35b7c36a6
+  - result: 2026年11月15日 下午 07:36:01 Running 267009
+- `Bash: command=cd "C:/Users/<user>/Desktop/個人/AI CUP 2026玉山人工智慧公開挑戰賽" && sleep 20; (python -m agent.ops.shared_state_sync --date 2026-11-16 2>&1 | tail -3; python -m agent.ops.shared_state_tactical 2>&1 | tail -2; python -m agent.ops.shared_state_scheduler --task dryrun_1930 --event END 2>&1 | t…[+165 chars; sha256:d645f0f4ef5e9a9f]`
+  - result: {"trade_date": "2026-11-16", "status": "ALREADY_SYNCED", "detail": "", "final_sha256": "1e31deef35b7c36a6508a4bfd6f9612d26c0b6bf9f355e834db2cbf7e7a96f37", "action": "UNCHANGED"} {"record": "supersede_20261109_latest.json", "status": "ALREADY_SYNCED"} {"record": "supersede_20261110_latest.json", "s
+- `Bash: command=cd "C:/Users/<user>/Desktop/個人/AI CUP 2026玉山人工智慧公開挑戰賽" && cat > handoff/claude_sessions/2026-11-15_3c6e927b-3359-42ca-a4f8-73630a860dd3_issue68_first_run.md <<'EOF' # Issue #68 — first production run (trade date 2026-11-16)  - Run: AI_CUP_Precompetition_DryRun_1930, started 2026-1…[+2518 chars; sha256:64489a3554a20bec]`
+  - result: https://github.com/DevonForlan/ai-cup-2026-etf-agent/issues/68#issuecomment-6893727741
+- `ScheduleWakeup: prompt=Issue #68 follow-through. (1) Each check-in: `python agent/ops/cc_session_sync.py sync --session 3c6e927b-3359-42ca-a4f8-73630a860dd3 --force` (slow; run in background). (2) State: Issue #68 policy (risk_adjusted tech overlay) ran 2026-11-15 19:30 for 11/16: FINAL sha 1e31deef…[+1059 chars; sha256:3a96b3a0352bef72]`
+  - result: Next wakeup scheduled for 20:36:00 (in 3532s). If you owe the user a status update this tick, write it now as ordinary response text; then end the turn — the harness re-invokes you when the wakeup fires or a task-notification arrives.
+
+### Claude
+
+_2026-11-15 19:37:16+0800_
+
+**11/16 的 D-Plan 已用 Issue #68 新策略產生，並在 Portal 確認提交成功（SUBMISSION_CONFIRMED）。**
+
+- **執行**：週日 19:30:01 準時開跑，19:35 提交完成，正式環境版本 6bc442f，Frozen Quant v1 沒有動。
+- **Portal 回看**：歷史列第 15 筆「已繳交」，回看內容與 FINAL 一致，沒有拒絕或檢核失敗標記。FINAL 的 sha256 開頭是 `1e31deef`，我也重算過本機檔案，吻合。
+- **市場狀態**：判定為防禦（DEFENSIVE）。原因是科技股 20 日波動率 ≥ 2.0%，而且站上 20 日均線的比例低於 45%。科技股區間因此是 85–88%。
+- **選擇**：選了「proportional@0.87」，這是風險調整後效用最高的候選。原本持股的科技比例是 89.6%，但記憶體／儲存這個子產業佔 34.6%，超過 30% 上限，所以沒有被選。
+- **科技曝險 85.50%**：Quant 自己的目標只有 82.10%，是 overlay 把它補到 85% 下限之上；沒有去追更高的比例。
+- **其他數字**：現金 14.50%，持股 22 檔，下單 10 筆，換手約 10.2%。子產業佔比是記憶體 29.5%、PCB/CCL/材料 14.1%、ASIC/IC 設計 11.9%、其他科技 30.0%。
+- **風控**：Active Share 官方口徑 45.23%（門檻 15%），validator 與合規檢查都通過。結算對帳只差現金 604 元，屬輕微差異，沒有被擋，也沒有退回 Quant 原始結果。
+- **證據**：已貼到 Issue #68，shared state 已同步，交接檔在 `handoff/claude_sessions/2026-11-15_3c6e927b-…_issue68_first_run.md`。
+
+這次做的是離線演練以外的第一次真實執行，結果符合設計。防禦狀態下科技比例貼著 85% 下限，是依 #68 的規則該有的樣子。
+
+排程工作本身還顯示執行中，我沒等它結束。下一次檢查排在 20:36，之後的重點是週一早上確認 MorningFinal 沒有蓋掉這份 FINAL，以及 17:10 的 11/16 評估結果。
+
+
+### Events
+
+- **TURN_END** 2026-11-15 19:37:17+0800 turn 226 completed
