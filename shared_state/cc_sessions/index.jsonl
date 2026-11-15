@@ -81,3 +81,4 @@
 {"session_id": "3c6e927b-3359-42ca-a4f8-73630a860dd3", "turn": 218, "timestamp": "2026-11-15 12:45:23+0800", "status": "WAITING_SCHEDULE", "events": 9629, "synced_at": "2026-11-15T12:45:43+08:00"}
 {"session_id": "3c6e927b-3359-42ca-a4f8-73630a860dd3", "turn": 219, "timestamp": "2026-11-15 13:45:08+0800", "status": "RUNNING", "events": 9634, "synced_at": "2026-11-15T13:45:11+08:00"}
 {"session_id": "3c6e927b-3359-42ca-a4f8-73630a860dd3", "turn": 219, "timestamp": "2026-11-15 13:45:08+0800", "status": "RUNNING", "events": 9634, "synced_at": "2026-11-15T13:45:11+08:00"}
+{"session_id": "3c6e927b-3359-42ca-a4f8-73630a860dd3", "turn": 220, "timestamp": "2026-11-15 14:45:09+0800", "status": "RUNNING", "events": 9645, "synced_at": "2026-11-15T14:45:16+08:00"}
