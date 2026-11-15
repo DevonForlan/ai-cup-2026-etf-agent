@@ -1,0 +1,799 @@
+{
+ "phase": "TECH_OVERWEIGHT",
+ "decision_authority": "FROZEN_QUANT_V1+TECH_OVERWEIGHT_OVERLAY",
+ "rebalance_day_flag_from_pipeline": false,
+ "base_strategy": "FROZEN_QUANT_V1",
+ "tactical_overlay": "TECH_RISK_ADJUSTED",
+ "policy": "risk_adjusted",
+ "version": "TACTICAL_TECH_OVERWEIGHT_V1",
+ "target_tech_weight_min": 0.85,
+ "owner_tech_floor": 0.85,
+ "owner_directive": "GitHub Issue #68 (OWNER 2026-11-13: best risk-adjusted portfolio subject to tech >= 85%, from the 2026-11-16 D-Plan; supersedes the highest-compliant search); GitHub Issue #65 (OWNER OVERRIDE 2026-11-10: persistent tech floor >=85%, supersedes the Issue #63 one-day 75% rule for later D-Plans); Issue #63 for 2026-11-11",
+ "tech_weight_before_overlay": 0.8209584833832226,
+ "quant_target_tech_weight": 0.820984,
+ "quant_target_names": 24,
+ "frozen_quant_sha256": "f34fa02e924011b20c52a4bd42e961169f97e1950e76e04b7e78dc43ac23d2e0",
+ "regime": "DEFENSIVE",
+ "regime_reasons": [
+  "tech_vol20>=2.0%",
+  "breadth_ma20<45%"
+ ],
+ "regime_inputs": {
+  "sox_ret1": -0.005437318219513321,
+  "sox_ret5": 0.16596460955932701,
+  "txf_night_ret": 0.012706362455945142,
+  "breadth_ma20": 0.18446601941747573,
+  "breadth_up5": 0.8737864077669902,
+  "tech_rs5": 0.07326911038401601,
+  "tech_vol20": 0.03922976211253193
+ },
+ "regime_missing_inputs": [],
+ "band": [
+  0.85,
+  0.88
+ ],
+ "bucket_cap": 0.3,
+ "band_used_max": 0.88,
+ "candidates": [
+  {
+   "label": "stay",
+   "mode": "stay",
+   "level": null,
+   "passed": true,
+   "tech_after": 0.8959555204966774,
+   "orders": 0,
+   "turnover": 0.0,
+   "cost": 0.0,
+   "utility": -0.011613271938619205,
+   "alpha": 0.0002853025185776783,
+   "risk": 0.03449431033836868,
+   "max_bucket": 0.3458546207638426,
+   "buckets": {
+    "pcb_ccl_materials": 0.1313,
+    "other_tech": 0.2997,
+    "memory_storage": 0.3459,
+    "asic_ic_design": 0.1191
+   }
+  },
+  {
+   "label": "tilt@0.85",
+   "mode": "tilt",
+   "level": 0.85,
+   "passed": true,
+   "tech_after": 0.8372675924280666,
+   "orders": 10,
+   "turnover": 0.0972414743456235,
+   "cost": 0.0006553475872790212,
+   "utility": -0.01069115379559556,
+   "alpha": 0.00036535866846633576,
+   "risk": 0.032250837007406295,
+   "max_bucket": 0.2997630637562967,
+   "buckets": {
+    "pcb_ccl_materials": 0.1341,
+    "other_tech": 0.2998,
+    "memory_storage": 0.2842,
+    "asic_ic_design": 0.1191
+   }
+  },
+  {
+   "label": "tilt@0.86",
+   "mode": "tilt",
+   "level": 0.86,
+   "passed": true,
+   "tech_after": 0.841533038630528,
+   "orders": 9,
+   "turnover": 0.09106525301408319,
+   "cost": 0.0006195046758088656,
+   "utility": -0.01067520495470234,
+   "alpha": 0.0003700138399643034,
+   "risk": 0.03228887442890783,
+   "max_bucket": 0.2997601650296137,
+   "buckets": {
+    "pcb_ccl_materials": 0.1346,
+    "other_tech": 0.2998,
+    "memory_storage": 0.288,
+    "asic_ic_design": 0.1191
+   }
+  },
+  {
+   "label": "tilt@0.87",
+   "mode": "tilt",
+   "level": 0.87,
+   "passed": true,
+   "tech_after": 0.8546123024658344,
+   "orders": 10,
+   "turnover": 0.10263971748643277,
+   "cost": 0.0006653406712262864,
+   "utility": -0.01106578243102,
+   "alpha": 0.000364989641497168,
+   "risk": 0.032810716848753675,
+   "max_bucket": 0.29976444161960664,
+   "buckets": {
+    "pcb_ccl_materials": 0.1414,
+    "other_tech": 0.2998,
+    "memory_storage": 0.2943,
+    "asic_ic_design": 0.1192
+   }
+  },
+  {
+   "label": "tilt@0.88",
+   "mode": "tilt",
+   "level": 0.88,
+   "passed": true,
+   "tech_after": 0.8635132183363604,
+   "orders": 11,
+   "turnover": 0.11004216970129797,
+   "cost": 0.0007010595369193078,
+   "utility": -0.011305039687512756,
+   "alpha": 0.00040343651440913494,
+   "risk": 0.033177427062692166,
+   "max_bucket": 0.29976693550992584,
+   "buckets": {
+    "pcb_ccl_materials": 0.1421,
+    "other_tech": 0.2998,
+    "memory_storage": 0.2976,
+    "asic_ic_design": 0.124
+   }
+  },
+  {
+   "label": "tilt@0.89",
+   "mode": "tilt",
+   "level": 0.89,
+   "passed": true,
+   "tech_after": 0.8658948291735848,
+   "orders": 11,
+   "turnover": 0.11241996296012487,
+   "cost": 0.0007068256855719629,
+   "utility": -0.011394255947941424,
+   "alpha": 0.0004003212177208121,
+   "risk": 0.03329827545097534,
+   "max_bucket": 0.2997679516072713,
+   "buckets": {
+    "pcb_ccl_materials": 0.1445,
+    "other_tech": 0.2998,
+    "memory_storage": 0.2976,
+    "asic_ic_design": 0.124
+   }
+  },
+  {
+   "label": "tilt@0.90",
+   "mode": "tilt",
+   "level": 0.9,
+   "passed": true,
+   "tech_after": 0.8732055555633017,
+   "orders": 11,
+   "turnover": 0.11971887001122916,
+   "cost": 0.000724525535170891,
+   "utility": -0.011638079620903907,
+   "alpha": 0.00039298812265563536,
+   "risk": 0.0336252021679999,
+   "max_bucket": 0.29977107067675235,
+   "buckets": {
+    "pcb_ccl_materials": 0.1518,
+    "other_tech": 0.2998,
+    "memory_storage": 0.2976,
+    "asic_ic_design": 0.124
+   }
+  },
+  {
+   "label": "tilt@0.91",
+   "mode": "tilt",
+   "level": 0.91,
+   "passed": true,
+   "tech_after": 0.8908724613280439,
+   "orders": 12,
+   "turnover": 0.13735658647075913,
+   "cost": 0.000787296997585251,
+   "utility": -0.012189129302336548,
+   "alpha": 0.0004809620568333126,
+   "risk": 0.03447142927350796,
+   "max_bucket": 0.29977860813659674,
+   "buckets": {
+    "pcb_ccl_materials": 0.1542,
+    "other_tech": 0.2998,
+    "memory_storage": 0.2977,
+    "asic_ic_design": 0.1393
+   }
+  },
+  {
+   "label": "tilt@0.92",
+   "mode": "tilt",
+   "level": 0.92,
+   "passed": true,
+   "tech_after": 0.8983555678020285,
+   "orders": 12,
+   "turnover": 0.14482706193789666,
+   "cost": 0.0008054129005930595,
+   "utility": -0.01244799016825247,
+   "alpha": 0.0004740322500658149,
+   "risk": 0.03480892057752614,
+   "max_bucket": 0.2997818007508163,
+   "buckets": {
+    "pcb_ccl_materials": 0.1616,
+    "other_tech": 0.2998,
+    "memory_storage": 0.2977,
+    "asic_ic_design": 0.1393
+   }
+  },
+  {
+   "label": "tilt@0.93",
+   "mode": "tilt",
+   "level": 0.93,
+   "passed": true,
+   "tech_after": 0.8983555678020285,
+   "orders": 12,
+   "turnover": 0.14482706193789666,
+   "cost": 0.0008054129005930595,
+   "utility": -0.01244799016825247,
+   "alpha": 0.0004740322500658149,
+   "risk": 0.03480892057752614,
+   "max_bucket": 0.2997818007508163,
+   "buckets": {
+    "pcb_ccl_materials": 0.1616,
+    "other_tech": 0.2998,
+    "memory_storage": 0.2977,
+    "asic_ic_design": 0.1393
+   }
+  },
+  {
+   "label": "tilt@0.94",
+   "mode": "tilt",
+   "level": 0.94,
+   "passed": true,
+   "tech_after": 0.8983555678020285,
+   "orders": 12,
+   "turnover": 0.14482706193789666,
+   "cost": 0.0008054129005930595,
+   "utility": -0.01244799016825247,
+   "alpha": 0.0004740322500658149,
+   "risk": 0.03480892057752614,
+   "max_bucket": 0.2997818007508163,
+   "buckets": {
+    "pcb_ccl_materials": 0.1616,
+    "other_tech": 0.2998,
+    "memory_storage": 0.2977,
+    "asic_ic_design": 0.1393
+   }
+  },
+  {
+   "label": "tilt@0.95",
+   "mode": "tilt",
+   "level": 0.95,
+   "passed": true,
+   "tech_after": 0.8983555678020285,
+   "orders": 12,
+   "turnover": 0.14482706193789666,
+   "cost": 0.0008054129005930595,
+   "utility": -0.01244799016825247,
+   "alpha": 0.0004740322500658149,
+   "risk": 0.03480892057752614,
+   "max_bucket": 0.2997818007508163,
+   "buckets": {
+    "pcb_ccl_materials": 0.1616,
+    "other_tech": 0.2998,
+    "memory_storage": 0.2977,
+    "asic_ic_design": 0.1393
+   }
+  },
+  {
+   "label": "proportional@0.85",
+   "mode": "proportional",
+   "level": 0.85,
+   "passed": true,
+   "tech_after": 0.8373891122829838,
+   "orders": 10,
+   "turnover": 0.09697904716278954,
+   "cost": 0.0006541341515332019,
+   "utility": -0.01070150943566768,
+   "alpha": 0.0003604928434277646,
+   "risk": 0.03226122770069708,
+   "max_bucket": 0.299762778577203,
+   "buckets": {
+    "pcb_ccl_materials": 0.1341,
+    "other_tech": 0.2998,
+    "memory_storage": 0.2844,
+    "asic_ic_design": 0.1191
+   }
+  },
+  {
+   "label": "proportional@0.86",
+   "mode": "proportional",
+   "level": 0.86,
+   "passed": true,
+   "tech_after": 0.8453064598251901,
+   "orders": 9,
+   "turnover": 0.09334844199843542,
+   "cost": 0.0006228093281678929,
+   "utility": -0.010804100691081517,
+   "alpha": 0.00035706280054208483,
+   "risk": 0.032462831305133735,
+   "max_bucket": 0.2997604713306837,
+   "buckets": {
+    "pcb_ccl_materials": 0.1358,
+    "other_tech": 0.2998,
+    "memory_storage": 0.2906,
+    "asic_ic_design": 0.1191
+   }
+  },
+  {
+   "label": "proportional@0.87",
+   "mode": "proportional",
+   "level": 0.87,
+   "passed": true,
+   "tech_after": 0.8550082886500466,
+   "orders": 10,
+   "turnover": 0.10155074133593446,
+   "cost": 0.0006604678231333013,
+   "utility": -0.011089256014024804,
+   "alpha": 0.00035725445633958655,
+   "risk": 0.03284211114899755,
+   "max_bucket": 0.2997633069420915,
+   "buckets": {
+    "pcb_ccl_materials": 0.1414,
+    "other_tech": 0.2998,
+    "memory_storage": 0.2947,
+    "asic_ic_design": 0.1191
+   }
+  },
+  {
+   "label": "proportional@0.88",
+   "mode": "proportional",
+   "level": 0.88,
+   "passed": true,
+   "tech_after": 0.8615413801207483,
+   "orders": 10,
+   "turnover": 0.10749788258522193,
+   "cost": 0.0006740240659216527,
+   "utility": -0.011280604933950089,
+   "alpha": 0.00035303457188254523,
+   "risk": 0.03310530990628389,
+   "max_bucket": 0.2997655887078586,
+   "buckets": {
+    "pcb_ccl_materials": 0.1433,
+    "other_tech": 0.2998,
+    "memory_storage": 0.2994,
+    "asic_ic_design": 0.1192
+   }
+  },
+  {
+   "label": "proportional@0.89",
+   "mode": "proportional",
+   "level": 0.89,
+   "passed": true,
+   "tech_after": 0.8738888103355331,
+   "orders": 11,
+   "turnover": 0.11982543574569487,
+   "cost": 0.0007239183823357997,
+   "utility": -0.011672813136587964,
+   "alpha": 0.00038096851861816813,
+   "risk": 0.03365986225888385,
+   "max_bucket": 0.2997708566423635,
+   "buckets": {
+    "pcb_ccl_materials": 0.1507,
+    "other_tech": 0.2998,
+    "memory_storage": 0.2994,
+    "asic_ic_design": 0.124
+   }
+  },
+  {
+   "label": "proportional@0.90",
+   "mode": "proportional",
+   "level": 0.9,
+   "passed": true,
+   "tech_after": 0.8774492300305277,
+   "orders": 11,
+   "turnover": 0.12338004335111598,
+   "cost": 0.0007325383057789458,
+   "utility": -0.011810235091122022,
+   "alpha": 0.000371918958988017,
+   "risk": 0.033837280836868516,
+   "max_bucket": 0.29977237566757253,
+   "buckets": {
+    "pcb_ccl_materials": 0.1543,
+    "other_tech": 0.2998,
+    "memory_storage": 0.2994,
+    "asic_ic_design": 0.124
+   }
+  },
+  {
+   "label": "proportional@0.91",
+   "mode": "proportional",
+   "level": 0.91,
+   "passed": true,
+   "tech_after": 0.8847601845398335,
+   "orders": 11,
+   "turnover": 0.13067895040222027,
+   "cost": 0.0007502381553778738,
+   "utility": -0.012058707047386456,
+   "alpha": 0.0003645854601694787,
+   "risk": 0.034165851887781255,
+   "max_bucket": 0.29977549482911897,
+   "buckets": {
+    "pcb_ccl_materials": 0.1616,
+    "other_tech": 0.2998,
+    "memory_storage": 0.2994,
+    "asic_ic_design": 0.124
+   }
+  },
+  {
+   "label": "proportional@0.92",
+   "mode": "proportional",
+   "level": 0.92,
+   "passed": true,
+   "tech_after": 0.8975622852757771,
+   "orders": 12,
+   "turnover": 0.1434595891684148,
+   "cost": 0.0008012312043858955,
+   "utility": -0.012488039227035334,
+   "alpha": 0.00041769325185605697,
+   "risk": 0.03479152378741911,
+   "max_bucket": 0.2997809567452449,
+   "buckets": {
+    "pcb_ccl_materials": 0.164,
+    "other_tech": 0.2998,
+    "memory_storage": 0.2994,
+    "asic_ic_design": 0.1344
+   }
+  },
+  {
+   "label": "proportional@0.93",
+   "mode": "proportional",
+   "level": 0.93,
+   "passed": true,
+   "tech_after": 0.8975622852757771,
+   "orders": 12,
+   "turnover": 0.1434595891684148,
+   "cost": 0.0008012312043858955,
+   "utility": -0.012488039227035334,
+   "alpha": 0.00041769325185605697,
+   "risk": 0.03479152378741911,
+   "max_bucket": 0.2997809567452449,
+   "buckets": {
+    "pcb_ccl_materials": 0.164,
+    "other_tech": 0.2998,
+    "memory_storage": 0.2994,
+    "asic_ic_design": 0.1344
+   }
+  },
+  {
+   "label": "proportional@0.94",
+   "mode": "proportional",
+   "level": 0.94,
+   "passed": true,
+   "tech_after": 0.8975622852757771,
+   "orders": 12,
+   "turnover": 0.1434595891684148,
+   "cost": 0.0008012312043858955,
+   "utility": -0.012488039227035334,
+   "alpha": 0.00041769325185605697,
+   "risk": 0.03479152378741911,
+   "max_bucket": 0.2997809567452449,
+   "buckets": {
+    "pcb_ccl_materials": 0.164,
+    "other_tech": 0.2998,
+    "memory_storage": 0.2994,
+    "asic_ic_design": 0.1344
+   }
+  },
+  {
+   "label": "proportional@0.95",
+   "mode": "proportional",
+   "level": 0.95,
+   "passed": true,
+   "tech_after": 0.8975622852757771,
+   "orders": 12,
+   "turnover": 0.1434595891684148,
+   "cost": 0.0008012312043858955,
+   "utility": -0.012488039227035334,
+   "alpha": 0.00041769325185605697,
+   "risk": 0.03479152378741911,
+   "max_bucket": 0.2997809567452449,
+   "buckets": {
+    "pcb_ccl_materials": 0.164,
+    "other_tech": 0.2998,
+    "memory_storage": 0.2994,
+    "asic_ic_design": 0.1344
+   }
+  }
+ ],
+ "levels_tried": [
+  {
+   "mode": "stay",
+   "level": null,
+   "passed": true,
+   "tech_after": 0.8959555204966774
+  },
+  {
+   "mode": "tilt",
+   "level": 0.85,
+   "passed": true,
+   "tech_after": 0.8372675924280666
+  },
+  {
+   "mode": "tilt",
+   "level": 0.86,
+   "passed": true,
+   "tech_after": 0.841533038630528
+  },
+  {
+   "mode": "tilt",
+   "level": 0.87,
+   "passed": true,
+   "tech_after": 0.8546123024658344
+  },
+  {
+   "mode": "tilt",
+   "level": 0.88,
+   "passed": true,
+   "tech_after": 0.8635132183363604
+  },
+  {
+   "mode": "tilt",
+   "level": 0.89,
+   "passed": true,
+   "tech_after": 0.8658948291735848
+  },
+  {
+   "mode": "tilt",
+   "level": 0.9,
+   "passed": true,
+   "tech_after": 0.8732055555633017
+  },
+  {
+   "mode": "tilt",
+   "level": 0.91,
+   "passed": true,
+   "tech_after": 0.8908724613280439
+  },
+  {
+   "mode": "tilt",
+   "level": 0.92,
+   "passed": true,
+   "tech_after": 0.8983555678020285
+  },
+  {
+   "mode": "tilt",
+   "level": 0.93,
+   "passed": true,
+   "tech_after": 0.8983555678020285
+  },
+  {
+   "mode": "tilt",
+   "level": 0.94,
+   "passed": true,
+   "tech_after": 0.8983555678020285
+  },
+  {
+   "mode": "tilt",
+   "level": 0.95,
+   "passed": true,
+   "tech_after": 0.8983555678020285
+  },
+  {
+   "mode": "proportional",
+   "level": 0.85,
+   "passed": true,
+   "tech_after": 0.8373891122829838
+  },
+  {
+   "mode": "proportional",
+   "level": 0.86,
+   "passed": true,
+   "tech_after": 0.8453064598251901
+  },
+  {
+   "mode": "proportional",
+   "level": 0.87,
+   "passed": true,
+   "tech_after": 0.8550082886500466
+  },
+  {
+   "mode": "proportional",
+   "level": 0.88,
+   "passed": true,
+   "tech_after": 0.8615413801207483
+  },
+  {
+   "mode": "proportional",
+   "level": 0.89,
+   "passed": true,
+   "tech_after": 0.8738888103355331
+  },
+  {
+   "mode": "proportional",
+   "level": 0.9,
+   "passed": true,
+   "tech_after": 0.8774492300305277
+  },
+  {
+   "mode": "proportional",
+   "level": 0.91,
+   "passed": true,
+   "tech_after": 0.8847601845398335
+  },
+  {
+   "mode": "proportional",
+   "level": 0.92,
+   "passed": true,
+   "tech_after": 0.8975622852757771
+  },
+  {
+   "mode": "proportional",
+   "level": 0.93,
+   "passed": true,
+   "tech_after": 0.8975622852757771
+  },
+  {
+   "mode": "proportional",
+   "level": 0.94,
+   "passed": true,
+   "tech_after": 0.8975622852757771
+  },
+  {
+   "mode": "proportional",
+   "level": 0.95,
+   "passed": true,
+   "tech_after": 0.8975622852757771
+  }
+ ],
+ "selected": "proportional@0.87",
+ "selected_mode": "proportional",
+ "selected_level": 0.87,
+ "selection_reason": "highest risk-adjusted utility inside the band",
+ "stay_utility": null,
+ "selected_utility": -0.011089256014024804,
+ "status": "TECH_OVERWEIGHT_APPLIED",
+ "funded_from": [
+  "6446",
+  "2615"
+ ],
+ "reduced_nontech_names": [
+  "6446",
+  "2615"
+ ],
+ "funded_from_cash_weight": 0.010012,
+ "raised_tech_names": {
+  "3661": 0.0031738434608973537,
+  "2383": 0.006180215079421406,
+  "5274": 0.004060398693349549,
+  "3260": 0.005109291458626253,
+  "3443": 0.0038844319024500655,
+  "2408": 0.001986044284555169,
+  "3036": 5.327517011456661e-05,
+  "2344": 0.005089594380175435,
+  "8299": 0.005179211419572519,
+  "2376": 6.114496864685918e-05,
+  "3081": 5.938396000680792e-05,
+  "6274": 0.0034055408481718976,
+  "2382": 2.334501136321921e-05,
+  "2345": 2.9945299698649428e-05,
+  "6223": 1.971467807549449e-05,
+  "1815": 0.0026746018705894312,
+  "2059": 2.217682904445505e-05,
+  "2337": 0.00165502134528219,
+  "6770": 0.0019157509192780813,
+  "7734": 3.039486936469426e-05,
+  "6187": 4.9619213685253845e-05,
+  "2451": 0.00435305433763065
+ },
+ "added_tech_names": [],
+ "tech_weight_after_overlay": 0.8550082886500466,
+ "blocker": null,
+ "regime_turnover": 0.10155074133593446,
+ "transaction_cost": 0.0006604678231333013,
+ "bucket_weights_after": {
+  "pcb_ccl_materials": 0.1414,
+  "other_tech": 0.2998,
+  "memory_storage": 0.2947,
+  "asic_ic_design": 0.1191
+ },
+ "top_tilt_scores": {
+  "3661": 0.807,
+  "2330": 0.757,
+  "3260": 0.737,
+  "2317": 0.686,
+  "2357": 0.674,
+  "3231": 0.67,
+  "8069": 0.624,
+  "3443": 0.57
+ },
+ "reason": "DEFENSIVE regime, band 85%-88%: highest risk-adjusted utility inside the band",
+ "sells": {
+  "2337": 373000,
+  "2408": 78000
+ },
+ "buys": {
+  "1815": 15000,
+  "2344": 33000,
+  "2383": 1000,
+  "2451": 15000,
+  "3260": 14000,
+  "6274": 2000,
+  "6770": 27000,
+  "8299": 2000
+ },
+ "orders": 10,
+ "tech_weight_before": 0.8959555204966774,
+ "tech_weight_after": 0.8550082886500466,
+ "cash_weight_after": 0.14499171134995334,
+ "holdings_after": 22,
+ "max_weight_after": 0.07132315001321635,
+ "weights_after": {
+  "2383": 0.071323,
+  "3260": 0.059863,
+  "2344": 0.059527,
+  "8299": 0.059466,
+  "2376": 0.052519,
+  "3081": 0.051006,
+  "2451": 0.050864,
+  "3036": 0.045759,
+  "5274": 0.043512,
+  "6187": 0.042619,
+  "3443": 0.041626,
+  "6274": 0.038849,
+  "3661": 0.034012,
+  "1815": 0.031237,
+  "7734": 0.026107,
+  "2345": 0.02572,
+  "2408": 0.023239,
+  "6770": 0.02239,
+  "2382": 0.020052,
+  "2337": 0.019338,
+  "2059": 0.019049,
+  "6223": 0.016933
+ },
+ "weights_before": {
+  "2383": 0.066205,
+  "2408": 0.05876,
+  "8299": 0.055482,
+  "2337": 0.055204,
+  "3260": 0.054733,
+  "2344": 0.054521,
+  "2376": 0.0525,
+  "3081": 0.050987,
+  "2451": 0.046632,
+  "3036": 0.045743,
+  "5274": 0.043496,
+  "6187": 0.042603,
+  "3443": 0.041611,
+  "6274": 0.036481,
+  "3661": 0.034,
+  "1815": 0.028652,
+  "7734": 0.026098,
+  "2345": 0.025711,
+  "6770": 0.020523,
+  "2382": 0.020045,
+  "2059": 0.019042,
+  "6223": 0.016927
+ },
+ "active_share_min": 0.4066781043155057,
+ "active_share_benchmark": "00985A",
+ "est_nav": 827361102.0975,
+ "names": {
+  "2408": "南亞科",
+  "6274": "台燿",
+  "2451": "創見",
+  "8299": "群聯",
+  "2337": "旺宏",
+  "2344": "華邦電",
+  "2383": "台光電",
+  "6770": "力積電",
+  "1815": "富喬",
+  "3260": "威剛"
+ },
+ "turnover_pct": 10.155074133593446,
+ "holdings_before": 22,
+ "cash_weight_before": 0.10404447950332259,
+ "fingerprint": "d99e49ad4b526f0a917ddd514190f8a7e1304e17fc939f554dcd4d7699c3b353",
+ "trade_date": "2026-11-16",
+ "recorded_at": "2026-11-15T19:35:25+0800",
+ "source_record": "logs/tactical/2026-11-16_TECH_OVERWEIGHT_V1.json",
+ "source_sha256": "sha256:88f512f2235fe93b1c8388db45d7142d4dfe140fbd9a3ffbdd7456760d41ee30",
+ "final_sha256": "1e31deef35b7c36a6508a4bfd6f9612d26c0b6bf9f355e834db2cbf7e7a96f37",
+ "final_path": "shared_state/daily_submissions/2026-11-16/FINAL.json",
+ "submission_status": "SUBMISSION_CONFIRMED",
+ "submitted_at": "2026-11-15T19:35:37.237544+08:00",
+ "confirmed_at": "2026-11-15T19:35:42.692647+08:00",
+ "idempotency_key": "2026-11-16_TECH_OVERWEIGHT_V1.json|sha256:88f512f2235fe93b1c8388db45d7142d4dfe140fbd9a3ffbdd7456760d41ee30|SUBMISSION_CONFIRMED|1e31deef35b7c36a6508a4bfd6f9612d26c0b6bf9f355e834db2cbf7e7a96f37",
+ "synced_at": "2026-11-15T19:35:57+08:00"
+}
