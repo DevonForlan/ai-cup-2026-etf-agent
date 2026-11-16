@@ -1,9 +1,22 @@
 {
  "task": "evaluation_1700",
- "event": "START",
- "recorded_at": "2026-11-16T18:13:43+08:00",
+ "event": "END",
+ "recorded_at": "2026-11-16T18:14:11+08:00",
  "scheduled_local": "17:00",
- "actual_start_time": "2026-11-16T18:13:43+08:00",
- "run_delay_minutes": 73,
- "status": "RUNNING"
+ "status": "PASS",
+ "blocked_reason": null,
+ "started_at": "2026-11-16T18:13:49+08:00",
+ "finished_at": "2026-11-16T18:13:51+08:00",
+ "evaluation_date": "2026-11-16",
+ "label": "COMPETITION_DAY_ESTIMATE",
+ "active_share": 0.4990753371877943,
+ "market_data": "OK",
+ "start_source": "OFFICIAL_SETTLEMENT",
+ "settlement": "PASS",
+ "execution": "10 filled / 10 orders",
+ "nav": "765852155.99",
+ "daily_return": -0.07467576535607752,
+ "compliance": "PASS",
+ "prediction_sha256": "sha256:1e31deef35b7c36a6508a4bfd6f9612d26c0b6bf9f355e834db2cbf7e7a96f37",
+ "trade_date_key": "2026-11-16"
 }
