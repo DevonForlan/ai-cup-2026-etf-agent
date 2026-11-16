@@ -1,24 +1,9 @@
 {
  "task": "dryrun_1930",
- "event": "END",
- "recorded_at": "2026-11-15T19:42:15+08:00",
+ "event": "START",
+ "recorded_at": "2026-11-17T00:03:57+08:00",
  "scheduled_local": "19:30",
- "status": "PASS",
- "blocked_reason": null,
- "error_message": null,
- "scheduled_time": "2026-11-15T19:30:00+08:00",
- "actual_start_time": "2026-11-15T19:30:11+08:00",
- "finished_at": "2026-11-15T19:36:03+08:00",
+ "actual_start_time": "2026-11-17T00:03:57+08:00",
  "run_delay_minutes": 0,
- "trade_date": "2026-11-16",
- "label": "COMPETITION",
- "network": "OK",
- "data_refresh": "PASS",
- "etf_freshness": "WARN 30 ETFs; oldest latest-date 2026-11-10 (6 days)",
- "quant": "PASS",
- "active_share": "PASS (45.23%)",
- "dplan_validation": "PASS",
- "grounding": "TEMPLATE_FALLBACK",
- "final_candidate": "submissions\\20261116\\FINAL\\D-Plan_TEAM_11442_2026-11-16.json",
- "trade_date_key": "2026-11-16"
+ "status": "RUNNING"
 }
