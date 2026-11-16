@@ -1,15 +1,9 @@
 {
  "task": "evaluation_1700",
- "event": "END",
- "recorded_at": "2026-11-16T17:54:39+08:00",
+ "event": "START",
+ "recorded_at": "2026-11-16T17:55:18+08:00",
  "scheduled_local": "17:00",
- "status": "BLOCKED",
- "blocked_reason": "SETTLEMENT_CHAIN_MISMATCH",
- "started_at": "2026-11-16T17:53:50+08:00",
- "finished_at": "2026-11-16T17:54:36+08:00",
- "evaluation_date": "2026-11-16",
- "label": "PRECOMPETITION_PAPER_RUN",
- "market_data": "OK",
- "prediction_sha256": "sha256:1e31deef35b7c36a6508a4bfd6f9612d26c0b6bf9f355e834db2cbf7e7a96f37",
- "trade_date_key": "2026-11-16"
+ "actual_start_time": "2026-11-16T17:55:18+08:00",
+ "run_delay_minutes": 55,
+ "status": "RUNNING"
 }
