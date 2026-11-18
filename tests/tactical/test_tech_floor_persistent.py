@@ -13,9 +13,13 @@ def test_floor_schedule_persistent_from_1112_and_history_kept():
     assert cfg["owner_tech_floor"] == 0.85
     assert TW.floor_for(cfg, "2026-11-10") is None                    # before the first segment: inactive
     assert TW.floor_for(cfg, "2026-11-11") == 0.75                    # Issue #63 history segment (already submitted)
-    for d in ("2026-11-12", "2026-11-13", "2026-11-27", "2027-01-04"):
-        assert TW.floor_for(cfg, d) == 0.85                           # persistent: never expires on its own
+    for d in ("2026-11-12", "2026-11-13", "2026-11-18"):
+        assert TW.floor_for(cfg, d) == 0.85                           # #65 / #68 history segments
         assert TW.resolve(d)["target_tech_weight_min"] == 0.85
+    for d in ("2026-11-19", "2026-11-27", "2027-01-04"):              # Owner 2026-11-18: aggressive segment, still never expires on its own
+        assert TW.floor_for(cfg, d) == 0.93 and TW.resolve(d)["target_tech_weight_min"] == 0.93
+        assert TO.is_active(d, "competition") is True
+    for d in ("2026-11-12", "2026-11-13", "2026-11-27", "2027-01-04"):
         assert TO.is_active(d, "competition") is True
     assert TO.is_active("2026-11-10", "competition") is False
     assert TO.is_active("2026-11-12", "dry-run") is False             # competition mode only
@@ -26,7 +30,7 @@ def test_owner_can_end_or_change_the_floor(tmp_path):
     cfg["floor_schedule"][-1]["to"] = "2026-11-20"                     # explicit Owner end date
     p = tmp_path / "ended.yaml"
     p.write_text(yaml.safe_dump(cfg), encoding="utf-8")
-    assert TW.resolve("2026-11-20", p)["target_tech_weight_min"] == 0.85
+    assert TW.resolve("2026-11-20", p)["target_tech_weight_min"] == 0.93
     assert TW.resolve("2026-11-21", p) is None
     cfg["enabled"] = False
     p.write_text(yaml.safe_dump(cfg), encoding="utf-8")

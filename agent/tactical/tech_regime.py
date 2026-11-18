@@ -87,7 +87,7 @@ def _z(vals: dict[str, float | None]) -> dict[str, float]:
 def composite_score(signals: dict[str, dict], rank_of: dict[str, int], cfg: dict) -> dict[str, float]:
     """Cross-sectional composite z over the technology names: Frozen Quant rank (primary), 5d / 20d relative strength, institutional flow,
     20d realized volatility (lower is better), extreme gap / sharp move (penalty). Missing inputs count as neutral (0)."""
-    w = {"quant_rank": 0.40, "rs5": 0.15, "rs20": 0.15, "flow5": 0.10, "vol20": 0.10, "gap": 0.10}
+    w = {"quant_rank": 0.40, "rs5": 0.15, "rs20": 0.15, "flow5": 0.10, "vol20": 0.10, "gap": 0.10, "rebound": 0.0}
     w.update(cfg.get("score_weights") or {})
     names = list(signals)
     nr = max(rank_of.values()) if rank_of else 1
@@ -96,9 +96,11 @@ def composite_score(signals: dict[str, dict], rank_of: dict[str, int], cfg: dict
     zf, zv = _z({t: signals[t].get("flow5") for t in names}), _z({t: signals[t].get("vol20") for t in names})
     ext = {t: max(signals[t].get("gap_max5") or 0.0, signals[t].get("move_max5") or 0.0) for t in names}
     zg = _z(ext)
+    zb = _z({t: (-signals[t]["ret5"] if signals[t].get("ret5") is not None else None) for t in names})   # short-term reversal (oversold = higher)
     thr = float(cfg.get("sharp_move_threshold", 0.07))
+    pen = float(cfg.get("sharp_move_penalty", 0.5))
     return {t: (w["quant_rank"] * zr[t] + w["rs5"] * z5[t] + w["rs20"] * z20[t] + w["flow5"] * zf[t]
-                - w["vol20"] * zv[t] - w["gap"] * zg[t] - (0.5 if ext[t] >= thr else 0.0)) for t in names}
+                - w["vol20"] * zv[t] - w["gap"] * zg[t] + w["rebound"] * zb[t] - (pen if ext[t] >= thr else 0.0)) for t in names}
 
 
 def classify_regime(prices, overnight, tech, cfg: dict) -> dict:

@@ -12,7 +12,8 @@ owner_tech_floor: 0.85
 floor_schedule:
 - {from: '2026-11-11', to: '2026-11-11', min: 0.75}     # Issue #63 (history; the submitted FINAL is 75.95%)
 - {from: '2026-11-12', to: '2026-11-15', min: 0.85}      # Issue #65 highest-compliant search (history: 11/12, 11/13 FINALs)
-- {from: '2026-11-16', min: 0.85, policy: risk_adjusted}  # Issue #68 persistent risk-adjusted policy; no end date
+- {from: '2026-11-16', to: '2026-11-18', min: 0.85, policy: risk_adjusted}  # Issue #68 risk-adjusted policy (history: 11/16-11/18 FINALs)
+- {from: '2026-11-19', min: 0.93, policy: aggressive}     # Owner 2026-11-18: ranking = final NAV on 11/27 only -> AGGRESSIVE_RETURN (block `aggressive:`)
 # No artificial ceiling above the minimum: only the per-name cap (Quant other_target_cap), holdings 20-30, cash, Active Share, 30 orders apply.
 # Technology classification = the list used since #41-#43 (config/tactical_override_v2.yaml: reduce_tickers).
 tech_classification_file: config/tactical_override_v2.yaml
@@ -40,3 +41,19 @@ risk_adjusted:
     memory_storage: ['2337', '2344', '2408', '2451', '3260', '5289', '6770', '8299']
     pcb_ccl_materials: ['1815', '2313', '2368', '2383', '3037', '3044', '3189', '4749', '4958', '6274', '8046', '8358']
     asic_ic_design: ['2379', '2454', '3034', '3227', '3443', '3529', '3661', '4966', '5274', '6415']
+
+# Owner decision 2026-11-18 (rules PDF: preliminary ranking = final NAV after the 11/27 close; MDD only breaks ties; team far behind with
+# 7 trading days left). Overrides of the risk_adjusted block when the floor_schedule segment says `policy: aggressive`. Every hard guard
+# is unchanged (Quant _finalize: lots, per-name cap other_target_cap 9%, holdings 20-30, cash < 25% and >= 0 under stress, Active Share,
+# <= 30 orders, validator, compliance). Rollback: set the 2026-11-19 segment back to `policy: risk_adjusted, min: 0.85`.
+aggressive:
+  bands: {STRONG: [0.93, 0.97], NORMAL: [0.93, 0.97], DEFENSIVE: [0.93, 0.97]}   # regime is still computed and recorded, not used to de-risk
+  strong_ceiling: 0.97
+  min_cash_weight: 0.03             # cash floor (was 8%): stays well above 0 under the stress fills, far below the 25% cap
+  bucket_cap: 0.45                  # sub-sector concentration allowed up to 45% NAV (was 30%)
+  score_weights: {quant_rank: 0.35, rs5: 0.0, rs20: 0.25, flow5: 0.15, vol20: 0.0, gap: 0.0, rebound: 0.25}  # momentum + flow + 5d reversal; no volatility penalty
+  sharp_move_penalty: 0.0           # limit-down names are rebound candidates, not penalised
+  tilt_kappa: 0.8
+  tilt_clip: [0.3, 3.0]
+  utility: {gamma: 0.0}             # select by expected return net of transaction cost (risk aversion off)
+  min_improvement: 0.0              # no preference for the existing portfolio

@@ -334,3 +334,14 @@ def test_reconcile_auto_accepts_cash_only_fee_sized_difference(ops_cfg):
     # disabled -> old behaviour
     off = {**ops_cfg, "reconciliation": {**ops_cfg["reconciliation"], "auto_accept": {"enabled": False}}}
     assert reconcile(small, OFFICIAL, off)["status"] == "BLOCK"
+
+
+def test_morning_plan_accepts_an_explicit_trade_date_in_the_evening_window():
+    """Owner 2026-11-18 supersession: T-1 evening (>= 19:30) is inside the official window for T; without trade_date the old rule holds."""
+    from datetime import datetime
+    from agent.ops import morning_final as MF
+    from agent.ops.common import TPE
+    now = datetime(2026, 11, 18, 20, 30, tzinfo=TPE)
+    assert MF.plan(now, set(), None, trade_date="2026-11-19")["action"] == "RUN"
+    assert MF.plan(datetime(2026, 11, 18, 18, 0, tzinfo=TPE), set(), None, trade_date="2026-11-19")["action"] == "SKIP"
+    assert MF.plan(now, set(), None)["trade_date"] == "2026-11-18"          # default unchanged: today's date
