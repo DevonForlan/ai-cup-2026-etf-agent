@@ -345,3 +345,12 @@ def test_morning_plan_accepts_an_explicit_trade_date_in_the_evening_window():
     assert MF.plan(now, set(), None, trade_date="2026-11-19")["action"] == "RUN"
     assert MF.plan(datetime(2026, 11, 18, 18, 0, tzinfo=TPE), set(), None, trade_date="2026-11-19")["action"] == "SKIP"
     assert MF.plan(now, set(), None)["trade_date"] == "2026-11-18"          # default unchanged: today's date
+
+
+def test_supersede_uses_tech_policy_mode_on_v2_resume_dates():
+    """2026-11-19 is a V2 RESUME date; the Owner-authorised tech-policy supersession must not be blocked by the V2 ENTRY rule."""
+    from agent.tactical import override as TO
+    c = TO.resolve_config(None, "2026-11-19")
+    assert c is None or c.get("version") != TO.VERSION_V2 or TO.phase_for(c, "2026-11-19") != "ENTRY"
+    from agent.tactical import tech_overweight as TW
+    assert TW.resolve("2026-11-19")["policy"] == "aggressive"
