@@ -4,9 +4,9 @@
  "status": "TECH_OVERWEIGHT_APPLIED",
  "tactical_status": null,
  "version": "TACTICAL_TECH_OVERWEIGHT_V1",
- "fingerprint": "d99e49ad4b526f0a917ddd514190f8a7e1304e17fc939f554dcd4d7699c3b353",
+ "fingerprint": "021c4d6b77ededf5085bdc75c68573731f98eaf7156d4dd54e80cd38a139c92d",
  "x_effective": null,
  "submission_status": "SUBMISSION_CONFIRMED",
- "final_sha256": "6180655d18cfe2ace1a3064962413cd20d1400ab0ee451bd8c94c6fdd908c83f",
+ "final_sha256": "4a7b1bd850ebe9eb7a94ae6c50f1d34fc45430831665c9bf790e3ad9efe9bc6f",
  "record_path": "shared_state/tactical/2026-11-19_TECH_OVERWEIGHT_V1.json"
 }
