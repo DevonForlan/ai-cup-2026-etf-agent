@@ -21,6 +21,27 @@ from agent.ops.settlement import ManualFileSettlementProvider, load_internal, pa
 MATCH, MINOR, BLOCK = "MATCH", "MINOR_DIFFERENCE", "BLOCK"
 
 
+def _auto_accept(rc: dict, diffs: list, status: str, internal: dict, official: dict) -> dict | None:
+    """Owner directive 2026-11-18 (no more manual reconciliation stops): a BLOCK that is ONLY a cash / NAV difference - identical
+    shares, identical warnings, relative size <= auto_accept.max_rel_nav - is a fee / tax / rounding-sized settlement difference
+    (the organiser's cash includes fees and taxes our simulator estimates). The OFFICIAL figures are used and the ledger follows them.
+    Share differences, unexpected warnings or larger gaps still BLOCK."""
+    ac = rc.get("auto_accept") or {}
+    if status != BLOCK or not ac.get("enabled"):
+        return None
+    if any(d["field"] not in ("cash", "nav") for d in diffs) or not diffs:
+        return None
+    n_o = D(official["nav"]) if official.get("nav") is not None else None
+    if not n_o:
+        return None
+    cap = D(ac.get("max_rel_nav", 0.001))
+    dc = abs(D(internal["cash"]) - D(official["cash"])) / n_o
+    dn = abs(D(internal["nav"]) - n_o) / n_o if internal.get("nav") is not None else Decimal(0)
+    if dc > cap or dn > cap:
+        return None
+    return {"policy": ac.get("policy", "AUTO_ACCEPT_OFFICIAL_CASH_ONLY"), "rel_cash": float(dc), "rel_nav": float(dn), "cap": float(cap)}
+
+
 def reconcile(internal: dict, official: dict, cfg: dict | None = None) -> dict:
     """internal / official: {holdings, cash, nav, accrued_dividends, warnings}."""
     rc = (cfg or load_ops_config())["reconciliation"]
@@ -61,9 +82,31 @@ def reconcile(internal: dict, official: dict, cfg: dict | None = None) -> dict:
     if wi != wo:
         diffs.append({"field": "warnings", "internal": wi, "official": wo})
         bump(BLOCK)                      # a warning we did not expect (or vice versa) needs a human
-    return {"status": status, "diffs": diffs,
+    auto = _auto_accept(rc, diffs, status, internal, official)
+    if auto:
+        status = MINOR
+        for d in diffs:
+            d["level"] = "AUTO_ACCEPTED"
+    return {"status": status, "diffs": diffs, **({"auto_accepted": auto} if auto else {}),
             "action": {"MATCH": "continue", "MINOR_DIFFERENCE": "continue with OFFICIAL figures; review diffs",
                        "BLOCK": "STOP: human must confirm the settlement before the next competition run"}[status]}
+
+
+def persist_official_to_ledger(date: str, internal, official: dict, start, cfg: dict | None = None, by: str = "AUTO_RECONCILE_POLICY") -> None:
+    """After a non-MATCH reconciliation the run starts from the OFFICIAL figures; keep the internal ledger identical to that start
+    (old file kept as *_superseded_<ts>.json) so the next-day evaluation chain (settlement_hash) always matches the D-Plan."""
+    import shutil
+    from datetime import datetime
+    from agent.ops.common import TPE
+    from agent.ops.settlement import save_internal
+    cfg = cfg or load_ops_config()
+    ts = datetime.now(TPE)
+    src = path_for(date, "internal", cfg)
+    if src.exists():
+        shutil.copy2(src, src.with_name(src.stem + f"_superseded_{ts:%Y%m%d_%H%M%S}.json"))
+    save_internal(start, cfg)
+    write_json(path_for(date, "reconciliation_auto", cfg), {"date": date, "at": ts.isoformat(), "by": by,
+                                                          "official_cash": str(official.get("cash")), "official_nav": str(official.get("nav"))})
 
 
 def reconcile_date(date: str, cfg: dict | None = None, provider=None) -> dict:

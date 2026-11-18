@@ -37,3 +37,15 @@ competition 模式下，T 的官方結算沒有「已確認」紀錄 → preflig
 
 ## 狀態查詢
 `.venv\Scripts\python.exe agent\ops\settlement_entry.py --status --date YYYY-MM-DD`
+
+## Auto-accept of fee / tax-sized cash differences (Owner directive 2026-11-18)
+
+Repeated manual `reconcile --accept-official` stops (cash-only differences of 604 – 37,112 TWD, 0.0001 % – 0.005 % of NAV, identical shares)
+delayed or nearly lost D-Plans. `config/ops.yaml: reconciliation.auto_accept` now handles them without a human:
+
+- BLOCK that consists ONLY of cash / NAV differences, with identical shares and identical warnings, and cash and NAV each <= `max_rel_nav`
+  (0.1 % of official NAV) -> `MINOR_DIFFERENCE`, `auto_accepted` recorded in `data/settlement/YYYYMMDD_reconciliation.json`.
+- The run starts from the OFFICIAL figures; in competition mode the internal ledger is aligned to that start (old file kept as
+  `*_superseded_<ts>.json`, marker `*_reconciliation_auto.json`) so the next-day evaluation chain (`settlement_hash`) matches the D-Plan.
+- Still BLOCK (human): any share difference, any unexpected warning, or a gap above the cap.
+- Rollback: `auto_accept.enabled: false`.

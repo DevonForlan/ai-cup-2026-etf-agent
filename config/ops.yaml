@@ -19,6 +19,10 @@ reconciliation:          # internal (our simulator) vs official settlement (orga
   nav_minor_tolerance_rel: 0.00005      # relative NAV diff above -> BLOCK
   accrued_dividend_tolerance_twd: 5
   shares_must_match: true               # any share difference -> BLOCK
+  auto_accept:                          # Owner directive 2026-11-18: no manual reconciliation stop for fee/tax-sized cash differences
+    enabled: true
+    policy: AUTO_ACCEPT_OFFICIAL_CASH_ONLY
+    max_rel_nav: 0.001                  # cash AND nav diff each <= 0.1% of official NAV (observed 0.0001%-0.005%); shares / warnings still BLOCK
 
 preflight:
   branch: master
