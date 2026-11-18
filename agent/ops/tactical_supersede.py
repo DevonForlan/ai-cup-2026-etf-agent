@@ -221,7 +221,9 @@ def preconditions(trade_date: str, ops: dict, now: datetime) -> dict:
     from agent.tactical import override as TO
     out = {"ok": False, "reasons": [], "trade_date": trade_date}
     tcfg = TO.resolve_config(None, trade_date)
-    if tcfg is None or tcfg.get("version") != TO.VERSION_V2:
+    v2_active = bool(tcfg) and tcfg.get("version") == TO.VERSION_V2 and (
+        TO.phase_for(tcfg, trade_date) == "ENTRY" or TO.is_forced_rebalance(tcfg, trade_date))
+    if not v2_active:                                     # V2 only claims later dates as RESUME: the tech-policy mode applies there
         from agent.tactical import tech_overweight as TW
         tw = TW.resolve(trade_date)
         if tw is not None and tw.get("policy"):           # Owner 2026-11-18: supersede a FINAL built under an older technology policy
