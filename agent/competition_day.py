@@ -235,6 +235,13 @@ def run_competition_day(trade_date: str, team_id: str, mode: str = "dry-run", *,
             sstat["reconciliation"] = rec["status"]
             if rec["status"] != "BLOCK":
                 start = apply_official(internal, official)
+                if rec["status"] != "MATCH" and rec["diffs"] and mode == "competition":     # keep the ledger on the official figures
+                    try:
+                        from agent.ops.reconcile import persist_official_to_ledger
+                        persist_official_to_ledger(prev_date, internal, official, start, ops_cfg)
+                        rl.info(f"ledger {prev_date} aligned to the OFFICIAL figures (auto_accepted={rec.get('auto_accepted')})")
+                    except Exception as e:  # noqa: BLE001 - never block the run on bookkeeping
+                        rl.info(f"ledger alignment failed: {type(e).__name__}: {str(e)[:160]}")
                 sstat.update(previous_available=True, source=f"official ({official.get('source')}) + internal state")
             else:                       # both exist but disagree: a human decides, the agent never picks a side
                 sstat.update(previous_available=True, source="internal and official DISAGREE (see reconciliation)")
@@ -589,4 +596,5 @@ def main(argv=None) -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-
+
+

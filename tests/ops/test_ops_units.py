@@ -318,3 +318,19 @@ def test_refresh_after_holiday_not_stale(ops_cfg, fixture_store):
     assert r["level"] == PASS
     r2 = refresh(T1, store=fixture_store, fetchers=_fake(latest="2026-10-22"), ops_cfg=ops_cfg, clock=Clock("2026-10-25T20:00:00+08:00"))
     assert r2["level"] == BLOCK                                # not a known closure -> T-1 prices stale
+
+
+def test_reconcile_auto_accepts_cash_only_fee_sized_difference(ops_cfg):
+    """Owner directive 2026-11-18: identical shares + cash/nav gap <= 0.1% NAV -> continue with OFFICIAL figures, never a manual stop."""
+    cfg = {**ops_cfg, "reconciliation": {**ops_cfg["reconciliation"], "auto_accept": {"enabled": True, "max_rel_nav": 0.001}}}
+    small = dict(OFFICIAL, cash="1020000", nav="30020000")                                   # +20k = 0.067% of 30M
+    r = reconcile(small, OFFICIAL, cfg)
+    assert r["status"] == "MINOR_DIFFERENCE" and r["auto_accepted"]["rel_cash"] < 0.001
+    big = dict(OFFICIAL, cash="1100000", nav="30100000")                                     # 0.33% -> still BLOCK
+    assert reconcile(big, OFFICIAL, cfg)["status"] == "BLOCK"
+    # any share difference or unexpected warning is never auto-accepted
+    assert reconcile(dict(small, holdings={"2330": 16999, "2317": 50000}), OFFICIAL, cfg)["status"] == "BLOCK"
+    assert reconcile(dict(small, warnings=["cash"]), OFFICIAL, cfg)["status"] == "BLOCK"
+    # disabled -> old behaviour
+    off = {**ops_cfg, "reconciliation": {**ops_cfg["reconciliation"], "auto_accept": {"enabled": False}}}
+    assert reconcile(small, OFFICIAL, off)["status"] == "BLOCK"
