@@ -38,14 +38,17 @@ def _wts(res):
 def run_overlay_v2(plan, res0, prev_cash, rb, cfg, market, etf_holdings, etf_meta, scores, regime_override, tcfg, tech, legacy=None):
     tw, prev_h, no_trade, nav, closes, lot = plan
     nav = D(nav)
-    ra = tcfg.get("risk_adjusted") or {}
+    ra = dict(tcfg.get("risk_adjusted") or {})
+    aggressive = tcfg.get("policy") == "aggressive"
+    if aggressive:                                   # Owner decision 2026-11-18 (ranking = final NAV only): AGGRESSIVE_RETURN overrides
+        ra.update(tcfg.get("aggressive") or {})
     floor = float(tcfg["target_tech_weight_min"])
     rank_of = {t: int(r) for t, r in scores["rank"].dropna().items()} if "rank" in scores else {}
     elig = scores["eligible"].to_dict() if "eligible" in scores else {}
     scored = set(scores.index[scores["score"].notna()]) if "score" in scores else set(rank_of)
     elig = {t: bool(v) and t in scored for t, v in elig.items()}
     caps = D(cfg["strategy_buffers"]["other_target_cap"])
-    cash_floor = tcfg.get("min_cash_weight")
+    cash_floor = ra.get("min_cash_weight", tcfg.get("min_cash_weight"))
     regime, stance, cash_rng, why = regime_override or B.regime_from_market(market, cfg)
 
     frames = tcfg.get("_frames") or RG.load_market_frames(tcfg["trade_date"])
@@ -58,14 +61,19 @@ def run_overlay_v2(plan, res0, prev_cash, rb, cfg, market, etf_holdings, etf_met
     bmap = RG.bucket_map(ra, tech)
     bcap = float(ra.get("bucket_cap", 0.30))
     kappa = float(ra.get("tilt_kappa", 0.35))
-    mult = {t: min(2.0, max(0.5, pow(2.718281828, kappa * z))) for t, z in z_all.items()}
+    clo, chi = (ra.get("tilt_clip") or [0.5, 2.0])
+    mult = {t: min(float(chi), max(float(clo), pow(2.718281828, kappa * z))) for t, z in z_all.items()}
+    # aggressive: technology names ordered by the composite score (best first) for the "ranked" fill; non-technology keep Quant order
+    zrank = {t: i + 1 for i, t in enumerate(sorted(z_all, key=lambda t: (-z_all[t], t)))}
+    rank_mix = {**{t: 1000 + r for t, r in rank_of.items()}, **zrank}
     margin = float(ra.get("min_improvement", 0.0005))
     lo, hi = reg["band_min"], reg["band_max"]
     lo = max(lo, floor)
     strong_hi = float(ra.get("strong_ceiling", 0.95))
 
     quant_tw_tech = _tech_weight({t: D(v) for t, v in tw.items()}, tech)
-    rec = {"base_strategy": "FROZEN_QUANT_V1", "tactical_overlay": "TECH_RISK_ADJUSTED", "policy": "risk_adjusted", "version": VERSION,
+    rec = {"base_strategy": "FROZEN_QUANT_V1", "tactical_overlay": "TECH_AGGRESSIVE_RETURN" if aggressive else "TECH_RISK_ADJUSTED",
+           "policy": "aggressive" if aggressive else "risk_adjusted", "version": VERSION,
            "target_tech_weight_min": floor, "owner_tech_floor": floor, "owner_directive": tcfg.get("owner_directive"),
            "tech_weight_before_overlay": _tech_weight(res0.est_weights, tech) if isinstance(res0, K.TargetPortfolio) else quant_tw_tech,
            "quant_target_tech_weight": quant_tw_tech, "quant_target_names": len(tw), "frozen_quant_sha256": tcfg.get("frozen_quant_sha256"),
@@ -74,8 +82,11 @@ def run_overlay_v2(plan, res0, prev_cash, rb, cfg, market, etf_holdings, etf_met
     cands: list[dict] = []
 
     def evaluate(label, mode, lv, tw2, nt2, info):
-        notes = [f"科技股風險調整策略（Owner Issue #68）：regime={reg['regime']}，科技區間 {lo:.0%}–{hi:.0%}（下限 {floor:.0%} 非目標），"
-                 f"候選 {label}；沿用 Frozen Quant v1 目標與排名，並考量相對強弱／法人／波動／跳空與子產業集中度及換手成本"]
+        notes = [(f"科技股進攻策略（Owner 2026-11-18：初賽僅以最終 NAV 排名）：regime={reg['regime']}，科技區間 {lo:.0%}–{hi:.0%}，"
+                  f"候選 {label}；沿用 Frozen Quant v1 目標與排名，依營收排名／20 日相對強弱／法人／短線超跌反彈加權集中，壓低現金"
+                  ) if aggressive else
+                 (f"科技股風險調整策略（Owner Issue #68）：regime={reg['regime']}，科技區間 {lo:.0%}–{hi:.0%}（下限 {floor:.0%} 非目標），"
+                  f"候選 {label}；沿用 Frozen Quant v1 目標與排名，並考量相對強弱／法人／波動／跳空與子產業集中度及換手成本")]
         res = K._finalize(tw2, nt2, prev_h, D(prev_cash), nav, closes, rb, cfg, etf_holdings, etf_meta, regime, stance, why, cash_rng,
                           {"kept": list(prev_h), "new": info.get("added", []), "dropped": info.get("funded_from", []), "rank_of": rank_of,
                            "tactical": VERSION}, notes)
@@ -103,13 +114,14 @@ def run_overlay_v2(plan, res0, prev_cash, rb, cfg, market, etf_holdings, etf_met
             held_w[t] = (Decimal(int(sh)) * D(px) / nav).quantize(Q, rounding="ROUND_FLOOR")
     if held_w:
         evaluate("stay", "stay", None, held_w, set(held_w), {"funded_from": [], "added": []})
-    for mode in ("tilt", "proportional"):
+    for mode in (("score_ranked", "tilt") if aggressive else ("tilt", "proportional")):
         lv = lo
         while lv <= strong_hi + 1e-9:
-            tw2, nt2, info = overlay_weights(tw, no_trade, rank_of, elig, tech, lv, caps,
+            ranked = mode == "score_ranked"
+            tw2, nt2, info = overlay_weights(tw, no_trade, rank_mix if ranked else rank_of, elig, tech, lv, caps,
                                              lambda t, w: closes.get(t) is not None and w * nav / D(closes[t]) >= lot,
-                                             mode="proportional", cash_floor=cash_floor, mult=mult if mode == "tilt" else None,
-                                             bucket_of=bmap, bucket_cap=bcap)
+                                             mode="ranked" if ranked else "proportional", cash_floor=cash_floor,
+                                             mult=mult if mode == "tilt" else None, bucket_of=bmap, bucket_cap=bcap)
             evaluate(f"{mode}@{lv:.2f}", mode, lv, tw2, nt2, info)
             lv = round(lv + 0.01, 4)
 
@@ -141,7 +153,8 @@ def run_overlay_v2(plan, res0, prev_cash, rb, cfg, market, etf_holdings, etf_met
         return res0, rec
     best = max(pool, key=lambda c: c["utility"])
     stay = next((c for c in pool if c["label"] == "stay"), None)
-    chosen, why_sel = best, "highest risk-adjusted utility inside the band"
+    chosen, why_sel = best, ("highest expected return net of transaction cost inside the band" if aggressive
+                             else "highest risk-adjusted utility inside the band")
     if stay is not None and best is not stay and best["utility"] - stay["utility"] < margin:
         chosen, why_sel = stay, (f"stability: best candidate {best['label']} improves utility by {best['utility'] - stay['utility']:.5f} "
                                  f"< min_improvement {margin}; existing portfolio kept (no turnover)")

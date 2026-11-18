@@ -65,6 +65,36 @@ def _rebalance_gate(s: dict, t: dict, tcfg: dict, run_id: str | None) -> tuple[b
     return (not why), why
 
 
+def _tech_policy_gate(s: dict, t: dict, tcfg: dict, run_id: str | None) -> tuple[bool, list[str]]:
+    """May the candidate built under the CURRENT technology-overlay policy replace the confirmed FINAL built under an older policy?"""
+    why = []
+    if run_id is None or s.get("run_id") != run_id:
+        why.append("summary does not belong to the candidate run")
+    if s.get("status") != "READY_TO_SUBMIT":
+        why.append(f"run status {s.get('status')}")
+    if s.get("validation") != "PASS":
+        why.append(f"validation {s.get('validation')}")
+    if s.get("fallback"):
+        why.append("the run fell back to the previous portfolio")
+    if t.get("phase") != "TECH_OVERWEIGHT" or t.get("status") != "TECH_OVERWEIGHT_APPLIED":
+        why.append(f"record {t.get('phase')} / {t.get('status')} (TECH_OVERWEIGHT_APPLIED required)")
+    if t.get("policy") != tcfg.get("policy"):
+        why.append(f"record policy {t.get('policy')} != configured policy {tcfg.get('policy')}")
+    if t.get("frozen_quant_sha256") != "f34fa02e924011b20c52a4bd42e961169f97e1950e76e04b7e78dc43ac23d2e0":
+        why.append("Frozen Quant v1 fingerprint mismatch")
+    if int(t.get("orders") or 0) > 30:
+        why.append(f"orders {t.get('orders')} > 30")
+    n = t.get("holdings_after")
+    if n is None or not (20 <= int(n) <= 30):
+        why.append(f"holdings {n} not in 20-30")
+    if t.get("active_share_min") is None or float(t["active_share_min"]) < 0.20:
+        why.append(f"Active Share {t.get('active_share_min')} below 0.20")
+    cw = t.get("cash_weight_after")
+    if cw is None or not (0.0 <= float(cw) < 0.25):
+        why.append(f"cash weight {cw} not in [0, 25%)")
+    return (not why), why
+
+
 def candidate_gate(summary: dict | None, tcfg: dict, run_id: str | None) -> tuple[bool, list[str]]:
     """Pure: may this competition_day candidate replace the confirmed FINAL? Every condition must hold (fail closed)."""
     from agent.tactical import override as TO
@@ -73,6 +103,8 @@ def candidate_gate(summary: dict | None, tcfg: dict, run_id: str | None) -> tupl
     why = []
     if t.get("phase") == "RESUME_REBALANCE":                       # Issue #61: the one-time full Frozen Quant v1 rebalance
         return _rebalance_gate(s, t, tcfg, run_id)
+    if tcfg.get("_mode") == "TECH_POLICY":                          # Owner 2026-11-18: a new technology-overlay policy for the same trade date
+        return _tech_policy_gate(s, t, tcfg, run_id)
     if run_id is None or s.get("run_id") != run_id:
         why.append("summary does not belong to the candidate run")
     if s.get("status") != "READY_TO_SUBMIT":
@@ -133,6 +165,52 @@ def archive_prior(trade_date: str, ops: dict, prior_sha: str) -> Path:
     return dst
 
 
+def _prior_policy(trade_date: str, ops: dict, prior: dict | None) -> str | None:
+    """Policy recorded in the run summary of the active FINAL (None if unknown)."""
+    if not prior:
+        return None
+    day = ops_path(ops, "ops_logs_dir") / ymd(trade_date)
+    want = str(prior.get("sha256", "")).split(":")[-1]
+    for p in (day / "summaries" / f"{want}.json", day / "competition_day_summary.json"):
+        try:
+            s = json.loads(p.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            continue
+        if str(s.get("sha256", "")).split(":")[-1] == want:
+            return (s.get("tactical_override") or {}).get("policy")
+    return None
+
+
+def _tech_preconditions(out: dict, tw: dict, prior: dict | None, trade_date: str, ops: dict, now: datetime) -> dict:
+    from agent.ops import morning_final as MF
+    from agent.ops.scheduled_run import holidays, run_mode
+    from agent.ops.team import resolve
+    from agent.submission.base import CONFIRMED, get_state
+    tcfg = dict(tw, version="TACTICAL_TECH_OVERWEIGHT_V1", _mode="TECH_POLICY", _fingerprint=None)
+    out.update(tactical_version=tcfg["version"], mode=f"TECH_POLICY_{str(tw.get('policy')).upper()}")
+    if run_mode(ops) != "COMPETITION":
+        out["reasons"].append("not COMPETITION mode")
+    if resolve("COMPETITION", ops)["status"] != "OK":
+        out["reasons"].append("Team ID not configured")
+    p = MF.plan(now, holidays(ops), ops, trade_date=trade_date)
+    if p["action"] != "RUN" or p.get("trade_date") != trade_date:
+        out["reasons"].append(f"decision window: {p['action']} {p.get('reason')} (a new decision needs T-1 19:30 .. T 08:30)")
+    out["prior_final_sha256"] = (prior or {}).get("sha256")
+    if not prior:
+        out["reasons"].append("no active FINAL to supersede")
+    pp = _prior_policy(trade_date, ops, prior)
+    out["prior_policy"] = pp
+    if prior and pp == tw.get("policy"):
+        out["reasons"].append(f"the active FINAL is already built under policy {pp}")
+    st = get_state(trade_date, ops).get("state")
+    out["state"] = st
+    if st != CONFIRMED:
+        out["reasons"].append(f"submission state {st} (this tool supersedes a SUBMISSION_CONFIRMED FINAL only)")
+    out["ok"] = not out["reasons"]
+    out["tcfg"] = tcfg
+    return out
+
+
 def preconditions(trade_date: str, ops: dict, now: datetime) -> dict:
     """Read-only. Returns {ok, reasons, ...context}."""
     from agent.ops import morning_final as MF
@@ -143,6 +221,11 @@ def preconditions(trade_date: str, ops: dict, now: datetime) -> dict:
     from agent.tactical import override as TO
     out = {"ok": False, "reasons": [], "trade_date": trade_date}
     tcfg = TO.resolve_config(None, trade_date)
+    if tcfg is None or tcfg.get("version") != TO.VERSION_V2:
+        from agent.tactical import tech_overweight as TW
+        tw = TW.resolve(trade_date)
+        if tw is not None and tw.get("policy"):           # Owner 2026-11-18: supersede a FINAL built under an older technology policy
+            return _tech_preconditions(out, tw, active_final(trade_date, ops), trade_date, ops, now)
     out["tactical_version"] = (tcfg or {}).get("version")
     rebalance = bool(tcfg) and tcfg["version"] == TO.VERSION_V2 and TO.is_forced_rebalance(tcfg, trade_date)
     out["mode"] = "ONE_TIME_FROZEN_QUANT_V1_FULL_REBALANCE" if rebalance else "V2_ENTRY"
@@ -245,9 +328,10 @@ def run(trade_date: str, *, authorization: str, expect_prior_sha: str | None = N
 
     MF.supersede_decision = decision
     try:
+        kw = {"trade_date": trade_date} if tcfg.get("_mode") == "TECH_POLICY" else {}
         mrec = (runner or MF.run)(portal_check=lambda t, o: (True, f"Owner-authorised supersession ({authorization}): "
                                                                f"portal holds prior FINAL {prior_sha[:20]} as SUBMISSION_CONFIRMED"),
-                                  replace=tactical_replace)
+                                  replace=tactical_replace, **kw)
     except Exception as e:  # noqa: BLE001
         mrec = {"status": "FAILED", "error_message": f"{type(e).__name__}: {e}"[:300], "superseded": False}
     finally:

@@ -265,7 +265,7 @@ def run_overlay_legacy(plan, res0, prev_cash, rb, cfg, market, etf_holdings, etf
 
 def run_overlay(plan, res0, prev_cash, rb, cfg, market, etf_holdings, etf_meta, scores, regime_override, tcfg, tech):
     """Dispatcher: Issue #68 risk-adjusted policy from its effective date, else the Issue #65 highest-compliant search (history)."""
-    if tcfg.get("policy") == "risk_adjusted":
+    if tcfg.get("policy") in ("risk_adjusted", "aggressive"):
         from agent.tactical import tech_risk_adjusted as RA
         return RA.run_overlay_v2(plan, res0, prev_cash, rb, cfg, market, etf_holdings, etf_meta, scores, regime_override, tcfg, tech,
                                  legacy=run_overlay_legacy)

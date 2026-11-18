@@ -44,10 +44,13 @@ DONE = ("ACCEPTED", "SUBMISSION_CONFIRMED")
 
 
 # ----------------------------------------------------------------------------- pure logic (unit tested)
-def plan(now: datetime, hol: set[str], ops_cfg: dict | None = None) -> dict:
-    """RUN (decision allowed, < 08:30) | SUBMIT_EXISTING_ONLY (08:30 .. 08:55) | SKIP."""
+def plan(now: datetime, hol: set[str], ops_cfg: dict | None = None, trade_date: str | None = None) -> dict:
+    """RUN (decision allowed, < 08:30) | SUBMIT_EXISTING_ONLY (08:30 .. 08:55) | SKIP.
+    `trade_date` (Owner-authorised supersession only): an explicit trade date T, so a decision can also be made in the official
+    evening window (T-1 19:30 ..); the window phase is still computed by submission_window for T (opens / 08:30 / 08:55)."""
+    from datetime import date as _date
     from agent.ops import submission_window as SW
-    t = now.date()
+    t = _date.fromisoformat(trade_date) if trade_date else now.date()
     out = {"trade_date": t.isoformat(), "action": "RUN", "reason": None, "window_phase": None,
            "actual_start_time": now.replace(microsecond=0).isoformat()}
     if t.weekday() >= 5 or t.isoformat() in hol:
@@ -147,7 +150,7 @@ def _run_competition_day(trade_date: str, team: str, pre: dict, started: str) ->
 
 
 def run(now: datetime | None = None, *, cd_runner=None, submit=None, replace=None, prepare=None,
-        portal_check=None) -> dict:
+        portal_check=None, trade_date: str | None = None) -> dict:
     """`cd_runner` / `submit` / `replace` / `prepare` / `portal_check` are injectable for tests (defaults: the
     production calls)."""
     from agent.data.locks import LockTimeout
@@ -156,7 +159,7 @@ def run(now: datetime | None = None, *, cd_runner=None, submit=None, replace=Non
     clock_injected = now is not None
     now = now or datetime.now(TPE)
     ops = load_ops_config()
-    p = plan(now, holidays(ops), ops)
+    p = plan(now, holidays(ops), ops, trade_date=trade_date)
     rec = {"task": TASK_NAME, "status": None, "run_mode": run_mode(ops), **p, "superseded": False,
            "prior_final_sha256": None, "new_final_sha256": None, "supersede_reason": None,
            "auto_upload_status": None, "blocked_reason": None, "error_message": None}

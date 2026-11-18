@@ -111,3 +111,21 @@ Objective: best risk-adjusted portfolio subject to technology >= 85 % (floor = m
 - Stability: "stay" (today's holdings, zero orders) competes; kept unless another candidate wins by > 5 bp NAV; stays eligible up to band max + 3 pt; every candidate must realise >= 85.5 % (0.5 pt price-drift buffer).
 - Fallbacks: widen to the 95 % ceiling; then the #65 search; then Quant's result untouched. All parameters are documented assumptions (config), not fitted to results.
 Rehearsal (state after the 11/13 FINAL, trade date 11/16): DEFENSIVE regime (tech vol 3.9 %, breadth 18 %), band 85-88 %; stay breached the memory bucket (34.6 %), so the guard chose tilt@0.88: tech 85.7 %, 12 orders, turnover 14.8 %, Active Share 36.6 %, validator PASS.
+
+## Owner decision 2026-11-18 — AGGRESSIVE_RETURN policy from the 2026-11-19 D-Plan
+
+Rules PDF (五、評分方式): the preliminary ranking is the **final NAV after the 11/27 close**; MDD only breaks ties. With the team far behind
+(cumulative -26.4 % on 11/17) and 7 trading days left, the Owner approved option B (more exposure / concentration) plus a little C (short-term
+rebound). Implemented as policy `aggressive` of the same overlay (`config/tactical_tech_overweight_v1.yaml`, segment from 2026-11-19):
+
+- technology band 93-97 % in every regime (regime still computed and recorded), cash floor 3 % (was 8 %), sub-sector cap 45 % (was 30 %);
+- score = 0.35 Quant rank + 0.25 20d relative strength + 0.15 institutional flow + 0.25 5d reversal; no volatility / sharp-move penalty;
+- candidates: `score_ranked` (best-scored names raised to the 9 % per-name cap first) and `tilt` (kappa 0.8, clip 0.3-3);
+- selection by expected return net of transaction cost (gamma 0), no preference for the existing portfolio;
+- unchanged hard guards: Frozen Quant `_finalize` (lots, 9 % per-name cap, holdings 20-30, cash < 25 % and >= 0 under stress fills,
+  Active Share, <= 30 orders, validator, compliance), submission window, Portal read-back.
+- Same-trade-date supersession: `python -m agent.ops.tactical_supersede --date T --authorization "..."` now also accepts a FINAL built under an
+  older technology policy and can run in the official evening window (T-1 19:30 .. T 08:30); prior FINAL archived under `superseded/`.
+- Rehearsal for 2026-11-19 (from the official 11/18 settlement): tech 95.9 %, cash 4.1 %, 21 holdings, 4 orders, max name 8.9 %,
+  Active Share 42.4 %, validator PASS.
+- Rollback: set the 2026-11-19 segment back to `{min: 0.85, policy: risk_adjusted}`.
