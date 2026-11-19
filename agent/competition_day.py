@@ -61,6 +61,13 @@ def settlement_hash(s: Settlement) -> str:
     return sha256_json({"holdings": s.holdings, "cash": str(s.cash), "nav": str(s.nav)})
 
 
+def ledger_needs_alignment(internal: Settlement, start: Settlement) -> bool:
+    """The run starts from `start` (official figures applied). Whenever that differs from the internal ledger - including a
+    within-tolerance MATCH such as a 0.11 TWD rounding difference - the ledger must be rewritten, or the next-day evaluation
+    cannot find the D-Plan's settlement_hash (SETTLEMENT_CHAIN_MISMATCH, seen 2026-11-16 / 11-17 / 11-19)."""
+    return settlement_hash(internal) != settlement_hash(start)
+
+
 def http_reference_time(url: str = "https://www.twse.com.tw/", timeout: float = 5.0) -> datetime | None:
     """Best-effort reference clock from a public server's HTTP Date header (no login, read-only HEAD)."""
     try:
@@ -235,7 +242,7 @@ def run_competition_day(trade_date: str, team_id: str, mode: str = "dry-run", *,
             sstat["reconciliation"] = rec["status"]
             if rec["status"] != "BLOCK":
                 start = apply_official(internal, official)
-                if rec["status"] != "MATCH" and rec["diffs"] and mode == "competition":     # keep the ledger on the official figures
+                if mode == "competition" and ledger_needs_alignment(internal, start):     # keep the ledger on the official figures
                     try:
                         from agent.ops.reconcile import persist_official_to_ledger
                         persist_official_to_ledger(prev_date, internal, official, start, ops_cfg)

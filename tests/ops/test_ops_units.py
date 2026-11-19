@@ -336,6 +336,22 @@ def test_reconcile_auto_accepts_cash_only_fee_sized_difference(ops_cfg):
     assert reconcile(small, OFFICIAL, off)["status"] == "BLOCK"
 
 
+def test_ledger_alignment_also_runs_on_a_within_tolerance_match():
+    """2026-11-19: reconcile said MATCH (0.11 TWD rounding) so the ledger was not rewritten, but the D-Plan started from the
+    official figures -> next-day SETTLEMENT_CHAIN_MISMATCH. Alignment must follow the start state, not the reconcile status."""
+    from decimal import Decimal
+    from agent.competition_day import ledger_needs_alignment
+    from agent.ops.settlement import apply_official
+    from agent.sim.models import Settlement
+    internal = Settlement.initial("2026-11-18", Decimal("1000000"))
+    internal.holdings = {"2330": 1000}
+    internal.cash, internal.nav = Decimal("105763552.7770208918"), Decimal("738149652.7770208918")
+    official = {"holdings": {"2330": 1000}, "cash": "105763552.89", "nav": "738149652.89"}
+    assert ledger_needs_alignment(internal, apply_official(internal, official))
+    same = {"holdings": {"2330": 1000}, "cash": str(internal.cash), "nav": str(internal.nav)}
+    assert not ledger_needs_alignment(internal, apply_official(internal, same))
+
+
 def test_morning_plan_accepts_an_explicit_trade_date_in_the_evening_window():
     """Owner 2026-11-18 supersession: T-1 evening (>= 19:30) is inside the official window for T; without trade_date the old rule holds."""
     from datetime import datetime
