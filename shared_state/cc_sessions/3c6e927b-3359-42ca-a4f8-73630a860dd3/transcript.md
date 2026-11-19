@@ -52954,3 +52954,239 @@ Ops follow-through (AGGRESSIVE_RETURN policy, Owner decision 2026-11-18). (1) Ea
 
 - `Bash: command=cd "C:/Users/<user>/Desktop/個人/AI CUP 2026玉山人工智慧公開挑戰賽" && date; python -c "import json;print(json.load(open('submissions/20261119/submission_state.json'))['state'])"; sha256sum submissions/20261119/FINAL/*.json | cut -c1-12; tail -1 logs/morning/wrapper.log 2>/dev/null | cut -c1-2…[+170 chars; sha256:6697c00319fde0e6]`
   - result: Thu, Nov 19, 2026  9:28:53 AM SUBMISSION_CONFIRMED 4a7b1bd850eb 2026-11-19T09:27:52.8663551+08:00 MORNING_FINAL SKIPPED SUBMISSION_WINDOW_CLOSED prediction=SKIPPED submission=NOT_RUN
+- `ScheduleWakeup: prompt=Ops follow-through (AGGRESSIVE_RETURN policy, Owner decision 2026-11-18). Owner preference: keep wakeups but NO routine reports; report only at event checks or problems. (1) Each check-in: `python agent/ops/cc_session_sync.py sync --session 3c6e927b-3359-42ca-a4f8-73630a860dd3…[+1093 chars; sha256:97b7f65dd00227bb]`
+  - result: Next wakeup scheduled for 10:28:00 (in 3536s). If you owe the user a status update this tick, write it now as ordinary response text; then end the turn — the harness re-invokes you when the wakeup fires or a task-notification arrives.
+
+### Claude
+
+_2026-11-19 09:29:06+0800_
+
+11/19 早上確認完成：FINAL 沒有被蓋掉。
+
+- 提交狀態仍是 SUBMISSION_CONFIRMED，FINAL 仍是新策略那份（sha 開頭 `4a7b1bd8`）。
+- MorningFinal 因筆電休眠拖到 09:27 才跑，已過 08:55 截止，所以直接跳過，沒有動到 FINAL。
+
+下一次回報是 17:10 的 11/19 評估結果，那是新策略的第一天。
+
+
+### Events
+
+- **TURN_END** 2026-11-19 09:29:06+0800 turn 265 completed
+
+## Turn 266 — 2026-11-19 09:29:51+0800
+
+
+### User
+
+_2026-11-19 09:29:51+0800_
+
+現在採行的策略是什麼
+
+
+### Claude
+
+_2026-11-19 09:29:58+0800_
+
+現在採行的是**進攻型策略（AGGRESSIVE_RETURN）**。11/19 的 D-Plan 已經是用它產生的，之後每晚 19:30 的排程也會自動沿用，直到你另外指示。
+
+**底層選股**：Frozen Quant v1 沒改，依月營收年增率 70%、月增率 30% 評分排名。
+
+**上面的進攻型 overlay（Agent 依規則自動決定）**
+- **科技股比例 93–97%**：不論市場狀態，都維持高科技曝險。
+- **現金下限 3%**：盡量把錢放進股票。
+- **集中持股**：評分最高的股票優先加碼到單檔 9% 上限，單一子產業最多 45%。
+- **評分方式**：
+  - 營收排名 35%
+  - 20 日相對強弱 25%
+  - 法人買賣超 15%
+  - 5 日超跌反彈 25%
+  - 不扣波動率或急漲急跌的分數
+- **選擇標準**：扣除交易成本後的預期報酬最高。
+
+**不變的硬性限制**
+- 持股 20–30 檔，單檔不超過 10%（台積電不超過 25%）。
+- 現金低於 25%。
+- Active Share 達標，每天最多 30 筆委託，只交易 150 檔名單內的股票。
+- validator 和合規檢查要通過，提交後要 Portal 回看確認。
+
+**目前持股（11/19）**
+- 科技 95.9%，現金 4.1%，21 檔。
+- 前三大：台光電 8.9%、聯亞 8.9%、創意 8.1%。
+
+**為什麼這樣做**：比賽只看 11/27 的最終 NAV。我們落後很多，所以用較高的曝險和集中度押上檔。代價是市場再跌時虧損也會放大。
+
+
+### Events
+
+- **TURN_END** 2026-11-19 09:29:58+0800 turn 266 completed
+
+## Turn 267 — 2026-11-19 09:31:09+0800
+
+
+### User
+
+_2026-11-19 09:31:09+0800_
+
+好的 我覺得可以，那我想要問一下今天的結果會讓你做出不一樣的決策嗎?
+
+
+### Claude
+
+_2026-11-19 09:31:20+0800_
+
+不會改變策略本身，但今晚產生的投資組合會隨今天的行情調整。
+
+**策略規則不會因為今天的結果而改**
+- 進攻型規則（科技 93–97%、現金 3%、評分方式等）是依你 11/18 的決定定下的。我不會因為單日賺或賠就自己調參數；要改策略，需要你再下指示。
+- 原因是單日漲跌大多是雜訊，只剩約 6 個交易日，頻繁改規則只會增加交易成本，也讓決策失去一致性。
+
+**今晚 19:30 的 D-Plan 會反映今天的行情**
+- 收盤後的價格、法人買賣超和營收資料，會更新每檔股票的評分。
+- 評分變了，排名也可能變：
+  - 今天大漲的股票，20 日強弱分數會上升，但 5 日超跌反彈分數會下降。
+  - 今天大跌的股票則反過來，可能因「超跌」被加碼。
+- 所以今晚可能出現換股或加減碼。也可能分數差異不大，扣掉交易成本後不值得交易，就維持原持股。
+- 有兩種情況會觸發強制調整：
+  - 股價波動讓單檔超過 10%（規則給 5 個交易日內調回）。
+  - 科技比例或現金跑出區間。
+
+**今天的結果還不知道**：收盤是 13:30，評估排程 17:00 才會算出 NAV。17:10 我會告訴你今天的報酬；19:35 會告訴你今晚的決策，包括換了哪些股票、為什麼換。
+
+
+### Events
+
+- **TURN_END** 2026-11-19 09:31:21+0800 turn 267 completed
+
+## Turn 268 — 2026-11-19 10:26:42+0800
+
+
+### Events
+
+- **SYSTEM_INFO** 2026-11-19 10:26:42+0800 Conversation compacted
+
+### User
+
+_2026-11-19 10:26:42+0800_
+
+This session is being continued from a previous conversation that ran out of context. The summary below covers the earlier portion of the conversation.
+
+
+Summary:
+1. Primary Request and Intent:
+   - Project: AI CUP 2026 玉山 Agent 基金經理人, team TEAM_11442.
+     - Repo `DevonForlan/ai-cup-2026-etf-agent` (master).
+     - Production checkout: `C:\Users\<user>\Desktop\個人\AI CUP 2026玉山人工智慧公開挑戰賽`.
+   - Standing governance (CLAUDE.md §11 COMPETITION_HIGH_AUTONOMY, Issue #54, memory `feedback_pr_self_merge.md`):
+     - Carry work end to end: implement → test → CI → self-merge → deploy → verify → submit → confirm → shared state → GitHub evidence.
+     - Never ask the Owner to merge or deploy.
+   - Hard boundaries remain:
+     - No credential/cookie/token extraction.
+     - No login/MFA/CAPTCHA bypass.
+     - No fabricated evidence or submission success.
+     - No weakening of tests or guards.
+     - No force-push.
+     - No rewriting of audit history.
+   - Frozen Quant v1 (`config/strategy_quant_v1.yaml` sha256 f34fa02e924011b20c52a4bd42e961169f97e1950e76e04b7e78dc43ac23d2e0) must never change. Frozen paths: agent/features, agent/portfolio, agent/pipeline.py, agent/run_sim.py, agent/sim.
+   - Org policy: no sensitive data or credentials in prompts; AI output is reviewed by a human.
+   - Owner requests this segment:
+     - Submit predictions quickly (11/18).
+     - Make reconciliation automatic so a fee/tax-sized difference never stops a run again.
+     - Finish everything outstanding.
+     - Asked for contingency strategies given the late ranking.
+     - Then: "就按照你的建議執行，另外我希望就按照新的決策提交預測":
+       - Read the rules.
+       - Since scoring = final NAV only, adopt option B (more exposure and concentration) plus a little C (rebound).
+       - Submit under the new decision.
+     - Keep the wakeup loop but do not report on overnight routine ticks; report only at event checks (07:30+, 17:10, 19:35) or when there are problems.
+   - The aggressive policy persists until the Owner changes it. Do not change policy parameters on my own (single-day results do not change the rules).
+
+2. Key Technical Concepts:
+   - Competition rules (rules PDF):
+     - Preliminary ranking = final NAV after the 11/27 close; MDD only breaks ties.
+     - At least 22 of 24 trading days must be submitted. 18 are confirmed (10/27–11/19); 10/26 has no record, so at most 1 more miss is allowed.
+     - Holdings 20–30; 2330 ≤ 25%; others ≤ 10%; cash < 25% and never negative.
+     - Active Share ≥ 20% vs active ETFs.
+     - Fills at the daily VWAP; fee 0.1425%, tax 0.3%.
+     - Window: T-1 19:30 → T 08:55. Up to 25 submissions per day; the last submission counts.
+     - 3 warnings means disqualification.
+     - Decisions must be Agent-generated.
+   - Daily schedulers:
+     - `AI_CUP_Precompetition_DryRun_1930` (prediction + auto-upload).
+     - `AI_CUP_Precompetition_Evaluation_1700`.
+     - `AI_CUP_Competition_MorningFinal_0730`.
+     - Laptop Modern Standby often delays these runs.
+   - Evaluation chain: `daily_evaluation` requires the settlement_hash of the start state to match the prediction's `run_metadata.settlement_hash`. Manual rerun: `.venv\Scripts\python.exe -m agent.ops.daily_evaluation --date YYYY-MM-DD`. The scheduled wrapper skips past days with MISSED_PREVIOUS_DAY.
+   - Reconciliation auto-accept (PR #70): a cash/NAV-only BLOCK with identical shares and warnings, each ≤ 0.1% of NAV, becomes MINOR with `auto_accepted`. The ledger is then aligned to the official figures.
+   - Tactical overlay layering:
+     - `agent.tactical.override.activate` wraps `agent.pipeline.construct`.
+     - `tech_overweight.run_overlay` dispatches to `tech_risk_adjusted.run_overlay_v2` for policy `risk_adjusted` or `aggressive`.
+     - Every candidate passes through Quant's `K._finalize` (lots, 9% per-name cap `other_target_cap`, stress cash ≥ 0, Active Share, ≤ 30 orders).
+   - AGGRESSIVE_RETURN policy (from the 11/19 D-Plan):
+     - Band 93–97% in all regimes; cash floor 3%; bucket cap 45%.
+     - Score weights: quant_rank 0.35, rs20 0.25, flow5 0.15, rebound (−ret5) 0.25; rs5, vol20 and gap all 0; sharp_move_penalty 0.
+     - tilt_kappa 0.8, tilt_clip [0.3, 3.0].
+     - utility gamma 0 (select by expected return net of cost); min_improvement 0.
+     - Candidate modes: `score_ranked` (overlay_weights mode "ranked" with rank_mix = tech names by composite z, non-tech 1000+Quant rank) and `tilt`.
+   - Same-day supersession: `python -m agent.ops.tactical_supersede --date T --authorization "..." [--check-only]`.
+     - TECH_POLICY mode works on V2 RESUME dates and in the evening window, via `morning_final.plan/run(trade_date=...)`.
+     - The prior FINAL is archived under `submissions/<T>/superseded/<sha12>/`.
+
+3. Files and Code Sections:
+   - `agent/ops/reconcile.py` (PR #70):
+     - Added `_auto_accept(rc, diffs, status, internal, official)`. It returns `{policy, rel_cash, rel_nav, cap}` when the status is BLOCK, all diffs are cash or nav, and each relative diff is ≤ `max_rel_nav`.
+     - `reconcile()` then sets the status to MINOR, the diff levels to "AUTO_ACCEPTED", and adds `auto_accepted` to the result.
+     - Added `persist_official_to_ledger(date, internal, official, start, cfg, by)`. It backs up the internal ledger as `*_superseded_<ts>.json`, calls `save_internal(start)`, and writes a `*_reconciliation_auto.json` marker.
+   - `agent/competition_day.py` (PR #70): after `if rec["status"] != "BLOCK": start = apply_official(...)`, when the status is not MATCH and there are diffs in competition mode, it calls `persist_official_to_ledger` (wrapped in try/except, logged).
+   - `config/ops.yaml` (PR #70): `reconciliation.auto_accept: {enabled: true, policy: AUTO_ACCEPT_OFFICIAL_CASH_ONLY, max_rel_nav: 0.001}`.
+   - `docs/OFFICIAL_SETTLEMENT_ENTRY_SOP.md` (PR #70): new auto-accept section.
+   - `tests/ops/test_ops_units.py`:
+     - `test_reconcile_auto_accepts_cash_only_fee_sized_difference` (PR #70).
+     - `test_morning_plan_accepts_an_explicit_trade_date_in_the_evening_window` (PR #71).
+     - `test_supersede_uses_tech_policy_mode_on_v2_resume_dates` (PR #72).
+   - `agent/tactical/tech_regime.py` (PR #71): `composite_score` adds `"rebound": 0.0` to the default weights and computes `zb = _z(-ret5)`; the score adds `w["rebound"]*zb[t]`; the sharp-move penalty is `float(cfg.get("sharp_move_penalty", 0.5))`. Note: `_z` needs at least 3 names.
+   - `agent/tactical/tech_risk_adjusted.py` (PR #71):
+     - Config merge: `ra = dict(tcfg.get("risk_adjusted") or {}); aggressive = tcfg.get("policy") == "aggressive"; if aggressive: ra.update(tcfg.get("aggressive") or {})`.
+     - `cash_floor = ra.get("min_cash_weight", tcfg.get("min_cash_weight"))`.
+     - `tilt_clip` is used for the multiplier.
+     - Ranking: `zrank` and `rank_mix = {**{t: 1000 + r for t, r in rank_of.items()}, **zrank}`.
+     - The record's tactical_overlay/policy reflect aggressive.
+     - Candidate modes are `("score_ranked","tilt")` when aggressive (score_ranked uses `overlay_weights(..., rank_mix, mode="ranked")`).
+     - Notes text and selection reason ("highest expected return net of transaction cost inside the band") are adjusted.
+   - `agent/tactical/tech_overweight.py` (PR #71): `if tcfg.get("policy") in ("risk_adjusted", "aggressive"):` dispatches to v2.
+   - `config/tactical_tech_overweight_v1.yaml` (PR #71):
+     - floor_schedule: `{from: '2026-11-16', to: '2026-11-18', min: 0.85, policy: risk_adjusted}` and `{from: '2026-11-19', min: 0.93, policy: aggressive}`.
+     - New `aggressive:` block with bands, strong_ceiling 0.97, min_cash_weight 0.03, bucket_cap 0.45, score_weights, sharp_move_penalty 0.0, tilt_kappa 0.8, tilt_clip [0.3, 3.0], utility {gamma: 0.0}, min_improvement 0.0.
+     - Rollback: set the 11/19 segment back to `{min: 0.85, policy: risk_adjusted}`.
+   - `agent/ops/morning_final.py` (PR #71): `plan(now, hol, ops_cfg=None, trade_date=None)` uses `date.fromisoformat(trade_date)` when given; `run(..., trade_date=None)` passes i…[+8548 chars; sha256:ca3a23a8632b84a6]
+
+
+### Events
+
+- **SYSTEM_INFO** 2026-11-19 10:26:43+0800 Compacted while idle, before the prompt cache expired · turn off with "idleCompaction": false in settings.json
+- **SCHEDULED_WAKEUP** 2026-11-19 10:28:00+0800 Claude resuming /loop wakeup (Nov 19 10:28am)
+
+### User
+
+_2026-11-19 10:28:00+0800_
+
+Ops follow-through (AGGRESSIVE_RETURN policy, Owner decision 2026-11-18). Owner preference: keep wakeups but NO routine reports; report only at event checks or problems. (1) Each check-in: `python agent/ops/cc_session_sync.py sync --session 3c6e927b-3359-42ca-a4f8-73630a860dd3 --force` (slow; run in background). (2) State: production HEAD 832f6b6. 11/19 FINAL 4a7b1bd8… SUBMISSION_CONFIRMED; MorningFinal 11/19 SKIPPED (ran 09:27, window closed) - FINAL intact (verified 09:28). Rules: ranking = final NAV 11/27; must submit >= 22 of 24 days (18 done, at most 1 more miss) -> never miss a day. Policy aggressive persists. (3) Next: 17:10 evaluation for 11/19 (if late/BLOCKED rerun `.venv\Scripts\python.exe -m agent.ops.daily_evaluation --date 2026-11-19`; on SETTLEMENT_CHAIN_MISMATCH align the 11/18 ledger with `python -m agent.ops.reconcile --date 2026-11-18 --accept-official ...` only for identical shares + cash-only small diff); tell the Owner the cumulative return; ~19:35 verify the 19:30 run for 11/20 (policy aggressive in logs/tactical/2026-11-20_TECH_OVERWEIGHT_V1.json, SUBMISSION_CONFIRMED; if not started/BLOCKED fix and Start-ScheduledTask AI_CUP_Precompetition_DryRun_1930 at once; window open until 08:55), shared-state sync, post on #68, handoff, tell the Owner. If before time targets, reschedule silently (chain, max 3600s).
+
+
+### Tool actions
+
+- `PowerShell: command=Get-Date -Format "yyyy-MM-dd HH:mm:ss"; Get-ChildItem logs\ops\20261119 -ErrorAction SilentlyContinue | Select-Object Name,LastWriteTime | Format-Table -AutoSize | description=Check current time and today's ops logs`
+  - result: 2026-11-19 10:28:12  Name                         LastWriteTime          ----                         -------------          dplan_work                   2026/11/18 下午 07:33:03 run                          2026/11/18 下午 07:33:03 summaries                    2026/11/18 下午 08:32:11 competition_
+
+### Claude
+
+_2026-11-19 10:28:16+0800_
+
+Routine tick, before targets. Syncing and rescheduling silently.
+
+
+### Tool actions
+
+- `Bash: command=cd "/c/Users/<user>/Desktop/個人/AI CUP 2026玉山人工智慧公開挑戰賽" && python agent/ops/cc_session_sync.py sync --session 3c6e927b-3359-42ca-a4f8-73630a860dd3 --force > /dev/null 2>&1 | description=Sync Claude session to shared state`
+- `ScheduleWakeup: prompt=Ops follow-through (AGGRESSIVE_RETURN policy, Owner decision 2026-11-18). Owner preference: keep wakeups but NO routine reports; report only at event checks or problems. (1) Each check-in: `python agent/ops/cc_session_sync.py sync --session 3c6e927b-3359-42ca-a4f8-73630a860dd3…[+1093 chars; sha256:97b7f65dd00227bb]`
+  - result: Command running in background with ID: bhl22d2x3. Output is being written to: C:\Users\<user>\AppData\Local\Temp\claude\8f718917fde93c02\3c6e927b-3359-42ca-a4f8-73630a860dd3\tasks\bhl22d2x3.output. You will be notified when it completes — do not poll that file or sleep while waiting. Read the f…[+29
+  - result: Next wakeup scheduled for 11:27:00 (in 3517s). If you owe the user a status update this tick, write it now as ordinary response text; then end the turn — the harness re-invokes you when the wakeup fires or a task-notification arrives.
