@@ -1,26 +1,24 @@
 {
  "session_id": "3c6e927b-3359-42ca-a4f8-73630a860dd3",
- "turn": 259,
- "timestamp": "2026-11-18 20:33:54+0800",
+ "turn": 265,
+ "timestamp": "2026-11-19 09:28:54+0800",
  "project": "C:\\Users\\<user>\\Desktop\\個人\\AI CUP 2026玉山人工智慧公開挑戰賽",
  "status": "RUNNING",
- "latest_user_prompt": "好，請繼續作業",
- "latest_claude_response": "新策略已上線，11/19 的預測已改用新策略重新提交，Portal 確認成功（SUBMISSION_CONFIRMED，20:32，回看內容與新 FINAL 一致）。\n\n**比賽辦法的評分方式**\n- 初賽排名只看 11/27 收盤後的最終 NAV，最大回撤只在 NAV 相同時用來分勝負。\n- 24 個交易日中至少要繳交 22 天才列入排名。目前 18 天全部成功（10/26 沒有紀錄），之後最多只能再漏 1 天。\n\n**新策略（方案 B 加一點 C，Agent 自動依規則決策）**\n- 科技股比例 93–97%，不論市場狀態都一樣；仍會判斷並記錄市場狀態，但不再拿來降低曝險。\n- 現金下限從 8% 降到 3%。\n- 單一子產業上限從 30% 放寬到 45%。\n- 選股評分：營收排名 35%、20 日相對強弱 25%、法人買賣超 15%、5 日超跌反彈 25%。不再扣波動率和急漲急跌的分數。\n- 分數最高的股票優先加碼到單檔 9% 上限；選擇方式改成「扣除交易成本後的預期報酬最高」，不再偏好維持原持股。\n- 比賽規則和原有防線都沒放寬：\n  - 持股 20–30 檔，單檔不超過 10%（台積電不超過 25%）。\n  - 現金低於 25%，壓力測試下也不能變負。\n  - Active Share 達標，每天最多 30 筆委託，validator 通過。\n\n**新的 11/19 投資組合**\n\n| | 原本 | 新策略 |\n|---|---|---|\n| 科技比例 | 85.7% | 95.9% |\n| 現金 | 14.3% | 4.1% |\n| 持股 | 21 檔 | 21 檔 |\n| 下單 | 0 筆 | 4 筆（換手約 10%） |\n| 前三大 | — | 台光電 8.9%、聯亞 8.9%、創意 8.1% |\n| Active Share | — | 42.4% |\n\n原本那份 FINAL（sha 開頭 `6180655d`）已封存在 `submissions/20261119/superseded/`，新 FINAL 的 sha 開頭是 `4a7b1bd8`。\n\n**程式與紀錄**\n- PR #71（新策略）與 #72（替換提交工具的修正）已合併並部署，正式環境版本 832f6b6。\n- Frozen Quant v1 指紋沒變；CI 全部通過，完整測試也通過。\n- 舊的策略測試寫的是「85%、無結束日」，我已依你的新決策更新，並在 PR 說明原因。\n- Issue #68 已留言，交接檔已寫。\n\n**風險**：這個策略會放大波動，市場再跌時虧損會比之前更大。它沒辦法在剩下的 7 天內先驗證效果。\n\n**接下來**\n- 11/20 起，每晚 19:30 的排程會自動用新策略。\n- 最大的風險是筆電休眠造成漏交。若漏交就只剩 0 天可漏，比賽期間請盡量讓筆電插電、開蓋。\n- 「修正 LLM 敘事退回範本」我還沒做，因為評分不看報告內容，優先度低。\n- 明早我會確認 MorningFinal 沒有蓋掉這份 FINAL，17:10 回報 11/19 的報酬。\n- 如果要退回舊策略，把 `config/tactical_tech_overweight_v1.yaml` 裡 2026-11-19 那段改回 `{min: 0.85, policy: risk_adjusted}`。",
- "latest_claude_response_at": "2026-11-18 20:33:37+0800",
- "latest_tool_summary": "Bash: command=cd \"C:/Users/<user>/Desktop/個人/AI CUP 2026玉山人工智慧公開挑戰賽\" && timeout 590 .venv/Scripts/python.exe -m agent.ops.tactical_supersede --date 2026-11-19 --authorization \"Owner decision 2026-11-18 in session (approve option B + C, submit under the new decision); PRs #71/#72\" > \"$TEMP/sup11…[+399 chars; sha256:412f85f10273e5a7]; Bash: command=cd \"C:/Users/<user>/Desktop/個人/AI CUP 2026玉山人工智慧公開挑戰賽\" && python - <<'PYEOF' import json r=json.load(open(\"logs/tactical/2026-11-19_TECH_OVERWEIGHT_V1.json\",encoding=\"utf-8\")) for k in(\"policy\",\"status\",\"regime\",\"band\",\"selected\",\"tech_weight_after_overlay\",\"cash_weight_after\",\"ho…[+615 chars; sha256:4574ade243a44daa]; Bash: command=cd \"C:/Users/<user>/Desktop/個人/AI CUP 2026玉山人工智慧公開挑戰賽\" && cat > handoff/claude_sessions/2026-11-18_3c6e927b-3359-42ca-a4f8-73630a860dd3_aggressive.md <<'PYEOF' # Owner decision 2026-11-18 — AGGRESSIVE_RETURN policy (PRs #71, #72) and 11/19 resubmission - Rules PDF: preliminary ran…[+1630 chars; sha256:777fa3442851f2e2]; ScheduleWakeup: prompt=Ops follow-through (AGGRESSIVE_RETURN policy, Owner decision 2026-11-18). (1) Each check-in: `python agent/ops/cc_session_sync.py sync --session 3c6e927b-3359-42ca-a4f8-73630a860dd3 --force` (slow; run in background). (2) State: production HEAD 832f6b6 (PR #71 aggressive polic…[+1205 chars; sha256:ef915b66a48829e3]; Bash: command=cd \"C:/Users/<user>/Desktop/個人/AI CUP 2026玉山人工智慧公開挑戰賽\" && date; (python agent/ops/cc_session_sync.py sync --session 3c6e927b-3359-42ca-a4f8-73630a860dd3 --force 2>&1 | tail -1) | description=Sync CC session",
- "pending_next_action": "**接下來**",
+ "latest_user_prompt": "目前最新的投資策略是什麼",
+ "latest_claude_response": "目前最新的是**進攻型策略（AGGRESSIVE_RETURN）**，從 11/19 的 D-Plan 開始生效，會一直用到 11/27，除非你另外指示。\n\n**為什麼改**\n- 比賽辦法規定，初賽排名只看 11/27 收盤後的最終 NAV。\n- 我們累積 -26% 左右、排名靠後，只剩約 7 個交易日，所以改成追求報酬上檔。\n\n**架構**\n- 選股的基礎還是 **Frozen Quant v1**：依月營收年增率 70%、月增率 30% 評分排名，這部分沒有改。\n- 在它之上加一層科技股 overlay，由 Agent 依固定規則自動決定比重，人不挑股票。\n\n**overlay 的規則**\n\n| 項目 | 舊策略（11/16–11/18，風險調整型） | 新策略（11/19 起，進攻型） |\n|---|---|---|\n| 科技股比例 | 85–92%，防禦時 85–88% | 93–97%，不分市場狀態 |\n| 現金下限 | 8% | 3% |\n| 單一子產業上限 | 30% | 45% |\n| 選股評分 | 營收排名 40%、5 日強弱 15%、20 日強弱 15%、法人 10%，扣波動率與急漲急跌 | 營收排名 35%、20 日強弱 25%、法人 15%、5 日超跌反彈 25%，不扣風險分 |\n| 配置方式 | 分散加碼 | 分數最高的股票優先加碼到單檔 9% 上限 |\n| 選擇標準 | 風險調整後效用，偏好維持原持股 | 扣除交易成本後的預期報酬最高 |\n\n**不變的硬性限制（比賽規則與防線）**\n- 持股 20–30 檔，單檔不超過 10%（台積電不超過 25%，程式內控 9%）。\n- 現金低於 25%，壓力測試下不能變負。\n- Active Share 達標，每天最多 30 筆委託，只交易 150 檔名單內的股票。\n- validator 和合規檢查要通過，提交後要 Portal 回看確認。\n\n**目前持股（11/19 FINAL）**\n- 科技 95.9%，現金 4.1%，21 檔。\n- 前三大：台光電 8.9%、聯亞 8.9%、創意 8.1%。\n- Active Share 42.4%。\n\n**風險**：曝險和集中度都拉高了，大盤或科技股再跌，虧損會比舊策略大。這套規則沒辦法在剩下的天數內先驗證，本質上是在落後時押上檔。\n\n如果要退回舊策略，把 `config/tactical_tech_overweight_v1.yaml` 裡 2026-11-19 那段改回 `{min: 0.85, policy: risk_adjusted}` 即可。",
+ "latest_claude_response_at": "2026-11-18 20:46:35+0800",
+ "latest_tool_summary": "ScheduleWakeup: prompt=Ops follow-through (AGGRESSIVE_RETURN policy, Owner decision 2026-11-18). (1) Each check-in: `python agent/ops/cc_session_sync.py sync --session 3c6e927b-3359-42ca-a4f8-73630a860dd3 --force` (slow; run in background). (2) State: production HEAD 832f6b6 (PR #71 aggressive polic…[+1205 chars; sha256:ef915b66a48829e3]; Bash: command=cd \"C:/Users/<user>/Desktop/個人/AI CUP 2026玉山人工智慧公開挑戰賽\" && date; (python agent/ops/cc_session_sync.py sync --session 3c6e927b-3359-42ca-a4f8-73630a860dd3 --force 2>&1 | tail -1) | description=Sync CC session; Write: file_path=C:\\Users\\<user>\\.claude\\projects\\C--Users-<user>-Desktop----AI-CUP-2026-----------\\memory\\feedback_quiet_checkins.md; Edit: file_path=C:\\Users\\<user>\\.claude\\projects\\C--Users-<user>-Desktop----AI-CUP-2026-----------\\memory\\MEMORY.md; Bash: command=cd \"C:/Users/<user>/Desktop/個人/AI CUP 2026玉山人工智慧公開挑戰賽\" && date; python -c \"import json;print(json.load(open('submissions/20261119/submission_state.json'))['state'])\"; sha256sum submissions/20261119/FINAL/*.json | cut -c1-12; tail -1 logs/morning/wrapper.log 2>/dev/null | cut -c1-2…[+170 chars; sha256:6697c00319fde0e6]",
+ "pending_next_action": "如果要退回舊策略，把 `config/tactical_tech_overweight_v1.yaml` 裡 2026-11-19 那段改回 `{min: 0.85, policy: risk_adjusted}` 即可。",
  "next_scheduled_check": null,
  "related_issues": [
-  61,
-  71,
   72,
   68
  ],
  "related_prs": [
   71,
-  72
+  70
  ],
  "production_head": "832f6b64b20cdeea77c1d875e35542bf0851e9a3",
- "events": 10171,
- "synced_at": "2026-11-18T20:33:56+08:00"
+ "events": 10196,
+ "synced_at": "2026-11-19T09:28:57+08:00"
 }
