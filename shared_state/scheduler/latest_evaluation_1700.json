@@ -1,15 +1,9 @@
 {
  "task": "evaluation_1700",
- "event": "END",
- "recorded_at": "2026-11-18T19:09:02+08:00",
+ "event": "START",
+ "recorded_at": "2026-11-19T17:00:03+08:00",
  "scheduled_local": "17:00",
- "status": "BLOCKED",
- "blocked_reason": "MARKET_DATA_INCOMPLETE",
- "started_at": "2026-11-18T19:07:53+08:00",
- "finished_at": "2026-11-18T19:08:57+08:00",
- "evaluation_date": "2026-11-18",
- "label": "PRECOMPETITION_PAPER_RUN",
- "market_data": "2026-11-18 INCOMPLETE (TPEx 50/50, TWSE 0/100); TWSE: 0/100 universe tickers priced (< 95%)",
- "prediction_sha256": "sha256:d1dc51051dad1aba9d123c19b1e5bb5d6c5470ea2ed189c64cd43b7ea91c3d18",
- "trade_date_key": "2026-11-18"
+ "actual_start_time": "2026-11-19T17:00:03+08:00",
+ "run_delay_minutes": 0,
+ "status": "RUNNING"
 }
