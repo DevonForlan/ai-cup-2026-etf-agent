@@ -54691,3 +54691,35 @@ Ops follow-through. POLICY: DEFENSIVE_DIFFERENTIATION from the 2026-11-23 D-Plan
 
 - `PowerShell: command=Get-Date -Format "yyyy-MM-dd HH:mm"; Start-Process -WindowStyle Hidden -FilePath python -ArgumentList "agent/ops/cc_session_sync.py","sync","--session","3c6e927b-3359-42ca-a4f8-73630a860dd3","--force"; Get-ChildItem logs/ops -Directory | Sort-Object Name | Select-Object -Last 3 |…[+87 chars; sha256:2e04af6dce76fb53]`
   - result: 2026-11-20 12:36 20261120 competition_preflight day1
+- `ScheduleWakeup: prompt=Ops follow-through. POLICY: DEFENSIVE_DIFFERENTIATION from the 2026-11-23 D-Plan (Owner decision 2026-11-20 option B; PR #74, production HEAD 9294f87; recorded on #68). 11/19-11/20 were aggressive. Owner preference: no routine reports; report only at event checks or problems. …[+1524 chars; sha256:8331cde2f252db11]`
+  - result: Next wakeup scheduled for 13:36:00 (in 3548s). If you owe the user a status update this tick, write it now as ordinary response text; then end the turn — the harness re-invokes you when the wakeup fires or a task-notification arrives.
+
+### Claude
+
+_2026-11-20 12:36:54+0800_
+
+Checked in at 12:36 and nothing needs action. The next reports are the 11/20 return and cumulative return after 17:10, then Monday's (11/23) first defensive run around 19:40, covering what was sold and bought plus the cash and tech percentages.
+
+
+### Events
+
+- **TURN_END** 2026-11-20 12:36:55+0800 turn 300 completed
+
+## Turn 301 — 2026-11-20 13:36:00+0800
+
+
+### Events
+
+- **SCHEDULED_WAKEUP** 2026-11-20 13:36:00+0800 Claude resuming /loop wakeup (Nov 20 1:36pm)
+
+### User
+
+_2026-11-20 13:36:00+0800_
+
+Ops follow-through. POLICY: DEFENSIVE_DIFFERENTIATION from the 2026-11-23 D-Plan (Owner decision 2026-11-20 option B; PR #74, production HEAD 9294f87; recorded on #68). 11/19-11/20 were aggressive. Owner preference: no routine reports; report only at event checks or problems. Do not change policy without Owner approval. (1) Each check-in: `python agent/ops/cc_session_sync.py sync --session 3c6e927b-3359-42ca-a4f8-73630a860dd3 --force` (background). (2) 11/20 FINAL 9f000140 SUBMISSION_CONFIRMED; cumulative -31.40% after 11/19; 20/24 days submitted (>=22 required, never miss). (3) 17:10: evaluation of 11/20 (rerun `.venv\Scripts\python.exe -m agent.ops.daily_evaluation --date 2026-11-20` if late/BLOCKED; on SETTLEMENT_CHAIN_MISMATCH inspect the 11/19 ledger vs official), tell the Owner daily + cumulative return. ~19:40: verify the 19:30 run for 2026-11-23 (first DEFENSIVE run): logs/ops/20261123/operator_summary.txt, logs/tactical/2026-11-23_TECH_OVERWEIGHT_V1.json must show policy defensive, status TECH_OVERWEIGHT_APPLIED, no fallback, selected transition_sellN, cash ~16% (<25%), holdings 20-30, orders <=30; submissions/20261123/submission_state.json SUBMISSION_CONFIRMED. If fallback/BLOCKED: diagnose; if the run did not start or blocked, fix and Start-ScheduledTask AI_CUP_Precompetition_DryRun_1930 (window until 11/23 08:55). Then shared-state sync (`python -m agent.ops.shared_state_sync --date 2026-11-23`, `python -m agent.ops.shared_state_tactical`, `python -m agent.ops.sha…[+281 chars; sha256:78f10368f90c215e]
+
+
+### Tool actions
+
+- `PowerShell: command=Get-Date -Format "yyyy-MM-dd HH:mm"; Start-Process -WindowStyle Hidden -FilePath python -ArgumentList "agent/ops/cc_session_sync.py","sync","--session","3c6e927b-3359-42ca-a4f8-73630a860dd3","--force" | description=Check time and start session sync`
+  - result: 2026-11-20 13:36
