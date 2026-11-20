@@ -129,3 +129,16 @@ rebound). Implemented as policy `aggressive` of the same overlay (`config/tactic
 - Rehearsal for 2026-11-19 (from the official 11/18 settlement): tech 95.9 %, cash 4.1 %, 21 holdings, 4 orders, max name 8.9 %,
   Active Share 42.4 %, validator PASS.
 - Rollback: set the 2026-11-19 segment back to `{min: 0.85, policy: risk_adjusted}`.
+
+## Owner decision 2026-11-20 — DEFENSIVE_DIFFERENTIATION (option B)
+
+- **Why.** A read-only ranking analysis compared us with 22 active-ETF buy-and-hold proxies (10/27 → 11/19).
+  - We are below every proxy: −31.4% against a median of −27.0%.
+  - The technology portfolio moves with that crowd: beta 0.97, about 2% tracking deviation over six days. So it cannot change the ranking.
+  - A low-volatility non-technology portfolio plus cash has beta 0.04 and about 7.6% tracking deviation. Assuming no edge, it has about a 31% chance of closing the gap to the 25th percentile, against about 3% for the technology portfolio.
+- **What.** `agent/tactical/defensive_diff.py`, from the 2026-11-23 D-Plan (`floor_schedule` `policy: defensive`, block `defensive:`).
+  - Sell the largest technology positions and buy the lowest 60-day-volatility liquid non-technology names.
+  - Cash target 16%, against the official 25% cap.
+  - Within 30 orders per day and 21–28 holdings; any remaining technology is sold on the following days.
+  - Every candidate goes through Quant `_finalize`. If nothing passes, the aggressive overlay is used.
+- **Rollback.** Set the 2026-11-23 segment to `policy: aggressive, min: 0.93`.

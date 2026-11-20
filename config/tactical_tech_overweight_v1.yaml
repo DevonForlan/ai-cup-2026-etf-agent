@@ -13,7 +13,8 @@ floor_schedule:
 - {from: '2026-11-11', to: '2026-11-11', min: 0.75}     # Issue #63 (history; the submitted FINAL is 75.95%)
 - {from: '2026-11-12', to: '2026-11-15', min: 0.85}      # Issue #65 highest-compliant search (history: 11/12, 11/13 FINALs)
 - {from: '2026-11-16', to: '2026-11-18', min: 0.85, policy: risk_adjusted}  # Issue #68 risk-adjusted policy (history: 11/16-11/18 FINALs)
-- {from: '2026-11-19', min: 0.93, policy: aggressive}     # Owner 2026-11-18: ranking = final NAV on 11/27 only -> AGGRESSIVE_RETURN (block `aggressive:`)
+- {from: '2026-11-19', to: '2026-11-20', min: 0.93, policy: aggressive}  # Owner 2026-11-18: AGGRESSIVE_RETURN (history: 11/19, 11/20 FINALs)
+- {from: '2026-11-23', min: 0.0, policy: defensive}       # Owner 2026-11-20 option B: DEFENSIVE_DIFFERENTIATION (block `defensive:`)
 # No artificial ceiling above the minimum: only the per-name cap (Quant other_target_cap), holdings 20-30, cash, Active Share, 30 orders apply.
 # Technology classification = the list used since #41-#43 (config/tactical_override_v2.yaml: reduce_tickers).
 tech_classification_file: config/tactical_override_v2.yaml
@@ -57,3 +58,17 @@ aggressive:
   tilt_clip: [0.3, 3.0]
   utility: {gamma: 0.0}             # select by expected return net of transaction cost (risk aversion off)
   min_improvement: 0.0              # no preference for the existing portfolio
+
+# Owner decision 2026-11-20 (option B, GitHub #68): the technology portfolio moves with the active-ETF crowd (beta ~0.97) and cannot change
+# the ranking; differ from the crowd with low-volatility NON-technology names + cash. agent/tactical/defensive_diff.py. Hard guards unchanged
+# (Quant _finalize). Fallback if nothing passes: the aggressive overlay (fallback_tech_min). Rollback: the 2026-11-23 segment -> policy: aggressive, min: 0.93.
+fallback_tech_min: 0.93
+defensive:
+  cash_target: 0.16                 # official cap 25%; +/-5% stress fills and a further market drop keep it below ~21%
+  cash_band: [0.10, 0.20]           # once no technology is left: keep the portfolio while cash stays inside this band
+  max_weight: 0.09                  # per name (Quant other_target_cap 9%, official 10%)
+  min_holdings: 21                  # official 20-30 (one name of margin)
+  max_holdings: 28
+  max_orders: 30                    # official D-Plan limit
+  vol_lookback: 60                  # trading days of realised volatility used to rank the non-technology pool
+  min_avg_amount: 300000000         # 20-day average traded value (TWD) >= 300M: a ~4.5% NAV position stays ~10% of a day's value
