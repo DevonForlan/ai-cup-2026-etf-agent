@@ -54993,3 +54993,42 @@ Ops follow-through. POLICY: DEFENSIVE_DIFFERENTIATION from the 2026-11-23 D-Plan
 
 - `PowerShell: command=Get-Date -Format "yyyy-MM-dd HH:mm"; Start-Process -WindowStyle Hidden -FilePath python -ArgumentList "agent/ops/cc_session_sync.py","sync","--session","3c6e927b-3359-42ca-a4f8-73630a860dd3","--force"; Get-Content logs/ops/20261123/operator_summary.txt -ErrorAction SilentlyContin…[+177 chars; sha256:c3ba649bb94b9599]`
   - result (ERROR): Exit code 1 2026-11-20 19:43
+- `PowerShell: command=Get-ScheduledTaskInfo AI_CUP_Precompetition_DryRun_1930 | Format-List LastRunTime,LastTaskResult,NextRunTime; (Get-ScheduledTask AI_CUP_Precompetition_DryRun_1930).State; Get-ChildItem logs/ops -Directory | Sort-Object LastWriteTime | Select-Object -Last 3 Name,LastWriteTime; Get…[+168 chars; sha256:9958946707daa122]`
+  - result (ERROR): Exit code 1 LastRunTime    : 2026/11/20 下午 07:30:01 LastTaskResult : 0 NextRunTime    : 2026/11/21 下午 07:30:00    Ready  Name     LastWriteTime          ----     -------------          20261119 2026/11/18 下午 08:30:01 20261120 2026/11/19 下午 07:35:08 20261121 2026/11/20 下午 05:01:07
+- `PowerShell: command=Get-ChildItem logs/ops/20261121 | Select-Object Name,LastWriteTime; Get-ChildItem logs -Directory | Sort-Object LastWriteTime | Select-Object -Last 6 Name,LastWriteTime | description=Inspect logs dirs`
+  - result: Name                      LastWriteTime          ----                      -------------          data_health.json          2026/11/20 下午 05:01:07 data_health.md            2026/11/20 下午 05:01:07 data_health_history.jsonl 2026/11/20 下午 05:01:07 refresh.log               2026/11/20 下午 05:01:07 
+- `PowerShell: command=Get-ChildItem logs/scheduled | Sort-Object LastWriteTime | Select-Object -Last 4 Name,LastWriteTime,Length; Get-ChildItem logs/locks | Select-Object Name,LastWriteTime | description=List scheduled logs and locks`
+  - result: Name                                      LastWriteTime          Length ----                                      -------------          ------ precompetition_dryrun_20261120_193010.log 2026/11/20 下午 07:30:11   1148 latest_status.json                        2026/11/20 下午 07:30:11   1154 history.
+- `PowerShell: command=Get-Content logs/scheduled/precompetition_dryrun_20261120_193010.log; Get-Content logs/scheduled/latest_status.json; Get-Content logs/scheduled/wrapper.log -Tail 8 | description=Read 19:30 run logs`
+  - result: MODE                 PRECOMPETITION_REAL_DATA_DRY_RUN LABEL                PRECOMPETITION_PAPER_RUN RUN_MODE             COMPETITION RUN_KIND             NORMAL WINDOW_PHASE         - SUBMISSION_STATE     - DEADLINE_WARNINGS    - AUTO_UPLOAD_STATUS   - PREDICTION_STATUS    SKIPPED SUBMISSIO
+- `ScheduleWakeup: prompt=Ops follow-through. POLICY: DEFENSIVE_DIFFERENTIATION from the 2026-11-23 D-Plan (Owner decision 2026-11-20 option B; PR #74, production HEAD 9294f87; recorded on #68). Owner preference: no routine reports; report only at event checks or problems. Do not change policy without …[+1437 chars; sha256:88c1025a8066b27e]`
+  - result: Next wakeup scheduled for 20:43:00 (in 3550s). If you owe the user a status update this tick, write it now as ordinary response text; then end the turn — the harness re-invokes you when the wakeup fires or a task-notification arrives.
+
+### Claude
+
+_2026-11-20 19:43:53+0800_
+
+今晚 19:30 的排程有啟動，但系統判斷今晚不是提交時段，所以沒有產生預測或提交。這是正常的，不是故障。
+
+週一（11/23）的提交時段是從週日 11/22 晚上 19:30 開始，跟上週一樣：11/16 那份就是 11/15 週日晚上跑的。所以第一次防守型換股會在**週日 11/22 晚上 19:30** 自動執行。
+
+週日晚上 19:40 左右，我會告訴你賣出哪些科技股、買進哪些防守股，以及現金和科技股的比例。週末其他時間我不會發訊息，除非有問題。
+
+
+### Events
+
+- **TURN_END** 2026-11-20 19:43:53+0800 turn 308 completed
+
+## Turn 309 — 2026-11-20 20:43:00+0800
+
+
+### Events
+
+- **SCHEDULED_WAKEUP** 2026-11-20 20:43:00+0800 Claude resuming /loop wakeup (Nov 20 8:43pm)
+
+### User
+
+_2026-11-20 20:43:01+0800_
+
+Ops follow-through. POLICY: DEFENSIVE_DIFFERENTIATION from the 2026-11-23 D-Plan (Owner decision 2026-11-20 option B; PR #74, production HEAD 9294f87; recorded on #68). Owner preference: no routine reports; report only at event checks or problems. Do not change policy without Owner approval. (1) Each check-in: `python agent/ops/cc_session_sync.py sync --session 3c6e927b-3359-42ca-a4f8-73630a860dd3 --force` (background). (2) 11/20 evaluation DONE (PASS): daily -8.52%, cumulative -37.25%. 20/24 days submitted (>=22 required, never miss). Fri 11/20 19:30 run correctly SKIPPED (NO_SUBMISSION_WINDOW_TONIGHT): the 11/23 window opens SUNDAY 11/22 19:30 (same as 11/15 for 11/16). Saturday 11/21: nothing to do (17:00 evaluation may run as no-op). (3) Sun 11/22 ~19:40: verify the 19:30 run for 2026-11-23 (first DEFENSIVE run): logs/ops/20261123/operator_summary.txt, logs/tactical/2026-11-23_TECH_OVERWEIGHT_V1.json must show policy defensive, status TECH_OVERWEIGHT_APPLIED, no fallback, selected transition_sellN, cash ~16% (<25%), holdings 20-30, orders <=30; submissions/20261123/submission_state.json SUBMISSION_CONFIRMED. If fallback/BLOCKED: diagnose; if the run did not start or blocked, fix and Start-ScheduledTask AI_CUP_Precompetition_DryRun_1930 (window until 11/23 08:55). Then shared-state sync (`python -m agent.ops.shared_state_sync --date 2026-11-23`, `python -m agent.ops.shared_state_tactical`, `python -m agent.ops.shared_state_scheduler --task dryrun_1930 --event END`), #68 po…[+194 chars; sha256:bfb45069cbacee04]
+
