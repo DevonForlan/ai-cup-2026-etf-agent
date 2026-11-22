@@ -1,11 +1,11 @@
 {
- "trade_date": "2026-11-20",
+ "trade_date": "2026-11-23",
  "team_id": "TEAM_11442",
- "final_path": "shared_state/daily_submissions/2026-11-20/FINAL.json",
- "final_sha256": "9f00014002ec607826f72547ce853c290011329d2a697b2330aa03b32783b64d",
+ "final_path": "shared_state/daily_submissions/2026-11-23/FINAL.json",
+ "final_sha256": "dabbf60065dfbf58569f5aea239a18732bb6512d485ade92b986ff230927feba",
  "submission_status": "SUBMISSION_CONFIRMED",
- "submitted_at": "2026-11-19T19:35:17.196120+08:00",
- "confirmed_at": "2026-11-19T19:35:20.944959+08:00",
- "synced_at": "2026-11-19T19:35:28+08:00",
- "summary_path": "shared_state/daily_submissions/2026-11-20/summary.md"
+ "submitted_at": "2026-11-22T19:34:49.234872+08:00",
+ "confirmed_at": "2026-11-22T19:34:53.476957+08:00",
+ "synced_at": "2026-11-22T19:35:02+08:00",
+ "summary_path": "shared_state/daily_submissions/2026-11-23/summary.md"
 }
