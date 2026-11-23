@@ -96,9 +96,12 @@ def test_policy_effective_from_1116_and_history_untouched():
         r = TW.resolve(d)
         assert r["policy"] == "aggressive" and r["target_tech_weight_min"] == 0.93
         assert r["aggressive"]["min_cash_weight"] == 0.03 and r["aggressive"]["bucket_cap"] == 0.45
-    for d in ("2026-11-23", "2026-11-27"):                            # Owner 2026-11-20 option B: defensive differentiation
+    r = TW.resolve("2026-11-23")                                      # Owner 2026-11-20 option B: defensive differentiation (history)
+    assert r["policy"] == "defensive" and r["defensive"]["cash_target"] < 0.20 and r["fallback_tech_min"] == 0.93
+    for d in ("2026-11-24", "2026-11-27"):                            # Owner 2026-11-23: back to aggressive from the 11/24 D-Plan
         r = TW.resolve(d)
-        assert r["policy"] == "defensive" and r["defensive"]["cash_target"] < 0.20 and r["fallback_tech_min"] == 0.93
+        assert r["policy"] == "aggressive" and r["target_tech_weight_min"] == 0.93
+        assert r["aggressive"]["min_cash_weight"] == 0.03 and r["aggressive"]["bucket_cap"] == 0.45
     b = cfg["risk_adjusted"]["buckets"]
     assert {"memory_storage", "pcb_ccl_materials", "asic_ic_design"} <= set(b)
     assert not (set(b["memory_storage"]) & set(b["asic_ic_design"]))
