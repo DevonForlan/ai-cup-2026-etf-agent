@@ -14,7 +14,8 @@ floor_schedule:
 - {from: '2026-11-12', to: '2026-11-15', min: 0.85}      # Issue #65 highest-compliant search (history: 11/12, 11/13 FINALs)
 - {from: '2026-11-16', to: '2026-11-18', min: 0.85, policy: risk_adjusted}  # Issue #68 risk-adjusted policy (history: 11/16-11/18 FINALs)
 - {from: '2026-11-19', to: '2026-11-20', min: 0.93, policy: aggressive}  # Owner 2026-11-18: AGGRESSIVE_RETURN (history: 11/19, 11/20 FINALs)
-- {from: '2026-11-23', min: 0.0, policy: defensive}       # Owner 2026-11-20 option B: DEFENSIVE_DIFFERENTIATION (block `defensive:`)
+- {from: '2026-11-23', to: '2026-11-23', min: 0.0, policy: defensive}  # Owner 2026-11-20 option B: DEFENSIVE_DIFFERENTIATION (history: 11/23 FINAL)
+- {from: '2026-11-24', min: 0.93, policy: aggressive}     # Owner 2026-11-23 17:2x: back to AGGRESSIVE_RETURN (block `aggressive:`); re-decide after the 11/24 close
 # No artificial ceiling above the minimum: only the per-name cap (Quant other_target_cap), holdings 20-30, cash, Active Share, 30 orders apply.
 # Technology classification = the list used since #41-#43 (config/tactical_override_v2.yaml: reduce_tickers).
 tech_classification_file: config/tactical_override_v2.yaml
