@@ -1,0 +1,893 @@
+{
+ "phase": "TECH_OVERWEIGHT",
+ "decision_authority": "FROZEN_QUANT_V1+TECH_OVERWEIGHT_OVERLAY",
+ "rebalance_day_flag_from_pipeline": false,
+ "base_strategy": "FROZEN_QUANT_V1",
+ "tactical_overlay": "TECH_OVERWEIGHT",
+ "target_tech_weight_min": 0.93,
+ "owner_tech_floor": 0.93,
+ "owner_directive": "GitHub Issue #68 (OWNER 2026-11-13: best risk-adjusted portfolio subject to tech >= 85%, from the 2026-11-16 D-Plan; supersedes the highest-compliant search); GitHub Issue #65 (OWNER OVERRIDE 2026-11-10: persistent tech floor >=85%, supersedes the Issue #63 one-day 75% rule for later D-Plans); Issue #63 for 2026-11-11",
+ "tech_weight_before_overlay": 0.42460051263838783,
+ "quant_target_tech_weight": 0.450427,
+ "quant_target_names": 24,
+ "frozen_quant_sha256": "f34fa02e924011b20c52a4bd42e961169f97e1950e76e04b7e78dc43ac23d2e0",
+ "levels_tried": [
+  {
+   "mode": "proportional",
+   "level": 0.93,
+   "passed": false,
+   "tech_after": null,
+   "reason": "合規檢查失敗：R_COUNT 委託後(預估)持股 15 檔，不在 20–30"
+  },
+  {
+   "mode": "proportional",
+   "level": 0.94,
+   "passed": false,
+   "tech_after": null,
+   "reason": "合規檢查失敗：R_COUNT 委託後(預估)持股 15 檔，不在 20–30"
+  },
+  {
+   "mode": "proportional",
+   "level": 0.95,
+   "passed": false,
+   "tech_after": null,
+   "reason": "合規檢查失敗：R_COUNT 委託後(預估)持股 15 檔，不在 20–30"
+  },
+  {
+   "mode": "proportional",
+   "level": 0.96,
+   "passed": false,
+   "tech_after": null,
+   "reason": "合規檢查失敗：R_COUNT 委託後(預估)持股 15 檔，不在 20–30"
+  },
+  {
+   "mode": "proportional",
+   "level": 0.97,
+   "passed": false,
+   "tech_after": null,
+   "reason": "合規檢查失敗：R_COUNT 委託後(預估)持股 15 檔，不在 20–30"
+  },
+  {
+   "mode": "proportional",
+   "level": 0.98,
+   "passed": false,
+   "tech_after": null,
+   "reason": "合規檢查失敗：R_COUNT 委託後(預估)持股 15 檔，不在 20–30"
+  },
+  {
+   "mode": "proportional",
+   "level": 0.99,
+   "passed": false,
+   "tech_after": null,
+   "reason": "合規檢查失敗：R_COUNT 委託後(預估)持股 15 檔，不在 20–30"
+  },
+  {
+   "mode": "ranked",
+   "level": 0.93,
+   "passed": false,
+   "tech_after": null,
+   "reason": "合規檢查失敗：R_COUNT 委託後(預估)持股 15 檔，不在 20–30"
+  },
+  {
+   "mode": "ranked",
+   "level": 0.94,
+   "passed": false,
+   "tech_after": null,
+   "reason": "合規檢查失敗：R_COUNT 委託後(預估)持股 15 檔，不在 20–30"
+  },
+  {
+   "mode": "ranked",
+   "level": 0.95,
+   "passed": false,
+   "tech_after": null,
+   "reason": "合規檢查失敗：R_COUNT 委託後(預估)持股 15 檔，不在 20–30"
+  },
+  {
+   "mode": "ranked",
+   "level": 0.96,
+   "passed": false,
+   "tech_after": null,
+   "reason": "合規檢查失敗：R_COUNT 委託後(預估)持股 15 檔，不在 20–30"
+  },
+  {
+   "mode": "ranked",
+   "level": 0.97,
+   "passed": false,
+   "tech_after": null,
+   "reason": "合規檢查失敗：R_COUNT 委託後(預估)持股 15 檔，不在 20–30"
+  },
+  {
+   "mode": "ranked",
+   "level": 0.98,
+   "passed": false,
+   "tech_after": null,
+   "reason": "合規檢查失敗：R_COUNT 委託後(預估)持股 15 檔，不在 20–30"
+  },
+  {
+   "mode": "ranked",
+   "level": 0.99,
+   "passed": false,
+   "tech_after": null,
+   "reason": "合規檢查失敗：R_COUNT 委託後(預估)持股 15 檔，不在 20–30"
+  },
+  {
+   "mode": "proportional",
+   "level": 0.92,
+   "passed": false,
+   "tech_after": null,
+   "reason": "合規檢查失敗：R_COUNT 委託後(預估)持股 15 檔，不在 20–30"
+  },
+  {
+   "mode": "proportional",
+   "level": 0.91,
+   "passed": false,
+   "tech_after": null,
+   "reason": "合規檢查失敗：R_COUNT 委託後(預估)持股 15 檔，不在 20–30"
+  },
+  {
+   "mode": "proportional",
+   "level": 0.9,
+   "passed": false,
+   "tech_after": null,
+   "reason": "合規檢查失敗：R_COUNT 委託後(預估)持股 15 檔，不在 20–30"
+  },
+  {
+   "mode": "proportional",
+   "level": 0.89,
+   "passed": false,
+   "tech_after": null,
+   "reason": "合規檢查失敗：R_COUNT 委託後(預估)持股 15 檔，不在 20–30"
+  },
+  {
+   "mode": "proportional",
+   "level": 0.88,
+   "passed": false,
+   "tech_after": null,
+   "reason": "合規檢查失敗：R_COUNT 委託後(預估)持股 15 檔，不在 20–30"
+  },
+  {
+   "mode": "proportional",
+   "level": 0.87,
+   "passed": false,
+   "tech_after": null,
+   "reason": "合規檢查失敗：R_COUNT 委託後(預估)持股 15 檔，不在 20–30"
+  },
+  {
+   "mode": "proportional",
+   "level": 0.86,
+   "passed": false,
+   "tech_after": null,
+   "reason": "合規檢查失敗：R_COUNT 委託後(預估)持股 15 檔，不在 20–30"
+  },
+  {
+   "mode": "proportional",
+   "level": 0.85,
+   "passed": false,
+   "tech_after": null,
+   "reason": "合規檢查失敗：R_COUNT 委託後(預估)持股 16 檔，不在 20–30"
+  },
+  {
+   "mode": "proportional",
+   "level": 0.84,
+   "passed": false,
+   "tech_after": null,
+   "reason": "合規檢查失敗：R_COUNT 委託後(預估)持股 16 檔，不在 20–30"
+  },
+  {
+   "mode": "proportional",
+   "level": 0.83,
+   "passed": false,
+   "tech_after": null,
+   "reason": "合規檢查失敗：R_COUNT 委託後(預估)持股 16 檔，不在 20–30"
+  },
+  {
+   "mode": "proportional",
+   "level": 0.82,
+   "passed": false,
+   "tech_after": null,
+   "reason": "合規檢查失敗：R_COUNT 委託後(預估)持股 16 檔，不在 20–30"
+  },
+  {
+   "mode": "proportional",
+   "level": 0.81,
+   "passed": false,
+   "tech_after": null,
+   "reason": "合規檢查失敗：R_COUNT 委託後(預估)持股 17 檔，不在 20–30"
+  },
+  {
+   "mode": "proportional",
+   "level": 0.8,
+   "passed": false,
+   "tech_after": null,
+   "reason": "合規檢查失敗：R_COUNT 委託後(預估)持股 17 檔，不在 20–30"
+  },
+  {
+   "mode": "proportional",
+   "level": 0.79,
+   "passed": false,
+   "tech_after": null,
+   "reason": "合規檢查失敗：R_COUNT 委託後(預估)持股 17 檔，不在 20–30"
+  },
+  {
+   "mode": "proportional",
+   "level": 0.78,
+   "passed": false,
+   "tech_after": null,
+   "reason": "合規檢查失敗：R_COUNT 委託後(預估)持股 17 檔，不在 20–30"
+  },
+  {
+   "mode": "proportional",
+   "level": 0.77,
+   "passed": false,
+   "tech_after": null,
+   "reason": "合規檢查失敗：R_COUNT 委託後(預估)持股 17 檔，不在 20–30"
+  },
+  {
+   "mode": "proportional",
+   "level": 0.76,
+   "passed": false,
+   "tech_after": null,
+   "reason": "合規檢查失敗：R_COUNT 委託後(預估)持股 18 檔，不在 20–30"
+  },
+  {
+   "mode": "proportional",
+   "level": 0.75,
+   "passed": false,
+   "tech_after": null,
+   "reason": "合規檢查失敗：R_COUNT 委託後(預估)持股 18 檔，不在 20–30"
+  },
+  {
+   "mode": "proportional",
+   "level": 0.74,
+   "passed": false,
+   "tech_after": null,
+   "reason": "合規檢查失敗：R_COUNT 委託後(預估)持股 18 檔，不在 20–30"
+  },
+  {
+   "mode": "proportional",
+   "level": 0.73,
+   "passed": false,
+   "tech_after": null,
+   "reason": "合規檢查失敗：R_COUNT 委託後(預估)持股 18 檔，不在 20–30"
+  },
+  {
+   "mode": "proportional",
+   "level": 0.72,
+   "passed": false,
+   "tech_after": null,
+   "reason": "合規檢查失敗：R_COUNT 委託後(預估)持股 19 檔，不在 20–30"
+  },
+  {
+   "mode": "proportional",
+   "level": 0.71,
+   "passed": false,
+   "tech_after": null,
+   "reason": "合規檢查失敗：R_COUNT 委託後(預估)持股 19 檔，不在 20–30"
+  },
+  {
+   "mode": "proportional",
+   "level": 0.7,
+   "passed": false,
+   "tech_after": null,
+   "reason": "合規檢查失敗：R_COUNT 委託後(預估)持股 19 檔，不在 20–30"
+  },
+  {
+   "mode": "proportional",
+   "level": 0.69,
+   "passed": false,
+   "tech_after": null,
+   "reason": "合規檢查失敗：R_COUNT 委託後(預估)持股 19 檔，不在 20–30"
+  },
+  {
+   "mode": "proportional",
+   "level": 0.68,
+   "passed": false,
+   "tech_after": null,
+   "reason": "合規檢查失敗：R_COUNT 委託後(預估)持股 19 檔，不在 20–30"
+  },
+  {
+   "mode": "proportional",
+   "level": 0.67,
+   "passed": true,
+   "tech_after": 0.6422853364311187
+  },
+  {
+   "mode": "proportional",
+   "level": 0.66,
+   "passed": true,
+   "tech_after": 0.6299054417798732
+  },
+  {
+   "mode": "proportional",
+   "level": 0.65,
+   "passed": true,
+   "tech_after": 0.6242264054750795
+  },
+  {
+   "mode": "proportional",
+   "level": 0.64,
+   "passed": true,
+   "tech_after": 0.61973832652496
+  },
+  {
+   "mode": "proportional",
+   "level": 0.63,
+   "passed": true,
+   "tech_after": 0.6071547816753534
+  },
+  {
+   "mode": "proportional",
+   "level": 0.62,
+   "passed": true,
+   "tech_after": 0.5895926691257967
+  },
+  {
+   "mode": "proportional",
+   "level": 0.61,
+   "passed": true,
+   "tech_after": 0.5831665058730816
+  },
+  {
+   "mode": "proportional",
+   "level": 0.6,
+   "passed": true,
+   "tech_after": 0.5635017561181208
+  },
+  {
+   "mode": "proportional",
+   "level": 0.59,
+   "passed": true,
+   "tech_after": 0.5593260043891412
+  },
+  {
+   "mode": "proportional",
+   "level": 0.58,
+   "passed": true,
+   "tech_after": 0.5483452281725556
+  },
+  {
+   "mode": "proportional",
+   "level": 0.57,
+   "passed": true,
+   "tech_after": 0.5337628016731899
+  },
+  {
+   "mode": "proportional",
+   "level": 0.56,
+   "passed": true,
+   "tech_after": 0.5283283682744842
+  },
+  {
+   "mode": "proportional",
+   "level": 0.55,
+   "passed": true,
+   "tech_after": 0.5242917235081191
+  },
+  {
+   "mode": "proportional",
+   "level": 0.54,
+   "passed": true,
+   "tech_after": 0.5159374369131403
+  },
+  {
+   "mode": "ranked",
+   "level": 0.92,
+   "passed": false,
+   "tech_after": null,
+   "reason": "合規檢查失敗：R_COUNT 委託後(預估)持股 15 檔，不在 20–30"
+  },
+  {
+   "mode": "ranked",
+   "level": 0.91,
+   "passed": false,
+   "tech_after": null,
+   "reason": "合規檢查失敗：R_COUNT 委託後(預估)持股 15 檔，不在 20–30"
+  },
+  {
+   "mode": "ranked",
+   "level": 0.9,
+   "passed": false,
+   "tech_after": null,
+   "reason": "合規檢查失敗：R_COUNT 委託後(預估)持股 15 檔，不在 20–30"
+  },
+  {
+   "mode": "ranked",
+   "level": 0.89,
+   "passed": false,
+   "tech_after": null,
+   "reason": "合規檢查失敗：R_COUNT 委託後(預估)持股 15 檔，不在 20–30"
+  },
+  {
+   "mode": "ranked",
+   "level": 0.88,
+   "passed": false,
+   "tech_after": null,
+   "reason": "合規檢查失敗：R_COUNT 委託後(預估)持股 15 檔，不在 20–30"
+  },
+  {
+   "mode": "ranked",
+   "level": 0.87,
+   "passed": false,
+   "tech_after": null,
+   "reason": "合規檢查失敗：R_COUNT 委託後(預估)持股 15 檔，不在 20–30"
+  },
+  {
+   "mode": "ranked",
+   "level": 0.86,
+   "passed": false,
+   "tech_after": null,
+   "reason": "合規檢查失敗：R_COUNT 委託後(預估)持股 15 檔，不在 20–30"
+  },
+  {
+   "mode": "ranked",
+   "level": 0.85,
+   "passed": false,
+   "tech_after": null,
+   "reason": "合規檢查失敗：R_COUNT 委託後(預估)持股 16 檔，不在 20–30"
+  },
+  {
+   "mode": "ranked",
+   "level": 0.84,
+   "passed": false,
+   "tech_after": null,
+   "reason": "合規檢查失敗：R_COUNT 委託後(預估)持股 16 檔，不在 20–30"
+  },
+  {
+   "mode": "ranked",
+   "level": 0.83,
+   "passed": false,
+   "tech_after": null,
+   "reason": "合規檢查失敗：R_COUNT 委託後(預估)持股 16 檔，不在 20–30"
+  },
+  {
+   "mode": "ranked",
+   "level": 0.82,
+   "passed": false,
+   "tech_after": null,
+   "reason": "合規檢查失敗：R_COUNT 委託後(預估)持股 16 檔，不在 20–30"
+  },
+  {
+   "mode": "ranked",
+   "level": 0.81,
+   "passed": false,
+   "tech_after": null,
+   "reason": "合規檢查失敗：R_COUNT 委託後(預估)持股 17 檔，不在 20–30"
+  },
+  {
+   "mode": "ranked",
+   "level": 0.8,
+   "passed": false,
+   "tech_after": null,
+   "reason": "合規檢查失敗：R_COUNT 委託後(預估)持股 17 檔，不在 20–30"
+  },
+  {
+   "mode": "ranked",
+   "level": 0.79,
+   "passed": false,
+   "tech_after": null,
+   "reason": "合規檢查失敗：R_COUNT 委託後(預估)持股 17 檔，不在 20–30"
+  },
+  {
+   "mode": "ranked",
+   "level": 0.78,
+   "passed": false,
+   "tech_after": null,
+   "reason": "合規檢查失敗：R_COUNT 委託後(預估)持股 17 檔，不在 20–30"
+  },
+  {
+   "mode": "ranked",
+   "level": 0.77,
+   "passed": false,
+   "tech_after": null,
+   "reason": "合規檢查失敗：R_COUNT 委託後(預估)持股 17 檔，不在 20–30"
+  },
+  {
+   "mode": "ranked",
+   "level": 0.76,
+   "passed": false,
+   "tech_after": null,
+   "reason": "合規檢查失敗：R_COUNT 委託後(預估)持股 18 檔，不在 20–30"
+  },
+  {
+   "mode": "ranked",
+   "level": 0.75,
+   "passed": false,
+   "tech_after": null,
+   "reason": "合規檢查失敗：R_COUNT 委託後(預估)持股 18 檔，不在 20–30"
+  },
+  {
+   "mode": "ranked",
+   "level": 0.74,
+   "passed": false,
+   "tech_after": null,
+   "reason": "合規檢查失敗：R_COUNT 委託後(預估)持股 18 檔，不在 20–30"
+  },
+  {
+   "mode": "ranked",
+   "level": 0.73,
+   "passed": false,
+   "tech_after": null,
+   "reason": "合規檢查失敗：R_COUNT 委託後(預估)持股 18 檔，不在 20–30"
+  },
+  {
+   "mode": "ranked",
+   "level": 0.72,
+   "passed": false,
+   "tech_after": null,
+   "reason": "合規檢查失敗：R_COUNT 委託後(預估)持股 19 檔，不在 20–30"
+  },
+  {
+   "mode": "ranked",
+   "level": 0.71,
+   "passed": false,
+   "tech_after": null,
+   "reason": "合規檢查失敗：R_COUNT 委託後(預估)持股 19 檔，不在 20–30"
+  },
+  {
+   "mode": "ranked",
+   "level": 0.7,
+   "passed": false,
+   "tech_after": null,
+   "reason": "合規檢查失敗：R_COUNT 委託後(預估)持股 19 檔，不在 20–30"
+  },
+  {
+   "mode": "ranked",
+   "level": 0.69,
+   "passed": false,
+   "tech_after": null,
+   "reason": "合規檢查失敗：R_COUNT 委託後(預估)持股 19 檔，不在 20–30"
+  },
+  {
+   "mode": "ranked",
+   "level": 0.68,
+   "passed": false,
+   "tech_after": null,
+   "reason": "合規檢查失敗：R_COUNT 委託後(預估)持股 19 檔，不在 20–30"
+  },
+  {
+   "mode": "ranked",
+   "level": 0.67,
+   "passed": true,
+   "tech_after": 0.6513227483045174
+  },
+  {
+   "mode": "ranked",
+   "level": 0.66,
+   "passed": true,
+   "tech_after": 0.6350473294177096
+  },
+  {
+   "mode": "ranked",
+   "level": 0.65,
+   "passed": true,
+   "tech_after": 0.625917787954976
+  },
+  {
+   "mode": "ranked",
+   "level": 0.64,
+   "passed": true,
+   "tech_after": 0.6156020537903454
+  },
+  {
+   "mode": "ranked",
+   "level": 0.63,
+   "passed": true,
+   "tech_after": 0.6056798119275351
+  },
+  {
+   "mode": "ranked",
+   "level": 0.62,
+   "passed": true,
+   "tech_after": 0.5957606974268945
+  },
+  {
+   "mode": "ranked",
+   "level": 0.61,
+   "passed": true,
+   "tech_after": 0.5854479236702778
+  },
+  {
+   "mode": "ranked",
+   "level": 0.6,
+   "passed": true,
+   "tech_after": 0.5822567105756432
+  },
+  {
+   "mode": "ranked",
+   "level": 0.59,
+   "passed": true,
+   "tech_after": 0.5690545771737523
+  },
+  {
+   "mode": "ranked",
+   "level": 0.58,
+   "passed": true,
+   "tech_after": 0.5558541172058111
+  },
+  {
+   "mode": "ranked",
+   "level": 0.57,
+   "passed": true,
+   "tech_after": 0.5558293745522684
+  },
+  {
+   "mode": "ranked",
+   "level": 0.56,
+   "passed": true,
+   "tech_after": 0.542631407483363
+  },
+  {
+   "mode": "ranked",
+   "level": 0.55,
+   "passed": true,
+   "tech_after": 0.5245372485903124
+  },
+  {
+   "mode": "ranked",
+   "level": 0.54,
+   "passed": true,
+   "tech_after": 0.5147189318041103
+  }
+ ],
+ "selected_mode": "ranked",
+ "selected_level": 0.67,
+ "blocker": "30-order cap / per-name cap / lots / cash / Active Share: see levels_tried for each attempt",
+ "status": "TECH_OVERWEIGHT_PARTIAL",
+ "funded_from": [
+  "2892",
+  "2880",
+  "2801",
+  "2912",
+  "3293"
+ ],
+ "reduced_nontech_names": [
+  "2892",
+  "2880",
+  "2801",
+  "2912",
+  "3293"
+ ],
+ "funded_from_cash_weight": 0.0,
+ "raised_tech_names": {
+  "3661": 0.052159,
+  "2383": 0.052159,
+  "5274": 0.052159,
+  "3260": 0.052159,
+  "3443": 0.010937
+ },
+ "added_tech_names": [],
+ "tech_weight_after_overlay": 0.6513227483045174,
+ "reason": "highest compliant attainable technology exposure 65.13% < 93%: a hard guard (holdings / per-name cap / cash / Active Share / 30 orders / lots) prevents more",
+ "policy": "aggressive",
+ "version": "TACTICAL_TECH_OVERWEIGHT_V1",
+ "regime": "DEFENSIVE",
+ "regime_reasons": [
+  "tech_vol20>=2.0%",
+  "breadth_ma20<45%",
+  "sox_ret1<=-2%",
+  "txf_night<=-1.5%"
+ ],
+ "regime_inputs": {
+  "sox_ret1": -0.10734182249194024,
+  "sox_ret5": -0.17126706187357021,
+  "txf_night_ret": -0.0525418994413408,
+  "breadth_ma20": 0.02912621359223301,
+  "breadth_up5": 0.02912621359223301,
+  "tech_rs5": -0.040708655646337466,
+  "tech_vol20": 0.04687581078153667
+ },
+ "regime_missing_inputs": [],
+ "band": [
+  0.93,
+  0.97
+ ],
+ "bucket_cap": 0.45,
+ "bucket_guard_relaxed": false,
+ "band_used_max": 0.97,
+ "candidates": [
+  {
+   "label": "stay",
+   "mode": "stay",
+   "level": null,
+   "passed": true,
+   "tech_after": 0.14770101038657577,
+   "orders": 0,
+   "turnover": 0.0,
+   "cost": 0.0,
+   "utility": 0.00040207361320795465,
+   "alpha": 0.00040207361320795465,
+   "risk": 0.012587047057835324,
+   "max_bucket": 0.11933125244772172,
+   "buckets": {
+    "other_tech": 0.1193,
+    "memory_storage": 0.0284
+   }
+  },
+  {
+   "label": "score_ranked@0.93",
+   "mode": "score_ranked",
+   "level": 0.93,
+   "passed": false,
+   "reason": "合規檢查失敗：R_COUNT 委託後(預估)持股 15 檔，不在 20–30"
+  },
+  {
+   "label": "score_ranked@0.94",
+   "mode": "score_ranked",
+   "level": 0.94,
+   "passed": false,
+   "reason": "合規檢查失敗：R_COUNT 委託後(預估)持股 15 檔，不在 20–30"
+  },
+  {
+   "label": "score_ranked@0.95",
+   "mode": "score_ranked",
+   "level": 0.95,
+   "passed": false,
+   "reason": "合規檢查失敗：R_COUNT 委託後(預估)持股 15 檔，不在 20–30; STRESS_CASH buy+5%/sell-5%: 現金 -1,777,511（-0.304%）"
+  },
+  {
+   "label": "score_ranked@0.96",
+   "mode": "score_ranked",
+   "level": 0.96,
+   "passed": false,
+   "reason": "合規檢查失敗：R_COUNT 委託後(預估)持股 15 檔，不在 20–30; STRESS_CASH buy+5%/sell-5%: 現金 -8,263,140（-1.416%）"
+  },
+  {
+   "label": "score_ranked@0.97",
+   "mode": "score_ranked",
+   "level": 0.97,
+   "passed": false,
+   "reason": "合規檢查失敗：R_COUNT 委託後(預估)持股 15 檔，不在 20–30; STRESS_CASH buy+5%/sell-5%: 現金 -15,019,003（-2.575%）"
+  },
+  {
+   "label": "tilt@0.93",
+   "mode": "tilt",
+   "level": 0.93,
+   "passed": false,
+   "reason": "合規檢查失敗：R_COUNT 委託後(預估)持股 15 檔，不在 20–30"
+  },
+  {
+   "label": "tilt@0.94",
+   "mode": "tilt",
+   "level": 0.94,
+   "passed": false,
+   "reason": "合規檢查失敗：R_COUNT 委託後(預估)持股 15 檔，不在 20–30"
+  },
+  {
+   "label": "tilt@0.95",
+   "mode": "tilt",
+   "level": 0.95,
+   "passed": false,
+   "reason": "合規檢查失敗：R_COUNT 委託後(預估)持股 15 檔，不在 20–30; STRESS_CASH buy+5%/sell-5%: 現金 -442,741（-0.076%）"
+  },
+  {
+   "label": "tilt@0.96",
+   "mode": "tilt",
+   "level": 0.96,
+   "passed": false,
+   "reason": "合規檢查失敗：R_COUNT 委託後(預估)持股 15 檔，不在 20–30; STRESS_CASH buy+5%/sell-5%: 現金 -6,449,309（-1.105%）"
+  },
+  {
+   "label": "tilt@0.97",
+   "mode": "tilt",
+   "level": 0.97,
+   "passed": false,
+   "reason": "合規檢查失敗：R_COUNT 委託後(預估)持股 15 檔，不在 20–30; STRESS_CASH buy+5%/sell-5%: 現金 -9,769,829（-1.674%）"
+  }
+ ],
+ "fallback": "no compliant candidate inside the risk-adjusted band; Issue #65 search used",
+ "sells": {
+  "1216": 389000,
+  "2801": 1150000,
+  "2834": 1804000,
+  "2880": 621000,
+  "2886": 564000,
+  "2892": 777000,
+  "2912": 143000,
+  "3293": 33000,
+  "5871": 310000,
+  "5876": 589000,
+  "5880": 1107000
+ },
+ "buys": {
+  "2344": 188000,
+  "2383": 18000,
+  "2408": 63000,
+  "3036": 111000,
+  "3260": 228000,
+  "3443": 6000,
+  "3661": 15000,
+  "5274": 6000,
+  "8299": 12000
+ },
+ "orders": 20,
+ "tech_weight_before": 0.14770101038657577,
+ "tech_weight_after": 0.6513227483045174,
+ "cash_weight_after": 0.15893985132418773,
+ "holdings_after": 20,
+ "max_weight_after": 0.09016467834362699,
+ "weights_after": {
+  "3260": 0.090165,
+  "2383": 0.088158,
+  "3661": 0.084639,
+  "5274": 0.079028,
+  "3443": 0.048691,
+  "1101": 0.046409,
+  "2610": 0.045885,
+  "2618": 0.045817,
+  "2002": 0.045643,
+  "2345": 0.032096,
+  "2344": 0.028457,
+  "2337": 0.028452,
+  "3036": 0.028414,
+  "2408": 0.028059,
+  "8299": 0.027579,
+  "2382": 0.026885,
+  "7734": 0.024726,
+  "6223": 0.018093,
+  "2059": 0.017879,
+  "3293": 0.005983
+ },
+ "weights_before": {
+  "5871": 0.047327,
+  "1216": 0.046416,
+  "1101": 0.046274,
+  "2892": 0.046233,
+  "2834": 0.045759,
+  "2610": 0.045751,
+  "2618": 0.045684,
+  "2801": 0.045618,
+  "2002": 0.04551,
+  "5876": 0.045472,
+  "3293": 0.045342,
+  "5880": 0.045312,
+  "2912": 0.045086,
+  "2886": 0.044567,
+  "2880": 0.044066,
+  "2345": 0.032003,
+  "2337": 0.02837,
+  "2382": 0.026807,
+  "7734": 0.024654,
+  "6223": 0.01804,
+  "2059": 0.017827
+ },
+ "active_share_min": 0.41891614403754857,
+ "active_share_benchmark": "00984A",
+ "est_nav": 630912249.065,
+ "names": {
+  "5880": "合庫金",
+  "2801": "彰銀",
+  "2383": "台光電",
+  "2912": "統一超",
+  "2886": "兆豐金",
+  "2834": "臺企銀",
+  "5274": "信驊",
+  "5876": "上海商銀",
+  "3036": "文曄",
+  "5871": "中租-KY",
+  "2344": "華邦電",
+  "2880": "華南金",
+  "1216": "統一",
+  "3443": "創意",
+  "8299": "群聯",
+  "3293": "鈊象",
+  "3661": "世芯-KY",
+  "3260": "威剛",
+  "2408": "南亞科",
+  "2892": "第一金"
+ },
+ "turnover_pct": 99.69614329511552,
+ "holdings_before": 21,
+ "cash_weight_before": 0.16788035728841602,
+ "fingerprint": "c9e11358f316b9e458780e83c2b0d734d177cc6db5d07d45c8c20175c20f33ed",
+ "trade_date": "2026-11-24",
+ "recorded_at": "2026-11-24T00:12:16+0800",
+ "source_record": "logs/tactical/2026-11-24_TECH_OVERWEIGHT_V1.json",
+ "source_sha256": "sha256:43eb97bc03fc617fa88a44f8916e3a30c7731ec5da98c8952c9f59e7567063ab",
+ "final_sha256": "f3384390e54bfbd6baf438e024bb07fcad7565295b5fee4440b5ef1535fe947f",
+ "final_path": "shared_state/daily_submissions/2026-11-24/FINAL.json",
+ "submission_status": "SUBMISSION_CONFIRMED",
+ "submitted_at": "2026-11-24T00:12:29.403988+08:00",
+ "confirmed_at": "2026-11-24T00:12:33.708163+08:00",
+ "idempotency_key": "2026-11-24_TECH_OVERWEIGHT_V1.json|sha256:43eb97bc03fc617fa88a44f8916e3a30c7731ec5da98c8952c9f59e7567063ab|SUBMISSION_CONFIRMED|f3384390e54bfbd6baf438e024bb07fcad7565295b5fee4440b5ef1535fe947f",
+ "synced_at": "2026-11-24T00:12:52+08:00"
+}
