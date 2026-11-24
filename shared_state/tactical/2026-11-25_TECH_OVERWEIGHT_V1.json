@@ -1,0 +1,299 @@
+{
+ "phase": "TECH_OVERWEIGHT",
+ "decision_authority": "FROZEN_QUANT_V1+TECH_OVERWEIGHT_OVERLAY",
+ "rebalance_day_flag_from_pipeline": false,
+ "base_strategy": "FROZEN_QUANT_V1",
+ "tactical_overlay": "TECH_SPRINT",
+ "policy": "sprint",
+ "version": "TACTICAL_TECH_OVERWEIGHT_V1",
+ "owner_directive": "GitHub Issue #68 (OWNER 2026-11-13: best risk-adjusted portfolio subject to tech >= 85%, from the 2026-11-16 D-Plan; supersedes the highest-compliant search); GitHub Issue #65 (OWNER OVERRIDE 2026-11-10: persistent tech floor >=85%, supersedes the Issue #63 one-day 75% rule for later D-Plans); Issue #63 for 2026-11-11",
+ "frozen_quant_sha256": "f34fa02e924011b20c52a4bd42e961169f97e1950e76e04b7e78dc43ac23d2e0",
+ "target_tech_weight_min": 0.93,
+ "tech_weight_before_overlay": 0.67674411,
+ "pool_top": [
+  {
+   "ticker": "6510",
+   "eligible": true,
+   "score": 0.884
+  },
+  {
+   "ticker": "3081",
+   "eligible": true,
+   "score": 0.616
+  },
+  {
+   "ticker": "1815",
+   "eligible": true,
+   "score": 0.556
+  },
+  {
+   "ticker": "6139",
+   "eligible": true,
+   "score": 0.512
+  },
+  {
+   "ticker": "8069",
+   "eligible": true,
+   "score": 0.481
+  },
+  {
+   "ticker": "2404",
+   "eligible": true,
+   "score": 0.434
+  },
+  {
+   "ticker": "2376",
+   "eligible": true,
+   "score": 0.412
+  },
+  {
+   "ticker": "4749",
+   "eligible": true,
+   "score": 0.364
+  },
+  {
+   "ticker": "4991",
+   "eligible": true,
+   "score": 0.364
+  },
+  {
+   "ticker": "5289",
+   "eligible": true,
+   "score": 0.352
+  },
+  {
+   "ticker": "3491",
+   "eligible": true,
+   "score": 0.336
+  },
+  {
+   "ticker": "3231",
+   "eligible": true,
+   "score": 0.327
+  },
+  {
+   "ticker": "3653",
+   "eligible": true,
+   "score": 0.312
+  },
+  {
+   "ticker": "2412",
+   "eligible": true,
+   "score": 0.305
+  },
+  {
+   "ticker": "8358",
+   "eligible": true,
+   "score": 0.277
+  },
+  {
+   "ticker": "6770",
+   "eligible": true,
+   "score": 0.253
+  },
+  {
+   "ticker": "2368",
+   "eligible": true,
+   "score": 0.247
+  },
+  {
+   "ticker": "2395",
+   "eligible": true,
+   "score": 0.244
+  },
+  {
+   "ticker": "2357",
+   "eligible": true,
+   "score": 0.244
+  },
+  {
+   "ticker": "6274",
+   "eligible": true,
+   "score": 0.228
+  }
+ ],
+ "candidates": [
+  {
+   "label": "sprint@0.99",
+   "passed": false,
+   "reason": "合規檢查失敗：STRESS_CASH buy+5%/sell-5%: 現金 -6,237,640（-0.980%）"
+  },
+  {
+   "label": "sprint@0.98",
+   "passed": true,
+   "tech_after": 0.951898150053106,
+   "cash_after": 0.048101849946894086,
+   "orders": 25
+  }
+ ],
+ "status": "TECH_OVERWEIGHT_APPLIED",
+ "selected": "sprint@0.98",
+ "selected_mode": "sprint",
+ "selected_level": 0.98,
+ "selection_reason": "highest technology level that passes every hard guard (holdings 20-30 kept by adding technology names)",
+ "sold_nontech": [
+  "1101",
+  "2002",
+  "2610",
+  "2618",
+  "3293"
+ ],
+ "kept_nontech": [],
+ "kept_tech": [
+  "3260",
+  "2383",
+  "3661",
+  "5274",
+  "3443",
+  "2345",
+  "2344",
+  "2337",
+  "2408",
+  "3036",
+  "8299",
+  "2382",
+  "7734",
+  "6223",
+  "2059"
+ ],
+ "untouched_tech": [
+  "3443"
+ ],
+ "added_tech_names": [
+  "6510",
+  "3081",
+  "1815",
+  "6139",
+  "8069",
+  "2404"
+ ],
+ "tech_weight_after_overlay": 0.951898150053106,
+ "blocker": null,
+ "fallback": null,
+ "reason": "TECH_SPRINT: sprint@0.98",
+ "sells": {
+  "1101": 1200000,
+  "2002": 1709000,
+  "2383": 9000,
+  "2610": 1372000,
+  "2618": 654000,
+  "3260": 114000,
+  "3293": 5000,
+  "3661": 8000,
+  "5274": 3000
+ },
+ "buys": {
+  "1815": 274000,
+  "2059": 2000,
+  "2337": 164000,
+  "2344": 106000,
+  "2345": 5000,
+  "2382": 43000,
+  "2404": 33000,
+  "2408": 37000,
+  "3036": 68000,
+  "3081": 20000,
+  "6139": 51000,
+  "6223": 4000,
+  "6510": 12000,
+  "7734": 9000,
+  "8069": 239000,
+  "8299": 7000
+ },
+ "orders": 25,
+ "tech_weight_before": 0.6767441873164216,
+ "tech_weight_after": 0.951898150053106,
+ "cash_weight_after": 0.048101849946894086,
+ "holdings_after": 21,
+ "max_weight_after": 0.050861775289690256,
+ "weights_after": {
+  "3443": 0.050862,
+  "6139": 0.046534,
+  "2408": 0.046525,
+  "3260": 0.046516,
+  "2404": 0.046507,
+  "3036": 0.046492,
+  "2337": 0.046483,
+  "2344": 0.04648,
+  "8069": 0.046422,
+  "1815": 0.046412,
+  "2382": 0.046364,
+  "2383": 0.046006,
+  "3081": 0.045923,
+  "8299": 0.04563,
+  "7734": 0.045215,
+  "6510": 0.044809,
+  "2345": 0.044719,
+  "6223": 0.044109,
+  "5274": 0.041286,
+  "3661": 0.041263,
+  "2059": 0.037341
+ },
+ "weights_before": {
+  "3260": 0.09282,
+  "2383": 0.091801,
+  "3661": 0.088219,
+  "5274": 0.082382,
+  "3443": 0.050745,
+  "2618": 0.047748,
+  "2610": 0.046374,
+  "1101": 0.045427,
+  "2002": 0.045056,
+  "2345": 0.033462,
+  "2344": 0.029654,
+  "2337": 0.029624,
+  "2408": 0.029244,
+  "3036": 0.028764,
+  "8299": 0.028753,
+  "2382": 0.028009,
+  "7734": 0.025778,
+  "6223": 0.018861,
+  "2059": 0.018628,
+  "3293": 0.005904
+ },
+ "active_share_min": 0.3282672538113171,
+ "active_share_benchmark": "00984A",
+ "est_nav": 664152987.33875,
+ "names": {
+  "2344": "華邦電",
+  "2618": "長榮航",
+  "2408": "南亞科",
+  "2404": "漢唐",
+  "3260": "威剛",
+  "5274": "信驊",
+  "8299": "群聯",
+  "6139": "亞翔",
+  "3036": "文曄",
+  "6223": "旺矽",
+  "1815": "富喬",
+  "2345": "智邦",
+  "2337": "旺宏",
+  "3081": "聯亞",
+  "2002": "中鋼",
+  "2383": "台光電",
+  "3293": "鈊象",
+  "2059": "川湖",
+  "7734": "印能科技",
+  "8069": "元太",
+  "3661": "世芯-KY",
+  "2382": "廣達",
+  "1101": "台泥",
+  "6510": "精測",
+  "2610": "華航"
+ },
+ "turnover_pct": 82.45883640771856,
+ "holdings_before": 20,
+ "cash_weight_before": 0.13274674879600604,
+ "fingerprint": "59e30c157172ad833fa07f77a5d0b4dc31932df4be573113e8387922fe4cb3ee",
+ "trade_date": "2026-11-25",
+ "recorded_at": "2026-11-24T20:52:49+0800",
+ "source_record": "logs/tactical/2026-11-25_TECH_OVERWEIGHT_V1.json",
+ "source_sha256": "sha256:e383f53f84dc99f17fd67dda05f4085acf3b7c554d83caa277f7549949fe1d90",
+ "final_sha256": "0ad0c7b3db5cd78cfbae5fba67fe8ac119151832b04d08f5ea95639c3c21fc6c",
+ "final_path": "shared_state/daily_submissions/2026-11-25/FINAL.json",
+ "submission_status": "SUBMISSION_CONFIRMED",
+ "submitted_at": "2026-11-24T20:53:00.690925+08:00",
+ "confirmed_at": "2026-11-24T20:53:04.221762+08:00",
+ "idempotency_key": "2026-11-25_TECH_OVERWEIGHT_V1.json|sha256:e383f53f84dc99f17fd67dda05f4085acf3b7c554d83caa277f7549949fe1d90|SUBMISSION_CONFIRMED|0ad0c7b3db5cd78cfbae5fba67fe8ac119151832b04d08f5ea95639c3c21fc6c",
+ "synced_at": "2026-11-24T20:53:23+08:00"
+}
