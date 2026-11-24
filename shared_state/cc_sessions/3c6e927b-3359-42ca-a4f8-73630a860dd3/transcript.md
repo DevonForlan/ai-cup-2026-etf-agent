@@ -57718,3 +57718,177 @@ _2026-11-24 10:22:53+0800_
 - `Write: file_path=C:\Users\<user>\Desktop\個人\AI CUP 2026玉山人工智慧公開挑戰賽\handoff\claude_sessions\2026-11-24_3c6e927b-3359-42ca-a4f8-73630a860dd3_sprint.md`
   - result: https://github.com/DevonForlan/ai-cup-2026-etf-agent/issues/68#issuecomment-7120179089
   - result: File created successfully at: C:\Users\<user>\Desktop\個人\AI CUP 2026玉山人工智慧公開挑戰賽\handoff\claude_sessions\2026-11-24_3c6e927b-3359-42ca-a4f8-73630a860dd3_sprint.md (file state is current in your context — no need to Read it back)
+- `ScheduleWakeup: prompt=Ops follow-through. POLICY: TECH_SPRINT from the 2026-11-25 D-Plan (Owner decision 2026-11-24 ~09:30 "科技股盡量往100%補"; PR #76 squash fe7be55 = production HEAD; #68 comment 7120179089). 11/24 was AGGRESSIVE (PR #75). Owner said they will tell after the 11/24 close whether to chang…[+1424 chars; sha256:1bda3a1eb482abc0]`
+  - result: Next wakeup scheduled for 11:28:00 (in 3563s). If you owe the user a status update this tick, write it now as ordinary response text; then end the turn — the harness re-invokes you when the wakeup fires or a task-notification arrives.
+
+### Claude
+
+_2026-11-24 10:28:47+0800_
+
+「科技股盡量往 100% 補」已經上線，從今晚 19:30 產生的 11/25 計畫開始生效。
+
+**今天為什麼只到 65%**
+原本的進攻型做法是把現有科技股加碼到單檔上限 9%，再把非科技股整檔賣掉。這樣持股只剩 15 檔，低於規定的 20 檔，所以 93% 以上的方案全部不合規，系統只好退到 65%。
+
+**新的「科技股衝刺」做法**
+- 賣掉所有非科技股，改成多買幾檔科技股，讓持股維持在至少 21 檔。
+- 新加的科技股照系統的綜合分數排序，不是人工挑選。優先選量化模型判定合格、成交量也夠大（20 日平均成交額 ≥ 3 億）的股票。
+- 科技股比例從 99% 往下試，選出能通過所有規則的最高比例。比賽規則和系統原本的風控都沒有放寬：成交價差 ±5% 時現金仍不為負、單檔 ≤ 9%、持股 20–30 檔、委託 ≤ 30 筆。
+- 一天 30 筆委託換不完時，先保留最小的幾檔非科技股，下一次再換。
+
+**用 11/24 的真實資料重播驗證**（只在暫存目錄跑，沒有提交）
+| | 原本做法（實際結果） | 新做法（重播） |
+|---|---|---|
+| 科技股比例 | 65.1% | **80.2%** |
+| 現金 | 15.9% | 6.4% |
+| 持股 / 委託 | 20 檔 / 20 筆 | 21 檔 / 30 筆 |
+
+11/24 是最難的情況：要一次賣掉 15 檔非科技股再換成科技股，30 筆委託不夠用。明天是從 65% 出發，應該能更接近上限。不過到不了 100%，因為現金要留一點緩衝，應付成交價跟預估不同的情況。實際能到多少，以今晚跑出來的結果為準。
+
+測試全部通過，已經合併並更新到正式版。
+
+接下來：
+- 17:10 回報 11/24 的報酬。
+- 19:40 左右回報 11/25 的計畫和實際的科技股比例。
+- 你說收盤後還要再決定策略，想改的話請在 19:30 前告訴我。沒有其他指示，就照這個衝刺做法跑。
+
+另外，昨晚電腦睡著錯過了 19:30。這次靠醒來後自動補跑救回來，但如果今晚到明早 08:30 都沒醒，就會漏掉一天。建議今晚讓電腦保持開機、不要進入睡眠。
+
+
+### Events
+
+- **TURN_END** 2026-11-24 10:28:47+0800 turn 367 completed
+
+## Turn 368 — 2026-11-24 11:23:34+0800
+
+
+### Events
+
+- **SYSTEM_INFO** 2026-11-24 11:23:34+0800 Conversation compacted
+
+### User
+
+_2026-11-24 11:23:34+0800_
+
+This session is being continued from a previous conversation that ran out of context. The summary below covers the earlier portion of the conversation.
+
+
+Summary:
+1. Primary Request and Intent:
+   - Project and repo:
+     - AI CUP 2026 玉山 Agent 基金經理人, TEAM_11442.
+     - Repo DevonForlan/ai-cup-2026-etf-agent (master).
+     - Production checkout: `C:\Users\<user>\Desktop\個人\AI CUP 2026玉山人工智慧公開挑戰賽`.
+     - Governance: CLAUDE.md §11 COMPETITION_HIGH_AUTONOMY (self-merge allowed after the gates).
+   - Hard boundaries (preserve):
+     - No credential, cookie or token extraction; no login, MFA or CAPTCHA bypass.
+     - No fabricated evidence or submission success.
+     - No weakening of tests or guards; no force-push; no rewriting of audit history.
+     - Frozen Quant v1 `config/strategy_quant_v1.yaml` sha256 f34fa02e924011b20c52a4bd42e961169f97e1950e76e04b7e78dc43ac23d2e0 must never change.
+   - Org policy (WebComm):
+     - No sensitive data or credentials.
+     - Conversation content is company property; do not share it externally without review and authorization.
+     - AI output must be reviewed by a human.
+   - Owner preferences:
+     - Silent wakeup chain; report only at event checks or on problems.
+     - NO email; present results in this session in Chinese.
+   - Current policy:
+     - TECH_SPRINT from the 2026-11-25 D-Plan, per the Owner on 11/24: "希望可以將科技股"盡量"往 100% 補(如果可行的話)，希望可以衝刺看看".
+     - The Owner also said "收盤後再告訴你", so they may give a further decision after the 11/24 close. Any change must be applied before the 19:30 run.
+   - Competition rules:
+     - Ranking = final NAV after the 11/27 close.
+     - At least 22 of 24 days submitted (22 done, including 11/24).
+     - Holdings 20–30; cash < 25%; per-name ≤ 10% (Quant cap 9%); ≤ 30 orders.
+
+2. Key Technical Concepts:
+   - Scheduler `AI_CUP_Precompetition_DryRun_1930`:
+     - Runs the evening before the trade date.
+     - After midnight it runs a CROSS_DAY_CATCHUP for today's trade date (worked 11/24 00:05 after the laptop slept).
+     - It runs from the production checkout, whatever branch is checked out.
+   - Other tasks: `AI_CUP_Precompetition_Evaluation_1700`, MorningFinal 0730.
+   - Evaluation: the simulator fills at next-day VWAP, not the open. Labelled COMPETITION_DAY_ESTIMATE; the official settlement comes from the next DataPack.
+   - Tactical overlay:
+     - `agent/tactical/override.py` `TO.activate(trade_date, mode, state_dir=, tech_config_path=)` patches `agent.pipeline.construct`.
+     - It then calls `TW.run_overlay(plan, res0, prev_cash, rb, cfg, market, etf_holdings, etf_meta, scores, regime_override, tcfg, tech)`, where plan = (tw, prev_h, no_trade, nav, closes, lot).
+     - Every candidate goes through `K._finalize`, which enforces lots, R_COUNT 20–30, cap, STRESS_CASH (buy +5% / sell −5%, cash ≥ 0), cash < 25%, Active Share, ≤ 30 orders.
+   - Policies in `config/tactical_tech_overweight_v1.yaml` floor_schedule: risk_adjusted, aggressive (`RA.run_overlay_v2` + legacy fallback), defensive (`defensive_diff`), and the new sprint.
+   - PowerShell `ConvertFrom-Json` fails on the tactical JSON; use Python.
+
+3. Files and Code Sections:
+   - `config/tactical_tech_overweight_v1.yaml`, current floor_schedule tail:
+     ```
+     - {from: '2026-11-23', to: '2026-11-23', min: 0.0, policy: defensive}
+     - {from: '2026-11-24', to: '2026-11-24', min: 0.93, policy: aggressive}
+     - {from: '2026-11-25', min: 0.93, policy: sprint}
+     ```
+     The new block, added after defensive min_avg_amount:
+     ```
+     sprint: {level_max: 0.99, level_min: 0.85, max_weight: 0.09, min_holdings: 21, max_holdings: 28, max_orders: 30, no_trade_band: 0.01, min_avg_amount: 300000000}
+     ```
+   - `agent/tactical/tech_sprint.py` (new). VERSION "TACTICAL_TECH_SPRINT_V1".
+     - `liquid(prices, names, min_avg_amount)`: keeps names whose 20-day average amount ≥ the threshold.
+     - `plan_sprint(held_w, tech, ranked_new, level, *, cap, min_holdings, max_holdings, max_orders, no_trade_band=0.01, keep_nontech=0)`:
+       - Sells non-tech except the keep_nontech smallest (untouched).
+       - level −= the kept non-tech weight.
+       - n = max(min_holdings − kept non-tech, held tech).
+       - Adds ranked new tech names; per = level/n; returns None if per > cap.
+       - Held tech within the band of per goes to no_trade; the rest get per2 = (level − stay)/len(rest), and must satisfy per2 ≤ cap and > 0.005.
+       - orders = sells + rest ≤ max_orders.
+       - Returns (w, stay ∪ kept non-tech, info{sold_nontech, kept_nontech, kept_tech, untouched, added, per_weight, orders_planned}).
+     - `run_overlay_sprint(..., fallback=None)`:
+       - Pool = tech names that are buyable (have a close, liquid, not held, a 3% NAV position ≥ 1 lot), sorted by (not eligible, −z, ticker).
+       - z = `RG.composite_score` with the risk_adjusted config overridden by the aggressive block.
+       - Loops k = 0..n_nontech (outer) and levels 0.99 → 0.85 (inner); the first that passes `_finalize` wins. Labels look like `sprint@0.96_keep3`.
+       - Fallback: the aggressive `run_overlay_v2`; records sprint_candidates and policy_requested.
+       - On success it records status TECH_OVERWEIGHT_APPLIED plus sold_nontech, kept_nontech, kept_tech, untouched_tech, added_tech_names.
+   - `agent/tactical/tech_overweight.py` run_overlay: a `policy == "sprint"` branch added before the risk_adjusted/aggressive branch, with the aggressive fallback using fallback_tech_min 0.93.
+   - Tests:
+     - `tests/tactical/test_tech_sprint.py` (new): full switch, infeasible cases, partial switch with keep_nontech=3, liquidity filter, dispatcher.
+     - `tests/tactical/test_tech_risk_adjusted.py` and `test_tech_floor_persistent.py`: 11/23 defensive, 11/24 aggressive, 11/25+ sprint. The end-date test now uses 11/25 → sprint and 11/26 → None.
+   - Scratchpad (`C:\Users\<user>\AppData\Local\Temp\claude\8f718917fde93c02\3c6e927b-3359-42ca-a4f8-73630a860dd3\scratchpad\`):
+     - `replay_sprint.py <td> <prev> [policy]`: replays `run_day` under `TO.activate` with a temp config, state, out and log dirs, starting from `load_internal(prev)`. No submission.
+     - `est1123.py` and `tech1123.py`: quote estimates.
+   - Handoffs in `handoff/claude_sessions/`:
+     - 2026-11-23_..._1123_eval.md
+     - 2026-11-24_..._1124_aggressive.md
+     - 2026-11-24_..._sprint.md (written; contents are the Chinese sprint report to present).
+
+4. Errors and fixes:
+   - Decimal×float TypeError in est1123.py: cast to float.
+   - TPEx quotes were not yet published at ~14:00, so the estimate was partial. The −2.6% estimate was wrong versus the official +0.84%; this was disclosed and corrected to the Owner.
+   - The laptop slept 11/23 evening, so the 19:30 run was missed. The catch-up at 00:05 ran correctly for 11/24 from the feature branch (identical content). PR #75 was merged afterwards and master deployed after the run finished.
+   - The first sprint version had no feasible plan on 11/24 (36 orders). Fixed with the keep_nontech partial switch.
+   - Long-running pytest and push commands moved to the background; handled via notifications.
+
+5. Problem Solving:
+   - Diagnosed the aggressive 65% cap (holdings 15 < 20; stress cash at ≥ 95%). The sprint mode solves the count problem; the stress guard is kept.
+   - Replay validated sprint on the hardest case (65.1% → 80.2%).
+   - Open item: pytest appears to write into production logs/notifications (logs/runs/2026102x; a 2026-10-20 READY_FOR_UPLOAD notification at 00:07). Not addressed.
+
+6. All user messages:
+   - "今天的收益大概如何"
+   - "今天整體科技股都大漲嗎"
+   - "所以目前的策略不算是進攻型的?"
+   - "那我先改回進攻型好了，等明天收盤之後再打算"
+   - "好，收盤後再告訴你，另外因為比賽已經進入尾聲，所以我希望可以將科技股"盡量"往 100% 補(如果可行的話)，希望可以衝刺看看"
+   - Plus recurring loop prompts ("Ops follow-through …"). Earlier Owner instructions remain in force: no email, Chinese, report in session only.
+
+7. Pending Tasks:
+   - Present the sprint deployment report to the Owner in Chinese (the same text as handoff 2026-11-24_..._sprin…[+3286 chars; sha256:5da633b12ee39786]
+
+
+### Events
+
+- **SYSTEM_INFO** 2026-11-24 11:23:34+0800 Compacted while idle, before the prompt cache expired · turn off with "idleCompaction": false in settings.json
+- **SCHEDULED_WAKEUP** 2026-11-24 11:28:00+0800 Claude resuming /loop wakeup (Nov 24 11:28am)
+
+### User
+
+_2026-11-24 11:28:00+0800_
+
+Ops follow-through. POLICY: TECH_SPRINT from the 2026-11-25 D-Plan (Owner decision 2026-11-24 ~09:30 "科技股盡量往100%補"; PR #76 squash fe7be55 = production HEAD; #68 comment 7120179089). 11/24 was AGGRESSIVE (PR #75). Owner said they will tell after the 11/24 close whether to change; any change must be applied before the 19:30 run (config/tactical_tech_overweight_v1.yaml floor_schedule; PR + gates per CLAUDE.md §11). Owner preference: no routine reports; report only at event checks or problems. (1) Each check-in: `python agent/ops/cc_session_sync.py sync --session 3c6e927b-3359-42ca-a4f8-73630a860dd3 --force` (background). (2) 11/24 FINAL f3384390 SUBMISSION_CONFIRMED (tech 65.1%). 22/24 days submitted. 11/23 eval +0.84%, cum -36.73%. Replay harness: scratchpad replay_sprint.py <td> <prev> (temp dir, no submission). (3) 17:10: evaluation of 11/24 (rerun `.venv\Scripts\python.exe -m agent.ops.daily_evaluation --date 2026-11-24` if late/BLOCKED), tell the Owner daily + cumulative return in Chinese and remind them the 19:30 decision (sprint is set). ~19:40: verify the 19:30 run for 2026-11-25: logs/ops/20261125/operator_summary.txt, logs/tactical/2026-11-25_TECH_OVERWEIGHT_V1.json (policy sprint, APPLIED, selected sprint@x, tech after, cash, holdings 20-30, orders <=30; if fallback, explain), submissions/20261125/submission_state.json SUBMISSION_CONFIRMED; if not run (laptop sleep), Start-ScheduledTask AI_CUP_Precompetition_DryRun_1930. Then shared-state sync (shared_state_sync --dat…[+181 chars; sha256:ea86d46cbe3842ef]
+
+
+### Tool actions
+
+- `PowerShell: command=Get-Date -Format "yyyy-MM-dd HH:mm:ss"; Start-Process -WindowStyle Hidden -FilePath python -ArgumentList "agent/ops/cc_session_sync.py","sync","--session","3c6e927b-3359-42ca-a4f8-73630a860dd3","--force" | description=Show time and start session sync in background`
