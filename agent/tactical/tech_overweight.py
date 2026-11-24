@@ -273,6 +273,14 @@ def run_overlay(plan, res0, prev_cash, rb, cfg, market, etf_holdings, etf_meta, 
             plan, res0, prev_cash, rb, cfg, market, etf_holdings, etf_meta, scores, regime_override, tcfg, tech,
             fallback=lambda: RA.run_overlay_v2(plan, res0, prev_cash, rb, cfg, market, etf_holdings, etf_meta, scores, regime_override,
                                                agg, tech, legacy=run_overlay_legacy))
+    if tcfg.get("policy") == "sprint":                   # Owner 2026-11-24: technology as close to 100 % as feasible (fallback: aggressive)
+        from agent.tactical import tech_sprint as SP
+        from agent.tactical import tech_risk_adjusted as RA
+        agg = dict(tcfg, policy="aggressive", target_tech_weight_min=float(tcfg.get("fallback_tech_min", 0.93)))
+        return SP.run_overlay_sprint(
+            plan, res0, prev_cash, rb, cfg, market, etf_holdings, etf_meta, scores, regime_override, tcfg, tech,
+            fallback=lambda: RA.run_overlay_v2(plan, res0, prev_cash, rb, cfg, market, etf_holdings, etf_meta, scores, regime_override,
+                                               agg, tech, legacy=run_overlay_legacy))
     if tcfg.get("policy") in ("risk_adjusted", "aggressive"):
         from agent.tactical import tech_risk_adjusted as RA
         return RA.run_overlay_v2(plan, res0, prev_cash, rb, cfg, market, etf_holdings, etf_meta, scores, regime_override, tcfg, tech,
