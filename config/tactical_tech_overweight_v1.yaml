@@ -15,7 +15,8 @@ floor_schedule:
 - {from: '2026-11-16', to: '2026-11-18', min: 0.85, policy: risk_adjusted}  # Issue #68 risk-adjusted policy (history: 11/16-11/18 FINALs)
 - {from: '2026-11-19', to: '2026-11-20', min: 0.93, policy: aggressive}  # Owner 2026-11-18: AGGRESSIVE_RETURN (history: 11/19, 11/20 FINALs)
 - {from: '2026-11-23', to: '2026-11-23', min: 0.0, policy: defensive}  # Owner 2026-11-20 option B: DEFENSIVE_DIFFERENTIATION (history: 11/23 FINAL)
-- {from: '2026-11-24', min: 0.93, policy: aggressive}     # Owner 2026-11-23 17:2x: back to AGGRESSIVE_RETURN (block `aggressive:`); re-decide after the 11/24 close
+- {from: '2026-11-24', to: '2026-11-24', min: 0.93, policy: aggressive}  # Owner 2026-11-23 17:2x: back to AGGRESSIVE_RETURN (history: 11/24 FINAL)
+- {from: '2026-11-25', min: 0.93, policy: sprint}         # Owner 2026-11-24: final sprint, technology as close to 100% as feasible (block `sprint:`)
 # No artificial ceiling above the minimum: only the per-name cap (Quant other_target_cap), holdings 20-30, cash, Active Share, 30 orders apply.
 # Technology classification = the list used since #41-#43 (config/tactical_override_v2.yaml: reduce_tickers).
 tech_classification_file: config/tactical_override_v2.yaml
@@ -73,3 +74,17 @@ defensive:
   max_orders: 30                    # official D-Plan limit
   vol_lookback: 60                  # trading days of realised volatility used to rank the non-technology pool
   min_avg_amount: 300000000         # 20-day average traded value (TWD) >= 300M: a ~4.5% NAV position stays ~10% of a day's value
+
+# Owner decision 2026-11-24 (final days): technology "as close to 100% as feasible". agent/tactical/tech_sprint.py: sell every
+# non-technology holding, keep the holdings count by ADDING technology names (Quant-eligible first, then the technology list, by the
+# AGGRESSIVE_RETURN composite score), highest level that passes Quant _finalize (cash >= 0 under the +/-5% stress fills, holdings
+# 20-30, per-name cap, <= 30 orders). Fallback: the aggressive overlay (fallback_tech_min). Rollback: the 2026-11-25 segment -> policy: aggressive.
+sprint:
+  level_max: 0.99                   # technology share of NAV tried first (cash ~1% + stress guard decides what is feasible)
+  level_min: 0.85
+  max_weight: 0.09                  # per name (Quant other_target_cap 9%, official 10%)
+  min_holdings: 21                  # official 20-30 (one name of margin)
+  max_holdings: 28
+  max_orders: 30
+  no_trade_band: 0.01               # a technology holding within 1pt of the target weight is left untouched (saves orders / cost)
+  min_avg_amount: 300000000         # new names: 20-day average traded value >= 300M TWD

@@ -20,8 +20,9 @@ def test_floor_schedule_persistent_from_1112_and_history_kept():
         assert TW.floor_for(cfg, d) == 0.93 and TW.resolve(d)["target_tech_weight_min"] == 0.93
         assert TO.is_active(d, "competition") is True
     assert TW.floor_for(cfg, "2026-11-23") == 0.0 and TW.resolve("2026-11-23")["policy"] == "defensive"   # option B (history: 11/23 FINAL)
-    for d in ("2026-11-24", "2026-11-27", "2027-01-04"):              # Owner 2026-11-23: aggressive again, never expires on its own
-        assert TW.floor_for(cfg, d) == 0.93 and TW.resolve(d)["policy"] == "aggressive"
+    assert TW.floor_for(cfg, "2026-11-24") == 0.93 and TW.resolve("2026-11-24")["policy"] == "aggressive"   # history: 11/24 FINAL
+    for d in ("2026-11-25", "2026-11-27", "2027-01-04"):              # Owner 2026-11-24: technology sprint, never expires on its own
+        assert TW.floor_for(cfg, d) == 0.93 and TW.resolve(d)["policy"] == "sprint"
         assert TO.is_active(d, "competition") is True
     for d in ("2026-11-12", "2026-11-13", "2026-11-27", "2027-01-04"):
         assert TO.is_active(d, "competition") is True
@@ -31,11 +32,11 @@ def test_floor_schedule_persistent_from_1112_and_history_kept():
 
 def test_owner_can_end_or_change_the_floor(tmp_path):
     cfg = yaml.safe_load((ROOT / "config/tactical_tech_overweight_v1.yaml").read_text(encoding="utf-8"))
-    cfg["floor_schedule"][-1]["to"] = "2026-11-24"                     # explicit Owner end date
+    cfg["floor_schedule"][-1]["to"] = "2026-11-25"                     # explicit Owner end date
     p = tmp_path / "ended.yaml"
     p.write_text(yaml.safe_dump(cfg), encoding="utf-8")
-    assert TW.resolve("2026-11-24", p)["policy"] == "aggressive"
-    assert TW.resolve("2026-11-25", p) is None
+    assert TW.resolve("2026-11-25", p)["policy"] == "sprint"
+    assert TW.resolve("2026-11-26", p) is None
     cfg["enabled"] = False
     p.write_text(yaml.safe_dump(cfg), encoding="utf-8")
     assert TW.resolve("2026-11-12", p) is None
