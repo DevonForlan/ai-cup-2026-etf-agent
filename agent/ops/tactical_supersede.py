@@ -181,7 +181,8 @@ def _prior_policy(trade_date: str, ops: dict, prior: dict | None) -> str | None:
     return None
 
 
-def _tech_preconditions(out: dict, tw: dict, prior: dict | None, trade_date: str, ops: dict, now: datetime) -> dict:
+def _tech_preconditions(out: dict, tw: dict, prior: dict | None, trade_date: str, ops: dict, now: datetime,
+                        allow_same_policy: bool = False) -> dict:
     from agent.ops import morning_final as MF
     from agent.ops.scheduled_run import holidays, run_mode
     from agent.ops.team import resolve
@@ -200,8 +201,9 @@ def _tech_preconditions(out: dict, tw: dict, prior: dict | None, trade_date: str
         out["reasons"].append("no active FINAL to supersede")
     pp = _prior_policy(trade_date, ops, prior)
     out["prior_policy"] = pp
-    if prior and pp == tw.get("policy"):
+    if prior and pp == tw.get("policy") and not allow_same_policy:
         out["reasons"].append(f"the active FINAL is already built under policy {pp}")
+    out["allow_same_policy"] = bool(allow_same_policy)      # 2026-11-26: same policy, fixed implementation (explicit flag + authorization)
     st = get_state(trade_date, ops).get("state")
     out["state"] = st
     if st != CONFIRMED:
@@ -211,7 +213,7 @@ def _tech_preconditions(out: dict, tw: dict, prior: dict | None, trade_date: str
     return out
 
 
-def preconditions(trade_date: str, ops: dict, now: datetime) -> dict:
+def preconditions(trade_date: str, ops: dict, now: datetime, allow_same_policy: bool = False) -> dict:
     """Read-only. Returns {ok, reasons, ...context}."""
     from agent.ops import morning_final as MF
     from agent.ops.package_submission import active_final
@@ -227,7 +229,7 @@ def preconditions(trade_date: str, ops: dict, now: datetime) -> dict:
         from agent.tactical import tech_overweight as TW
         tw = TW.resolve(trade_date)
         if tw is not None and tw.get("policy"):           # Owner 2026-11-18: supersede a FINAL built under an older technology policy
-            return _tech_preconditions(out, tw, active_final(trade_date, ops), trade_date, ops, now)
+            return _tech_preconditions(out, tw, active_final(trade_date, ops), trade_date, ops, now, allow_same_policy)
     out["tactical_version"] = (tcfg or {}).get("version")
     rebalance = bool(tcfg) and tcfg["version"] == TO.VERSION_V2 and TO.is_forced_rebalance(tcfg, trade_date)
     out["mode"] = "ONE_TIME_FROZEN_QUANT_V1_FULL_REBALANCE" if rebalance else "V2_ENTRY"
@@ -258,7 +260,7 @@ def preconditions(trade_date: str, ops: dict, now: datetime) -> dict:
 
 
 def run(trade_date: str, *, authorization: str, expect_prior_sha: str | None = None, check_only: bool = False,
-        now: datetime | None = None, portal_verify=None, runner=None) -> dict:
+        now: datetime | None = None, portal_verify=None, runner=None, allow_same_policy: bool = False) -> dict:
     """`portal_verify(trade_date, ops) -> dict` and `runner(**kw) -> morning_final rec` are injectable for tests."""
     from agent.ops import morning_final as MF
     from agent.ops.final import replace_final
@@ -267,7 +269,7 @@ def run(trade_date: str, *, authorization: str, expect_prior_sha: str | None = N
     now = now or datetime.now(TPE)
     rec = {"task": "tactical_supersede", "trade_date": trade_date, "authorization": authorization, "status": None,
            "operator": OPERATOR, "started_at": now.replace(microsecond=0).isoformat()}
-    pre = preconditions(trade_date, ops, now)
+    pre = preconditions(trade_date, ops, now, allow_same_policy)
     tcfg = pre.pop("tcfg", None)
     rec.update(prior_final_sha256=pre.get("prior_final_sha256"), tactical_version=pre.get("tactical_version"),
                tactical_fingerprint=pre.get("tactical_fingerprint"), state_before=pre.get("state"))
@@ -368,8 +370,11 @@ def main(argv=None) -> int:
     ap.add_argument("--authorization", required=True, help="where the Owner authorised this (e.g. Issue #49 comment)")
     ap.add_argument("--expect-prior-sha", default=None)
     ap.add_argument("--check-only", action="store_true")
+    ap.add_argument("--allow-same-policy", action="store_true",
+                    help="technology-policy mode only: supersede a FINAL built under the SAME policy (e.g. a fixed implementation)")
     a = ap.parse_args(argv)
-    r = run(a.date, authorization=a.authorization, expect_prior_sha=a.expect_prior_sha, check_only=a.check_only)
+    r = run(a.date, authorization=a.authorization, expect_prior_sha=a.expect_prior_sha, check_only=a.check_only,
+            allow_same_policy=a.allow_same_policy)
     print(json.dumps(r, ensure_ascii=False, indent=1, default=str))
     return 0 if r["status"] in ("SUPERSEDED_CONFIRMED", "CHECK_OK") else 2
 

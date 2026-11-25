@@ -80,7 +80,7 @@ defensive:
 # AGGRESSIVE_RETURN composite score), highest level that passes Quant _finalize (cash >= 0 under the +/-5% stress fills, holdings
 # 20-30, per-name cap, <= 30 orders). Fallback: the aggressive overlay (fallback_tech_min). Rollback: the 2026-11-25 segment -> policy: aggressive.
 sprint:
-  level_max: 0.99                   # technology share of NAV tried first (cash ~1% + stress guard decides what is feasible)
+  level_max: 1.00                   # Owner 2026-11-24 ~21:30 "97-98%": first try 100%; lot rounding + the stress guard (cash >= 0 under +/-5% fills) decide what is feasible (11/26 replay: 97.7%)
   level_min: 0.85
   max_weight: 0.09                  # per name (Quant other_target_cap 9%, official 10%)
   min_holdings: 21                  # official 20-30 (one name of margin)

@@ -45,6 +45,20 @@ def test_partial_switch_keeps_the_smallest_nontech_untouched_when_orders_bind():
     assert info["orders_planned"] <= 30 and len(w) == 21 and abs(float(sum(w.values())) - 0.95) < 0.001
 
 
+def test_cash_is_deployed_when_every_holding_is_inside_the_band():
+    """2026-11-26 regression: 21 technology names at 4.0-4.85 %, 6.2 % cash. Every name was within 1pt of 0.99/21, so the plan
+    left everything untouched (0 orders, 93.8 %). The level must be reached by raising the names below the target."""
+    held = {f"T{i:02d}": Decimal("0.0400") + Decimal(i) / Decimal(2500) for i in range(21)}   # 4.00 % .. 4.80 %
+    tech = set(held)
+    total = sum(held.values())
+    assert Decimal("0.92") < total < Decimal("0.95")                            # ~92.4 % invested
+    w, nt, info = SP.plan_sprint(held, tech, [], 0.99, cap=Decimal("0.09"), min_holdings=21, max_holdings=28, max_orders=30)
+    assert abs(float(sum(w.values())) - 0.99) < 0.001 and len(w) == 21
+    per = Decimal("0.99") / 21
+    assert all(held[t] >= per for t in nt)                                       # only names at/above the target stay untouched
+    assert all(w[t] > held[t] for t in w if t not in nt) and info["orders_planned"] >= 1   # buys only, no sells
+
+
 def test_liquidity_filter():
     rows = [{"date": f"2026-10-{d + 1:02d}", "ticker": t, "close": 100.0, "amount": a}
             for d in range(25) for t, a in (("BIG", 5e8), ("THIN", 1e6))]
@@ -62,3 +76,24 @@ def test_dispatcher_routes_sprint_policy(monkeypatch):
     monkeypatch.setattr(SP, "run_overlay_sprint", fake)
     res, rec = TW.run_overlay(None, None, None, None, None, None, None, None, None, None, {"policy": "sprint"}, set())
     assert res == "RES" and rec["policy"] == "sprint" and callable(seen["fallback"])
+
+
+def test_supersede_same_policy_needs_the_explicit_flag(monkeypatch):
+    """2026-11-26: a FINAL built under the SAME policy is superseded only with --allow-same-policy (fixed implementation)."""
+    from datetime import datetime
+    from agent.ops import morning_final as MF
+    from agent.ops import scheduled_run as SR
+    from agent.ops import tactical_supersede as TS
+    from agent.ops import team as TM
+    from agent.submission import base as SB
+    monkeypatch.setattr(SR, "run_mode", lambda ops: "COMPETITION")
+    monkeypatch.setattr(SR, "holidays", lambda ops: set())
+    monkeypatch.setattr(TM, "resolve", lambda mode, ops: {"status": "OK"})
+    monkeypatch.setattr(MF, "plan", lambda now, hol, ops, trade_date=None: {"action": "RUN", "trade_date": "2026-11-26"})
+    monkeypatch.setattr(SB, "get_state", lambda t, ops: {"state": SB.CONFIRMED})
+    monkeypatch.setattr(TS, "_prior_policy", lambda t, ops, prior: "sprint")
+    args = ({"reasons": []}, {"policy": "sprint"}, {"sha256": "sha256:ab"}, "2026-11-26", {}, datetime(2026, 11, 26, 1, 0))
+    blocked = TS._tech_preconditions(*args)
+    assert not blocked["ok"] and any("already built under policy sprint" in r for r in blocked["reasons"])
+    allowed = TS._tech_preconditions({"reasons": []}, *args[1:], allow_same_policy=True)
+    assert allowed["ok"] and allowed["allow_same_policy"] is True
