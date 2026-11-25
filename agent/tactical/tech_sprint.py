@@ -66,6 +66,14 @@ def plan_sprint(held_w, tech, ranked_new, level, *, cap, min_holdings, max_holdi
         return None
     stay = {t for t in keep if abs(held_w[t] - per) <= D(str(no_trade_band)) and held_w[t] <= cap}
     rest = [t for t in names if t not in stay]
+    gap = level - sum((held_w[t] for t in stay), Decimal(0))
+    if not rest and abs(gap) > Decimal("0.005"):
+        # 2026-11-26 fix: every holding inside the band left the cash undeployed (0 orders, 93.8 % instead of 99 %). The level must be
+        # reached: release the holdings on the side of the gap (below the target when cash is to be invested) and re-weight them.
+        stay = {t for t in stay if (held_w[t] >= per if gap > 0 else held_w[t] <= per)}
+        rest = [t for t in names if t not in stay]
+        if not rest:
+            return None
     if rest:
         per2 = (level - sum((held_w[t] for t in stay), Decimal(0))) / len(rest)
         if per2 > cap or per2 <= Decimal("0.005"):
