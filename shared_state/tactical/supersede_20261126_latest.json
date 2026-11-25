@@ -1,0 +1,52 @@
+{
+ "task": "tactical_supersede",
+ "trade_date": "2026-11-26",
+ "authorization": "Issue #68 comment 7132439681 (Owner 2026-11-24 ~21:30: target ~97-98%); fix PR #77",
+ "status": "SUPERSEDED_CONFIRMED",
+ "operator": "tactical_supersede_v2",
+ "started_at": "2026-11-26T00:25:58+08:00",
+ "prior_final_sha256": "sha256:4c783814e4d9e6b6d356d85e4598a98f497d0d2cfc56efdd8c8c835df914604d",
+ "tactical_version": "TACTICAL_TECH_OVERWEIGHT_V1",
+ "tactical_fingerprint": null,
+ "state_before": "SUBMISSION_CONFIRMED",
+ "portal_prior_check": {
+  "status": "SUBMISSION_CONFIRMED",
+  "final_sha256": "sha256:4c783814e4d9e6b6d356d85e4598a98f497d0d2cfc56efdd8c8c835df914604d",
+  "history_entry": "第 23\t2026-11-26\t已繳交\t2026-11-26 00:01\t回看",
+  "reasons": [],
+  "matching_rows": 1
+ },
+ "prior_archive": "submissions\\20261126\\superseded\\4c783814e4d9",
+ "data_health_waiver": {
+  "accepted": true,
+  "detail": "only OPTIONAL / already-known-in-prior-run sources are not OK"
+ },
+ "candidate_gate": {
+  "ok": true,
+  "reasons": []
+ },
+ "morning_run": {
+  "status": "PASS",
+  "blocked_reason": null,
+  "error_message": null,
+  "final_action": "KEPT_DIFFERENT",
+  "superseded": true,
+  "new_final_sha256": "sha256:d78955bc417450b0506b00798ad9e37b447baba96be1ec007b57470f1f3f8e32",
+  "submission_state": "SUBMISSION_CONFIRMED",
+  "auto_upload_status": "SUBMISSION_CONFIRMED",
+  "candidate_run_id": "20261126_002934_git4aa900d",
+  "supersede_reason": "morning refresh produced a different, fully validated decision"
+ },
+ "active_final_sha256": "sha256:d78955bc417450b0506b00798ad9e37b447baba96be1ec007b57470f1f3f8e32",
+ "state_after": "SUBMISSION_CONFIRMED",
+ "finished_at": "2026-11-26T00:30:08+08:00",
+ "source_record": "logs/tactical/supersede_20261126_latest.json",
+ "source_sha256": "sha256:817f49d0d62ff31e057319eec713a757b08386cf1e9b188519fef3f1762814fb",
+ "final_sha256": "d78955bc417450b0506b00798ad9e37b447baba96be1ec007b57470f1f3f8e32",
+ "final_path": "shared_state/daily_submissions/2026-11-26/FINAL.json",
+ "submission_status": "SUBMISSION_CONFIRMED",
+ "submitted_at": "2026-11-26T00:29:44.739347+08:00",
+ "confirmed_at": "2026-11-26T00:29:48.257237+08:00",
+ "idempotency_key": "supersede_20261126_latest.json|sha256:817f49d0d62ff31e057319eec713a757b08386cf1e9b188519fef3f1762814fb|SUBMISSION_CONFIRMED|d78955bc417450b0506b00798ad9e37b447baba96be1ec007b57470f1f3f8e32",
+ "synced_at": "2026-11-26T00:30:18+08:00"
+}
