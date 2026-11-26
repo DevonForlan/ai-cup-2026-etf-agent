@@ -1,14 +1,9 @@
 {
  "task": "dryrun_1930",
- "event": "END",
- "recorded_at": "2026-11-26T00:30:25+08:00",
+ "event": "START",
+ "recorded_at": "2026-11-27T00:14:50+08:00",
  "scheduled_local": "19:30",
- "status": "PASS",
- "blocked_reason": null,
- "error_message": null,
- "actual_start_time": "2026-11-26T00:26:12+08:00",
- "trade_date": "2026-11-26",
- "data_refresh": "WARN",
- "dplan_validation": "PASS",
- "trade_date_key": "2026-11-26"
+ "actual_start_time": "2026-11-27T00:14:50+08:00",
+ "run_delay_minutes": 0,
+ "status": "RUNNING"
 }
