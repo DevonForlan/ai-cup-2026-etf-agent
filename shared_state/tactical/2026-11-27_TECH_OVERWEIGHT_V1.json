@@ -1,0 +1,254 @@
+{
+ "phase": "TECH_OVERWEIGHT",
+ "decision_authority": "FROZEN_QUANT_V1+TECH_OVERWEIGHT_OVERLAY",
+ "rebalance_day_flag_from_pipeline": false,
+ "base_strategy": "FROZEN_QUANT_V1",
+ "tactical_overlay": "TECH_SPRINT",
+ "policy": "sprint",
+ "version": "TACTICAL_TECH_OVERWEIGHT_V1",
+ "owner_directive": "GitHub Issue #68 (OWNER 2026-11-13: best risk-adjusted portfolio subject to tech >= 85%, from the 2026-11-16 D-Plan; supersedes the highest-compliant search); GitHub Issue #65 (OWNER OVERRIDE 2026-11-10: persistent tech floor >=85%, supersedes the Issue #63 one-day 75% rule for later D-Plans); Issue #63 for 2026-11-11",
+ "frozen_quant_sha256": "f34fa02e924011b20c52a4bd42e961169f97e1950e76e04b7e78dc43ac23d2e0",
+ "target_tech_weight_min": 0.93,
+ "tech_weight_before_overlay": 0.98048962,
+ "pool_top": [
+  {
+   "ticker": "4749",
+   "eligible": true,
+   "score": 0.643
+  },
+  {
+   "ticker": "2412",
+   "eligible": true,
+   "score": 0.617
+  },
+  {
+   "ticker": "2376",
+   "eligible": true,
+   "score": 0.607
+  },
+  {
+   "ticker": "3231",
+   "eligible": true,
+   "score": 0.535
+  },
+  {
+   "ticker": "2357",
+   "eligible": true,
+   "score": 0.459
+  },
+  {
+   "ticker": "2395",
+   "eligible": true,
+   "score": 0.441
+  },
+  {
+   "ticker": "3491",
+   "eligible": true,
+   "score": 0.406
+  },
+  {
+   "ticker": "6770",
+   "eligible": true,
+   "score": 0.359
+  },
+  {
+   "ticker": "2317",
+   "eligible": true,
+   "score": 0.346
+  },
+  {
+   "ticker": "4991",
+   "eligible": true,
+   "score": 0.341
+  },
+  {
+   "ticker": "4904",
+   "eligible": true,
+   "score": 0.313
+  },
+  {
+   "ticker": "2379",
+   "eligible": true,
+   "score": 0.3
+  },
+  {
+   "ticker": "3045",
+   "eligible": true,
+   "score": 0.259
+  },
+  {
+   "ticker": "5289",
+   "eligible": true,
+   "score": 0.248
+  },
+  {
+   "ticker": "2330",
+   "eligible": true,
+   "score": 0.208
+  },
+  {
+   "ticker": "1785",
+   "eligible": true,
+   "score": 0.148
+  },
+  {
+   "ticker": "2451",
+   "eligible": true,
+   "score": 0.141
+  },
+  {
+   "ticker": "7769",
+   "eligible": true,
+   "score": 0.136
+  },
+  {
+   "ticker": "4979",
+   "eligible": true,
+   "score": 0.133
+  },
+  {
+   "ticker": "2301",
+   "eligible": true,
+   "score": 0.119
+  }
+ ],
+ "candidates": [
+  {
+   "label": "sprint@1.00",
+   "passed": true,
+   "tech_after": 0.9801369293344288,
+   "cash_after": 0.019863070665571296,
+   "orders": 4
+  }
+ ],
+ "status": "TECH_OVERWEIGHT_APPLIED",
+ "selected": "sprint@1.00",
+ "selected_mode": "sprint",
+ "selected_level": 1.0,
+ "selection_reason": "highest technology level that passes every hard guard (holdings 20-30 kept by adding technology names)",
+ "sold_nontech": [],
+ "kept_nontech": [],
+ "kept_tech": [
+  "2383",
+  "2408",
+  "2344",
+  "8299",
+  "3081",
+  "2345",
+  "3443",
+  "3260",
+  "2382",
+  "2337",
+  "6139",
+  "1815",
+  "6510",
+  "3036",
+  "8069",
+  "7734",
+  "2404",
+  "3661",
+  "6223",
+  "2059",
+  "5274"
+ ],
+ "untouched_tech": [
+  "2344",
+  "2345",
+  "2382",
+  "2383",
+  "2408",
+  "3081",
+  "3260",
+  "3443",
+  "8299"
+ ],
+ "added_tech_names": [],
+ "tech_weight_after_overlay": 0.9801369293344288,
+ "blocker": null,
+ "fallback": null,
+ "reason": "TECH_SPRINT: sprint@1.00",
+ "sells": {
+  "2337": 1000,
+  "6139": 1000
+ },
+ "buys": {
+  "3036": 1000,
+  "8069": 2000
+ },
+ "orders": 4,
+ "tech_weight_before": 0.9804897250148051,
+ "tech_weight_after": 0.9801369293344288,
+ "cash_weight_after": 0.019863070665571296,
+ "holdings_after": 21,
+ "max_weight_after": 0.048986123284330205,
+ "weights_after": {
+  "2383": 0.048986,
+  "2408": 0.048692,
+  "2344": 0.048484,
+  "8299": 0.04848,
+  "3081": 0.04825,
+  "2345": 0.048183,
+  "3443": 0.048094,
+  "3260": 0.047716,
+  "2382": 0.047639,
+  "2337": 0.047123,
+  "3036": 0.047109,
+  "8069": 0.047028,
+  "1815": 0.047001,
+  "6510": 0.046882,
+  "7734": 0.046532,
+  "6139": 0.046244,
+  "2404": 0.046012,
+  "3661": 0.044435,
+  "6223": 0.042837,
+  "2059": 0.042562,
+  "5274": 0.041848
+ },
+ "weights_before": {
+  "2383": 0.048986,
+  "2408": 0.048691,
+  "2344": 0.048484,
+  "8299": 0.04848,
+  "3081": 0.04825,
+  "2345": 0.048183,
+  "3443": 0.048094,
+  "3260": 0.047716,
+  "2382": 0.047639,
+  "2337": 0.04722,
+  "6139": 0.047133,
+  "1815": 0.047001,
+  "6510": 0.046882,
+  "3036": 0.046859,
+  "8069": 0.04665,
+  "7734": 0.046532,
+  "2404": 0.046012,
+  "3661": 0.044435,
+  "6223": 0.042837,
+  "2059": 0.042561,
+  "5274": 0.041848
+ },
+ "active_share_min": 0.3526236787359142,
+ "active_share_benchmark": "00999A",
+ "est_nav": 672435330.4875,
+ "names": {
+  "2337": "旺宏",
+  "3036": "文曄",
+  "6139": "亞翔",
+  "8069": "元太"
+ },
+ "turnover_pct": 0.1614570562383837,
+ "holdings_before": 21,
+ "cash_weight_before": 0.019510274985194812,
+ "fingerprint": "f3e8f7a9e44b86aa9efdda594737d34b430beff896eeed75c20385f0162e39d9",
+ "trade_date": "2026-11-27",
+ "recorded_at": "2026-11-27T00:19:55+0800",
+ "source_record": "logs/tactical/2026-11-27_TECH_OVERWEIGHT_V1.json",
+ "source_sha256": "sha256:9ac80e0ad7451313fe4f4275419845fab3043e348542294d4f95cae66cb8a7c5",
+ "final_sha256": "af7834ecc0338fc458b940c8e34891d3ada00a43545d7429792eba9789c4157f",
+ "final_path": "shared_state/daily_submissions/2026-11-27/FINAL.json",
+ "submission_status": "SUBMISSION_CONFIRMED",
+ "submitted_at": "2026-11-27T00:20:07.027317+08:00",
+ "confirmed_at": "2026-11-27T00:20:11.487411+08:00",
+ "idempotency_key": "2026-11-27_TECH_OVERWEIGHT_V1.json|sha256:9ac80e0ad7451313fe4f4275419845fab3043e348542294d4f95cae66cb8a7c5|SUBMISSION_CONFIRMED|af7834ecc0338fc458b940c8e34891d3ada00a43545d7429792eba9789c4157f",
+ "synced_at": "2026-11-27T00:20:33+08:00"
+}
